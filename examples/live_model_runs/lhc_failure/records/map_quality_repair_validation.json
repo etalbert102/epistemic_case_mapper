@@ -1,0 +1,18 @@
+{
+  "failures": [
+    "semantic_candidate_bad_field field=evidence_mode expected=source_grounded actual=",
+    "semantic_candidate_missing_field field=title",
+    "semantic_candidate_missing_field field=status",
+    "semantic_candidate_bad_prompt expected=source_mapping_prompt_v2_json actual=",
+    "semantic_map_missing_sources",
+    "semantic_map_missing_required_source source=giddings_mangano_2008_comments_plaga",
+    "semantic_map_missing_required_source source=giddings_mangano_2008_stable_black_holes",
+    "semantic_map_missing_required_source source=lsag_2008_safety_review",
+    "semantic_map_missing_required_source source=plaga_2008_metastable_black_holes",
+    "semantic_map_missing_required_source source=spc_2008_lsag_review",
+    "semantic_map_missing_claims",
+    "semantic_map_missing_relations",
+    "semantic_map_too_few_cruxes count=0",
+    "semantic_map_evidence_check_too_short rows=0"
+  ]
+}

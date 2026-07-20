@@ -1,0 +1,234 @@
+{
+  "findings": [
+    {
+      "category": "quality:low_claim_count",
+      "evidence": {
+        "issue_type": "low_claim_count",
+        "message": "Accepted 1 claims; region target is at least 12.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_001",
+      "issue": "Accepted 1 claims; region target is at least 12.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_source_claim_coverage",
+      "evidence": {
+        "issue_type": "missing_source_claim_coverage",
+        "message": "No accepted claim from required source lsag_2008_safety_review.",
+        "severity": "fail"
+      },
+      "finding_id": "map_critique_002",
+      "issue": "No accepted claim from required source lsag_2008_safety_review.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "fail",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_source_claim_coverage",
+      "evidence": {
+        "issue_type": "missing_source_claim_coverage",
+        "message": "No accepted claim from required source spc_2008_lsag_review.",
+        "severity": "fail"
+      },
+      "finding_id": "map_critique_003",
+      "issue": "No accepted claim from required source spc_2008_lsag_review.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "fail",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_source_claim_coverage",
+      "evidence": {
+        "issue_type": "missing_source_claim_coverage",
+        "message": "No accepted claim from required source giddings_mangano_2008_stable_black_holes.",
+        "severity": "fail"
+      },
+      "finding_id": "map_critique_004",
+      "issue": "No accepted claim from required source giddings_mangano_2008_stable_black_holes.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "fail",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_source_claim_coverage",
+      "evidence": {
+        "issue_type": "missing_source_claim_coverage",
+        "message": "No accepted claim from required source giddings_mangano_2008_comments_plaga.",
+        "severity": "fail"
+      },
+      "finding_id": "map_critique_005",
+      "issue": "No accepted claim from required source giddings_mangano_2008_comments_plaga.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "fail",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_claim_role",
+      "evidence": {
+        "issue_type": "missing_claim_role",
+        "message": "No accepted claim with role conclusion_support.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_006",
+      "issue": "No accepted claim with role conclusion_support.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_claim_role",
+      "evidence": {
+        "issue_type": "missing_claim_role",
+        "message": "No accepted claim with role crux.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_007",
+      "issue": "No accepted claim with role crux.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_claim_role",
+      "evidence": {
+        "issue_type": "missing_claim_role",
+        "message": "No accepted claim with role scope_limit.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_008",
+      "issue": "No accepted claim with role scope_limit.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:low_relation_type_diversity",
+      "evidence": {
+        "issue_type": "low_relation_type_diversity",
+        "message": "Accepted 0 relation types; region target is at least 3.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_009",
+      "issue": "Accepted 0 relation types; region target is at least 3.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:missing_crux_or_tension_relation",
+      "evidence": {
+        "issue_type": "missing_crux_or_tension_relation",
+        "message": "No accepted crux/tension/challenge relation.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_010",
+      "issue": "No accepted crux/tension/challenge relation.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:high_rejected_claim_ratio",
+      "evidence": {
+        "issue_type": "high_rejected_claim_ratio",
+        "message": "Rejected 18 claim proposals vs. 1 accepted claims.",
+        "severity": "risk"
+      },
+      "finding_id": "map_critique_011",
+      "issue": "Rejected 18 claim proposals vs. 1 accepted claims.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "risk",
+      "target_id": "map"
+    },
+    {
+      "category": "quality:chunk_budget_skipped_content",
+      "evidence": {
+        "issue_type": "chunk_budget_skipped_content",
+        "message": "Skipped 191 source chunks due to configured chunk budgets.",
+        "severity": "note"
+      },
+      "finding_id": "map_critique_012",
+      "issue": "Skipped 191 source chunks due to configured chunk budgets.",
+      "recommended_fix": "Repair or explicitly mark this issue before accepting the map for synthesis.",
+      "severity": "note",
+      "target_id": "map"
+    },
+    {
+      "category": "label_audit_warning",
+      "evidence": {
+        "label_audit": {
+          "core_decision_priority": 40,
+          "deterministic_relevance_reason": "question_outcome_mismatch",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "supporting_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "appendix",
+          "routing_importance_level": "medium",
+          "routing_role": "background",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "appendix",
+          "warnings": [
+            "deterministic_relevance:question_outcome_mismatch",
+            "model_direct_with_deterministic_warning",
+            "model_high_importance_with_deterministic_warning"
+          ]
+        },
+        "warnings": [
+          "deterministic_relevance:question_outcome_mismatch",
+          "model_direct_with_deterministic_warning",
+          "model_high_importance_with_deterministic_warning"
+        ]
+      },
+      "finding_id": "map_critique_001",
+      "issue": "Audited routing disagrees with or qualifies model-provided labels.",
+      "recommended_fix": "Use audited routing labels for relation selection and synthesis while preserving the claim.",
+      "severity": "risk",
+      "target_id": "lhc_c001"
+    },
+    {
+      "category": "claim_rejections",
+      "evidence": {
+        "reason_counts": {
+          "source_quote_unaligned": 18
+        }
+      },
+      "finding_id": "map_critique_001",
+      "issue": "18 claim proposals were rejected.",
+      "recommended_fix": "Inspect rejection reasons if source coverage is weak.",
+      "severity": "note",
+      "target_id": "claims"
+    },
+    {
+      "category": "relation_rejections",
+      "evidence": {
+        "reason_counts": {
+          "too_few_claims": 1
+        }
+      },
+      "finding_id": "map_critique_002",
+      "issue": "1 relation proposals were rejected.",
+      "recommended_fix": "Use rejected relation reasons to select targeted repair pairs.",
+      "severity": "note",
+      "target_id": "relations"
+    }
+  ],
+  "repair_candidates": {
+    "relation_pairs": []
+  },
+  "schema_id": "staged_map_critique_v1",
+  "status": "review_needed",
+  "summary": {
+    "finding_count": 15,
+    "label_audit_warning_count": 3,
+    "missing_relation_candidate_count": 0,
+    "quality_issue_count": 12
+  }
+}

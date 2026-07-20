@@ -1,0 +1,545 @@
+{
+  "claims": [
+    {
+      "claim": "The existence of Earth and other astronomical bodies for billions of years despite continuous exposure to high-energy cosmic rays proves that any processes occurring at or above LHC energies (including vacuum bubbles and magnetic monopoles) are not catastrophic.",
+      "claim_quantities": [
+        {
+          "line_hint": "58-60",
+          "local_interpretation": "Comparison of historical cosmic ray hits vs. projected LHC collisions",
+          "measures": "times the total number of collisions expected over the duration of LHC experiments",
+          "quantity_role": "source_reported_quantity",
+          "quantity_type": "sample_size",
+          "retention_hint": "use_if_space",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "such energetic LHC-like cosmic rays have already hit the Earth (or the Sun) in numbers equivalent to one hundred thousand (or one billion) times the total number of collisions expected over the duration of LHC experiments.",
+          "value": "100,000 (or 1,000,000)"
+        }
+      ],
+      "decision_importance": "critical",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "This provides the fundamental safety proof by comparing LHC conditions to naturally occurring, non-catastrophic cosmic ray events.",
+      "quantity_values": [
+        "100,000 (or 1,000,000)"
+      ],
+      "question_relevance": "direct",
+      "relevance_rationale": "This provides the fundamental safety proof by comparing LHC conditions to naturally occurring, non-catastrophic cosmic ray events.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "the hypothesis that the LHC operation would threaten the existence of the Earth is irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have persisted for billions of years in spite of their continuous exposure to energetic cosmic rays.",
+      "span_id": "spc_2008_lsag_review_s0063",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Comparative observational analysis of cosmic ray flux vs. planetary age",
+          "exposure_or_option": "High-energy cosmic ray collisions",
+          "outcome_or_endpoint": "Catastrophic vacuum instability or magnetic monopole production",
+          "population": "Earth, Sun, and other astronomical bodies",
+          "stated_dose_or_threshold": "Energies equivalent to or larger than those of LHC collisions",
+          "stated_limitations": [],
+          "stated_scope": [
+            "vacuum bubbles",
+            "magnetic monopoles"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "58-60",
+            "local_interpretation": "Comparison of historical cosmic ray hits vs. projected LHC collisions",
+            "measures": "times the total number of collisions expected over the duration of LHC experiments",
+            "quantity_role": "source_reported_quantity",
+            "quantity_type": "sample_size",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "such energetic LHC-like cosmic rays have already hit the Earth (or the Sun) in numbers equivalent to one hundred thousand (or one billion) times the total number of collisions expected over the duration of LHC experiments.",
+            "value": "100,000 (or 1,000,000)"
+          }
+        ],
+        "must_preserve_terms": [
+          "cosmic rays",
+          "billions of years",
+          "vacuum bubbles",
+          "magnetic monopoles",
+          "non-catastrophic"
+        ],
+        "natural_bottom_line": "The fact that Earth and the Sun have survived billions of years of high-energy cosmic ray bombardment proves that such collisions do not cause catastrophic vacuum instability or produce dangerous magnetic monopoles.",
+        "quantities": [
+          "100,000 (or 1,000,000)"
+        ],
+        "scope_conditions": [
+          "comparative safety proof"
+        ],
+        "source_bottom_line": "The SPC endorses the LSAG report's conclusion that there is no danger from the production of new particles or states of matter (magnetic monopoles, vacuum bubbles, strangelets, and black holes) at the LHC, based on observational evidence of cosmic ray collisions with celestial bodies.",
+        "supporting_quotes": [
+          {
+            "line_hint": "63-66",
+            "quote": "the hypothesis that the LHC operation would threaten the existence of the Earth is irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have persisted for billions of years in spite of their continuous exposure to energetic cosmic rays."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "The production of microscopic black holes at the LHC is ruled out as a danger because any such black holes would have to satisfy an extremely unlikely set of conditions (e.g., specific extra dimensions, failure of Hawking radiation) and are contradicted by the observed properties of white dwarf stars.",
+      "claim_quantities": [],
+      "decision_importance": "critical",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Directly addresses the specific concern regarding black hole accretion and stability.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Directly addresses the specific concern regarding black hole accretion and stability.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "any danger for the Earth on time scales lower than or comparable to the natural lifetime of the solar system can be ruled out on the basis of its contradiction with the observation of white dwarf stars of known mass, age and other properties.",
+      "span_id": "spc_2008_lsag_review_s0132",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Theoretical analysis and observational data (GM paper)",
+          "exposure_or_option": "LHC energy range",
+          "outcome_or_endpoint": "Accretion of matter on Earth",
+          "population": "Microscopic, neutral, stable black holes",
+          "stated_dose_or_threshold": "Time scales lower than or comparable to the natural lifetime of the solar system",
+          "stated_limitations": [
+            "requires extra spatial dimensions with very peculiar properties"
+          ],
+          "stated_scope": [
+            "black holes"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "microscopic black holes",
+          "Hawking radiation",
+          "white dwarf stars",
+          "extra spatial dimensions"
+        ],
+        "natural_bottom_line": "Black hole production is ruled out because it requires highly improbable physical conditions that contradict observed astronomical data like white dwarf properties.",
+        "quantities": [],
+        "scope_conditions": [
+          "black hole safety proof"
+        ],
+        "source_bottom_line": "The SPC endorses the LSAG report's conclusion that there is no danger from the production of new particles or states of matter (magnetic monopoles, vacuum bubbles, strangelets, and black holes) at the LHC, based on observational evidence of cosmic ray collisions with celestial bodies.",
+        "supporting_quotes": [
+          {
+            "line_hint": "132-135",
+            "quote": "any danger for the Earth on time scales lower than or comparable to the natural lifetime of the solar system can be ruled out on the basis of its contradiction with the observation of white dwarf stars of known mass, age and other properties."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Strangelet production at LHC energies is less likely than at lower RHIC energies, and there is no evidence of strangelet-induced conversion of matter from high-energy cosmic rays bombarding the Moon.",
+      "claim_quantities": [],
+      "decision_importance": "medium",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Addresses the concern of 'strange' matter conversion, a distinct category of exotic particle risk.",
+      "quantity_values": [],
+      "question_relevance": "indirect",
+      "relevance_rationale": "Addresses the concern of 'strange' matter conversion, a distinct category of exotic particle risk.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "the data from the RHIC program strongly reinforce the arguments collected at the start of the RHIC program: there is no conceivable danger from strangelet production at LHC energy.",
+      "span_id": "spc_2008_lsag_review_s0167",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Comparison of RHIC program results and cosmic ray data",
+          "exposure_or_option": "Pb-Pb collisions at LHC",
+          "outcome_or_endpoint": "Coalescence with normal matter to catalyze conversion of the world into strange matter",
+          "population": "Strangelets (particles containing strange quark matter)",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "strangelets"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "strangelets",
+          "RHIC energy",
+          "Moon bombardment",
+          "baryon number"
+        ],
+        "natural_bottom_line": "Strangelet production is less likely at LHC energies than at lower RHIC energies, and no evidence exists for strangelet-related events in cosmic ray data.",
+        "quantities": [],
+        "scope_conditions": [
+          "strangelet safety proof"
+        ],
+        "source_bottom_line": "The SPC endorses the LSAG report's conclusion that there is no danger from the production of new particles or states of matter (magnetic monopoles, vacuum bubbles, strangelets, and black holes) at the LHC, based on observational evidence of cosmic ray collisions with celestial bodies.",
+        "supporting_quotes": [
+          {
+            "line_hint": "167-169",
+            "quote": "the data from the RHIC program strongly reinforce the arguments collected at the start of the RHIC program: there is no conceivable danger from strangelet production at LHC energy."
+          }
+        ]
+      }
+    }
+  ],
+  "extractor": "whole-doc",
+  "prompt_version": "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json",
+  "source_card": {
+    "canonical_claims": [
+      {
+        "claim": "The existence of Earth and other astronomical bodies for billions of years despite continuous exposure to high-energy cosmic rays proves that any processes occurring at or above LHC energies (including vacuum bubbles and magnetic monopoles) are not catastrophic.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Comparative observational analysis of cosmic ray flux vs. planetary age",
+          "exposure_or_option": "High-energy cosmic ray collisions",
+          "outcome_or_endpoint": "Catastrophic vacuum instability or magnetic monopole production",
+          "population": "Earth, Sun, and other astronomical bodies",
+          "stated_dose_or_threshold": "Energies equivalent to or larger than those of LHC collisions",
+          "stated_limitations": [],
+          "stated_scope": [
+            "vacuum bubbles",
+            "magnetic monopoles"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "58-60",
+            "local_interpretation": "Comparison of historical cosmic ray hits vs. projected LHC collisions",
+            "measures": "times the total number of collisions expected over the duration of LHC experiments",
+            "quantity_role": "source_reported_quantity",
+            "quantity_type": "sample_size",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "such energetic LHC-like cosmic rays have already hit the Earth (or the Sun) in numbers equivalent to one hundred thousand (or one billion) times the total number of collisions expected over the duration of LHC experiments.",
+            "value": "100,000 (or 1,000,000)"
+          }
+        ],
+        "decision_importance": "critical",
+        "must_preserve_terms": [
+          "cosmic rays",
+          "billions of years",
+          "vacuum bubbles",
+          "magnetic monopoles",
+          "non-catastrophic"
+        ],
+        "natural_bottom_line": "The fact that Earth and the Sun have survived billions of years of high-energy cosmic ray bombardment proves that such collisions do not cause catastrophic vacuum instability or produce dangerous magnetic monopoles.",
+        "quantities": [
+          "100,000 (or 1,000,000)"
+        ],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "comparative safety proof"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "63-66",
+            "quote": "the hypothesis that the LHC operation would threaten the existence of the Earth is irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have persisted for billions of years in spite of their continuous exposure to energetic cosmic rays."
+          }
+        ],
+        "why_it_matters": "This provides the fundamental safety proof by comparing LHC conditions to naturally occurring, non-catastrophic cosmic ray events."
+      },
+      {
+        "claim": "The production of microscopic black holes at the LHC is ruled out as a danger because any such black holes would have to satisfy an extremely unlikely set of conditions (e.g., specific extra dimensions, failure of Hawking radiation) and are contradicted by the observed properties of white dwarf stars.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Theoretical analysis and observational data (GM paper)",
+          "exposure_or_option": "LHC energy range",
+          "outcome_or_endpoint": "Accretion of matter on Earth",
+          "population": "Microscopic, neutral, stable black holes",
+          "stated_dose_or_threshold": "Time scales lower than or comparable to the natural lifetime of the solar system",
+          "stated_limitations": [
+            "requires extra spatial dimensions with very peculiar properties"
+          ],
+          "stated_scope": [
+            "black holes"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "critical",
+        "must_preserve_terms": [
+          "microscopic black holes",
+          "Hawking radiation",
+          "white dwarf stars",
+          "extra spatial dimensions"
+        ],
+        "natural_bottom_line": "Black hole production is ruled out because it requires highly improbable physical conditions that contradict observed astronomical data like white dwarf properties.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "black hole safety proof"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "132-135",
+            "quote": "any danger for the Earth on time scales lower than or comparable to the natural lifetime of the solar system can be ruled out on the basis of its contradiction with the observation of white dwarf stars of known mass, age and other properties."
+          }
+        ],
+        "why_it_matters": "Directly addresses the specific concern regarding black hole accretion and stability."
+      },
+      {
+        "claim": "Strangelet production at LHC energies is less likely than at lower RHIC energies, and there is no evidence of strangelet-induced conversion of matter from high-energy cosmic rays bombarding the Moon.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Comparison of RHIC program results and cosmic ray data",
+          "exposure_or_option": "Pb-Pb collisions at LHC",
+          "outcome_or_endpoint": "Coalescence with normal matter to catalyze conversion of the world into strange matter",
+          "population": "Strangelets (particles containing strange quark matter)",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "strangelets"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "medium",
+        "must_preserve_terms": [
+          "strangelets",
+          "RHIC energy",
+          "Moon bombardment",
+          "baryon number"
+        ],
+        "natural_bottom_line": "Strangelet production is less likely at LHC energies than at lower RHIC energies, and no evidence exists for strangelet-related events in cosmic ray data.",
+        "quantities": [],
+        "question_relevance": "indirect",
+        "scope_conditions": [
+          "strangelet safety proof"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "167-169",
+            "quote": "the data from the RHIC program strongly reinforce the arguments collected at the start of the RHIC program: there is no conceivable danger from strangelet production at LHC energy."
+          }
+        ],
+        "why_it_matters": "Addresses the concern of 'strange' matter conversion, a distinct category of exotic particle risk."
+      }
+    ],
+    "excluded_as_not_decision_relevant": [
+      "The specific composition of the SPC panel (lines 9-10)",
+      "The mention of previous reports at RHIC and LSSG as historical context (lines 21-23)"
+    ],
+    "source_bottom_line": "The SPC endorses the LSAG report's conclusion that there is no danger from the production of new particles or states of matter (magnetic monopoles, vacuum bubbles, strangelets, and black holes) at the LHC, based on observational evidence of cosmic ray collisions with celestial bodies.",
+    "source_id": "spc_2008_lsag_review"
+  },
+  "source_evidence_unit_quality_report": {
+    "exact_quote_count": 3,
+    "issues": [],
+    "quantity_tuple_count": 1,
+    "quote_count": 3,
+    "schema_id": "source_evidence_unit_quality_report_v1",
+    "source_id": "spc_2008_lsag_review",
+    "status": "ready",
+    "unit_count": 3,
+    "warning_counts": {}
+  },
+  "source_evidence_units": {
+    "schema_id": "source_evidence_units_v1",
+    "source_id": "spc_2008_lsag_review",
+    "units": [
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "Comparative observational analysis of cosmic ray flux vs. planetary age",
+          "exposure_or_option": "High-energy cosmic ray collisions",
+          "outcome_or_endpoint": "Catastrophic vacuum instability or magnetic monopole production",
+          "population": "Earth, Sun, and other astronomical bodies",
+          "stated_dose_or_threshold": "Energies equivalent to or larger than those of LHC collisions",
+          "stated_scope": "['vacuum bubbles', 'magnetic monopoles']"
+        },
+        "comparator": "",
+        "decision_importance": "critical",
+        "endpoint": "Catastrophic vacuum instability or magnetic monopole production",
+        "estimate": "Energies equivalent to or larger than those of LHC collisions",
+        "evidence_type": "Comparative observational analysis of cosmic ray flux vs. planetary age",
+        "exposure_or_intervention": "High-energy cosmic ray collisions",
+        "method": "Comparative observational analysis of cosmic ray flux vs. planetary age",
+        "must_preserve_terms": [
+          "cosmic rays",
+          "billions of years",
+          "vacuum bubbles",
+          "magnetic monopoles",
+          "non-catastrophic"
+        ],
+        "natural_bottom_line": "The fact that Earth and the Sun have survived billions of years of high-energy cosmic ray bombardment proves that such collisions do not cause catastrophic vacuum instability or produce dangerous magnetic monopoles.",
+        "population": "Earth, Sun, and other astronomical bodies",
+        "proposition": "The existence of Earth and other astronomical bodies for billions of years despite continuous exposure to high-energy cosmic rays proves that any processes occurring at or above LHC energies (including vacuum bubbles and magnetic monopoles) are not catastrophic.",
+        "quantities": [
+          {
+            "line_hint": "58-60",
+            "local_interpretation": "Comparison of historical cosmic ray hits vs. projected LHC collisions",
+            "measures": "times the total number of collisions expected over the duration of LHC experiments",
+            "quantity_role": "source_reported_quantity",
+            "quantity_type": "sample_size",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "such energetic LHC-like cosmic rays have already hit the Earth (or the Sun) in numbers equivalent to one hundred thousand (or one billion) times the total number of collisions expected over the duration of LHC experiments.",
+            "value": "100,000 (or 1,000,000)"
+          }
+        ],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "63-66",
+            "quote": "the hypothesis that the LHC operation would threaten the existence of the Earth is irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have persisted for billions of years in spite of their continuous exposure to energetic cosmic rays.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "comparative safety proof"
+        ],
+        "source_id": "spc_2008_lsag_review",
+        "source_quote": "the hypothesis that the LHC operation would threaten the existence of the Earth is irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have persisted for billions of years in spite of their continuous exposure to energetic cosmic rays.",
+        "source_span": "63-66",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "spc_2008_lsag_review_eu001",
+        "warnings": [],
+        "why_it_matters": "This provides the fundamental safety proof by comparing LHC conditions to naturally occurring, non-catastrophic cosmic ray events."
+      },
+      {
+        "caveat": "['requires extra spatial dimensions with very peculiar properties']",
+        "claim_context": {
+          "evidence_design": "Theoretical analysis and observational data (GM paper)",
+          "exposure_or_option": "LHC energy range",
+          "outcome_or_endpoint": "Accretion of matter on Earth",
+          "population": "Microscopic, neutral, stable black holes",
+          "stated_dose_or_threshold": "Time scales lower than or comparable to the natural lifetime of the solar system",
+          "stated_limitations": "['requires extra spatial dimensions with very peculiar properties']",
+          "stated_scope": "['black holes']"
+        },
+        "comparator": "",
+        "decision_importance": "critical",
+        "endpoint": "Accretion of matter on Earth",
+        "estimate": "Time scales lower than or comparable to the natural lifetime of the solar system",
+        "evidence_type": "Theoretical analysis and observational data (GM paper)",
+        "exposure_or_intervention": "LHC energy range",
+        "method": "Theoretical analysis and observational data (GM paper)",
+        "must_preserve_terms": [
+          "microscopic black holes",
+          "Hawking radiation",
+          "white dwarf stars",
+          "extra spatial dimensions"
+        ],
+        "natural_bottom_line": "Black hole production is ruled out because it requires highly improbable physical conditions that contradict observed astronomical data like white dwarf properties.",
+        "population": "Microscopic, neutral, stable black holes",
+        "proposition": "The production of microscopic black holes at the LHC is ruled out as a danger because any such black holes would have to satisfy an extremely unlikely set of conditions (e.g., specific extra dimensions, failure of Hawking radiation) and are contradicted by the observed properties of white dwarf stars.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "132-135",
+            "quote": "any danger for the Earth on time scales lower than or comparable to the natural lifetime of the solar system can be ruled out on the basis of its contradiction with the observation of white dwarf stars of known mass, age and other properties.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "black hole safety proof"
+        ],
+        "source_id": "spc_2008_lsag_review",
+        "source_quote": "any danger for the Earth on time scales lower than or comparable to the natural lifetime of the solar system can be ruled out on the basis of its contradiction with the observation of white dwarf stars of known mass, age and other properties.",
+        "source_span": "132-135",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "spc_2008_lsag_review_eu002",
+        "warnings": [],
+        "why_it_matters": "Directly addresses the specific concern regarding black hole accretion and stability."
+      },
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "Comparison of RHIC program results and cosmic ray data",
+          "exposure_or_option": "Pb-Pb collisions at LHC",
+          "outcome_or_endpoint": "Coalescence with normal matter to catalyze conversion of the world into strange matter",
+          "population": "Strangelets (particles containing strange quark matter)",
+          "stated_scope": "['strangelets']"
+        },
+        "comparator": "",
+        "decision_importance": "medium",
+        "endpoint": "Coalescence with normal matter to catalyze conversion of the world into strange matter",
+        "estimate": "",
+        "evidence_type": "Comparison of RHIC program results and cosmic ray data",
+        "exposure_or_intervention": "Pb-Pb collisions at LHC",
+        "method": "Comparison of RHIC program results and cosmic ray data",
+        "must_preserve_terms": [
+          "strangelets",
+          "RHIC energy",
+          "Moon bombardment",
+          "baryon number"
+        ],
+        "natural_bottom_line": "Strangelet production is less likely at LHC energies than at lower RHIC energies, and no evidence exists for strangelet-related events in cosmic ray data.",
+        "population": "Strangelets (particles containing strange quark matter)",
+        "proposition": "Strangelet production at LHC energies is less likely than at lower RHIC energies, and there is no evidence of strangelet-induced conversion of matter from high-energy cosmic rays bombarding the Moon.",
+        "quantities": [],
+        "question_relevance": "indirect",
+        "quote_lineage": [
+          {
+            "line_hint": "167-169",
+            "quote": "the data from the RHIC program strongly reinforce the arguments collected at the start of the RHIC program: there is no conceivable danger from strangelet production at LHC energy.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "strangelet safety proof"
+        ],
+        "source_id": "spc_2008_lsag_review",
+        "source_quote": "the data from the RHIC program strongly reinforce the arguments collected at the start of the RHIC program: there is no conceivable danger from strangelet production at LHC energy.",
+        "source_span": "167-169",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "spc_2008_lsag_review_eu003",
+        "warnings": [],
+        "why_it_matters": "Addresses the concern of 'strange' matter conversion, a distinct category of exotic particle risk."
+      }
+    ]
+  },
+  "source_quantity_tuples": {
+    "canonical_record_type": "source_result_quantity_tuple_v1",
+    "schema_id": "source_quantity_tuples_v1",
+    "source_id": "spc_2008_lsag_review",
+    "tuples": [
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "spc_2008_lsag_review_eu001",
+        "comparator": "",
+        "design": "Comparative observational analysis of cosmic ray flux vs. planetary age",
+        "endpoint": "Catastrophic vacuum instability or magnetic monopole production",
+        "estimate": "100,000 (or 1,000,000)",
+        "estimate_type": "ratio",
+        "exposure_or_intervention": "High-energy cosmic ray collisions",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Comparison of historical cosmic ray hits vs. projected LHC collisions",
+        "measures": "times the total number of collisions expected over the duration of LHC experiments",
+        "population": "Earth, Sun, and other astronomical bodies",
+        "quantity_role": "source_reported_quantity",
+        "quantity_type": "sample_size",
+        "result_tuple_id": "spc_2008_lsag_review_eu001_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "spc_2008_lsag_review",
+        "source_quote": "the hypothesis that the LHC operation would threaten the existence of the Earth is irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have persisted for billions of years in spite of their continuous exposure to energetic cosmic rays.",
+        "source_span": "63-66",
+        "time_horizon": "",
+        "tuple_id": "spc_2008_lsag_review_eu001_q001",
+        "unit_id": "spc_2008_lsag_review_eu001",
+        "units": "",
+        "value": "100,000 (or 1,000,000)"
+      }
+    ]
+  }
+}

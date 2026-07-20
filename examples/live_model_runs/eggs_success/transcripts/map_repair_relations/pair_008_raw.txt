@@ -1,0 +1,19 @@
+```json
+{
+  "pair_id": "pair_008",
+  "source_claim": "eggs_c025",
+  "target_claim": "eggs_c009",
+  "relation_type": "challenges",
+  "rationale": "eggs_c025 provides evidence of a higher risk of cardiovascular disease associated with high egg intake (>1/day) in US studies, which directly contradicts the finding in eggs_c009 that studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+  "relation_confidence": "high",
+  "edge_basis": "source_explicit",
+  "source_anchor_a": "RR = 1.08 (95% CI 1.02–1.14)",
+  "source_anchor_b": "not generally supported an association",
+  "why_decision_relevant": "This edge highlights a direct conflict between a broad claim of no association and specific observational data showing increased risk, which is central to determining if eggs are harmful.",
+  "failure_condition": "The edge would be weaker if the US studies were considered fundamentally flawed or non-comparable to the general population mentioned in eggs_c009.",
+  "crux_candidates": [
+    "Whether the findings in eggs_c025 (US studies) are representative of the general population is a crux for the decision."
+  ],
+  "similar_but_not_identical": []
+}
+```

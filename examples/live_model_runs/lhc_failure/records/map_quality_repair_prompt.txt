@@ -1,0 +1,546 @@
+You are repairing a source-grounded epistemic case-map candidate.
+
+Region ID: lhc_cosmic_ray_argument
+
+Decision question: Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?
+
+Case question: Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?
+
+Return only JSON in the same map shape as the candidate.
+
+Repair rules:
+
+- Preserve accepted claims and relations that remain source-grounded.
+
+- Address fail/risk issues in the deterministic quality report before adding polish.
+
+- Add claims only when they are supported by exact excerpts already present in the candidate or staged artifacts.
+
+- Use source IDs, claim IDs, relation IDs, source spans, excerpts, effect sizes, and consensus claims already present in the candidate or staged artifacts.
+
+- If a quality issue cannot be fixed from available artifacts, add an evidence_check row naming the missing source or review need.
+
+- Keep relation types within the allowed relation ontology listed in the scaffold.
+
+Deterministic quality report:
+{
+  "schema_id": "staged_map_quality_report_v1",
+  "status": "needs_repair",
+  "score": 0,
+  "summary": {
+    "claim_count": 1,
+    "relation_count": 0,
+    "relation_type_count": 0,
+    "relation_contract_count": 0,
+    "fallback_relation_count": 0,
+    "required_source_count": 5,
+    "sources_with_claims": 1,
+    "all_chunk_count": 196,
+    "selected_chunk_count": 5,
+    "skipped_chunk_count": 191,
+    "coverage_backfilled_claim_count": 0,
+    "consolidated_claim_count": 0,
+    "rejected_claim_count": 18,
+    "rejected_relation_count": 1
+  },
+  "source_claim_counts": {
+    "lsag_2008_safety_review": 0,
+    "spc_2008_lsag_review": 0,
+    "giddings_mangano_2008_stable_black_holes": 0,
+    "plaga_2008_metastable_black_holes": 1,
+    "giddings_mangano_2008_comments_plaga": 0
+  },
+  "claim_role_counts": {
+    "source_claim": 1
+  },
+  "relation_type_counts": {},
+  "relation_confidence_counts": {},
+  "issues": [
+    {
+      "severity": "risk",
+      "issue_type": "low_claim_count",
+      "message": "Accepted 1 claims; region target is at least 12."
+    },
+    {
+      "severity": "fail",
+      "issue_type": "missing_source_claim_coverage",
+      "message": "No accepted claim from required source lsag_2008_safety_review."
+    },
+    {
+      "severity": "fail",
+      "issue_type": "missing_source_claim_coverage",
+      "message": "No accepted claim from required source spc_2008_lsag_review."
+    },
+    {
+      "severity": "fail",
+      "issue_type": "missing_source_claim_coverage",
+      "message": "No accepted claim from required source giddings_mangano_2008_stable_black_holes."
+    },
+    {
+      "severity": "fail",
+      "issue_type": "missing_source_claim_coverage",
+      "message": "No accepted claim from required source giddings_mangano_2008_comments_plaga."
+    },
+    {
+      "severity": "risk",
+      "issue_type": "missing_claim_role",
+      "message": "No accepted claim with role conclusion_support."
+    },
+    {
+      "severity": "risk",
+      "issue_type": "missing_claim_role",
+      "message": "No accepted claim with role crux."
+    },
+    {
+      "severity": "risk",
+      "issue_type": "missing_claim_role",
+      "message": "No accepted claim with role scope_limit."
+    },
+    {
+      "severity": "risk",
+      "issue_type": "low_relation_type_diversity",
+      "message": "Accepted 0 relation types; region target is at least 3."
+    },
+    {
+      "severity": "risk",
+      "issue_type": "missing_crux_or_tension_relation",
+      "message": "No accepted crux/tension/challenge relation."
+    },
+    {
+      "severity": "risk",
+      "issue_type": "high_rejected_claim_ratio",
+      "message": "Rejected 18 claim proposals vs. 1 accepted claims."
+    },
+    {
+      "severity": "note",
+      "issue_type": "chunk_budget_skipped_content",
+      "message": "Skipped 191 source chunks due to configured chunk budgets."
+    }
+  ],
+  "scaffold": {
+    "case_question": "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?",
+    "decision_question": "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?",
+    "epistemic_config_profile": {
+      "profile_id": "general_decision_support",
+      "label": "General Decision Support",
+      "description": "A broad profile for mixed evidence packets and decision-relevant synthesis."
+    },
+    "required_sources": [
+      "lsag_2008_safety_review",
+      "spc_2008_lsag_review",
+      "giddings_mangano_2008_stable_black_holes",
+      "plaga_2008_metastable_black_holes",
+      "giddings_mangano_2008_comments_plaga"
+    ],
+    "source_roles": {
+      "lsag_2008_safety_review": {
+        "display_title": "Review of the Safety of LHC Collisions",
+        "evidence_role": "evidence synthesis",
+        "provenance_level": "secondary_summary",
+        "limitations": [
+          "Review conclusions depend on included-study quality and inclusion criteria."
+        ],
+        "needs_upgrade": true,
+        "inferred": true
+      },
+      "spc_2008_lsag_review": {
+        "display_title": "SPC Report on LSAG Documents",
+        "evidence_role": "evidence synthesis",
+        "provenance_level": "secondary_summary",
+        "limitations": [
+          "Review conclusions depend on included-study quality and inclusion criteria."
+        ],
+        "needs_upgrade": true,
+        "inferred": true
+      },
+      "giddings_mangano_2008_stable_black_holes": {
+        "display_title": "Astrophysical implications of hypothetical stable TeV-scale black holes",
+        "evidence_role": "commentary or case analysis",
+        "provenance_level": "secondary_summary",
+        "limitations": [
+          "Use for framing and argument structure; verify factual claims against primary sources."
+        ],
+        "needs_upgrade": true,
+        "inferred": true
+      },
+      "plaga_2008_metastable_black_holes": {
+        "display_title": "On the potential catastrophic risk from metastable quantum-black holes produced at particle colliders",
+        "evidence_role": "source document",
+        "provenance_level": "unspecified",
+        "limitations": [
+          "Source role was inferred from sparse metadata and needs human review."
+        ],
+        "needs_upgrade": true,
+        "inferred": true
+      },
+      "giddings_mangano_2008_comments_plaga": {
+        "display_title": "Comments on claimed risk from metastable black holes",
+        "evidence_role": "commentary or case analysis",
+        "provenance_level": "secondary_summary",
+        "limitations": [
+          "Use for framing and argument structure; verify factual claims against primary sources."
+        ],
+        "needs_upgrade": true,
+        "inferred": true
+      }
+    },
+    "source_role_taxonomy": [
+      {
+        "role_id": "source_document",
+        "description": "Provided source whose role is not yet known.",
+        "keyword_markers": [],
+        "limitations": [
+          "Source role may need review."
+        ]
+      }
+    ],
+    "target_claim_roles": [
+      {
+        "role_id": "conclusion_support",
+        "description": "Evidence or reasoning that supports a candidate answer.",
+        "use_when": "A claim bears directly on the likely answer."
+      },
+      {
+        "role_id": "crux",
+        "description": "A claim whose truth would materially change the answer.",
+        "use_when": "The decision turns on this uncertainty."
+      },
+      {
+        "role_id": "scope_limit",
+        "description": "A boundary on where a claim applies.",
+        "use_when": "Population, context, timing, or evidence limits matter."
+      },
+      {
+        "role_id": "implementation_constraint",
+        "description": "A practical condition for applying a recommendation.",
+        "use_when": "Feasibility, compliance, cost, operations, or rollout matters."
+      },
+      {
+        "role_id": "background",
+        "description": "Context needed to interpret the evidence.",
+        "use_when": "Useful context that is not itself load-bearing."
+      },
+      {
+        "role_id": "other",
+        "description": "A useful claim that does not fit the other roles.",
+        "use_when": "Use sparingly when no sharper role fits."
+      }
+    ],
+    "relation_goals": [
+      "Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.",
+      "Use similar_to only when the claims are redundant enough to merge.",
+      "connect at least one crux/scope-limit claim to a conclusion-support claim",
+      "preserve tensions instead of flattening them",
+      "use source limitations to bound claim strength",
+      "prefer cross-source relations when they clarify disagreement or scope"
+    ],
+    "profile_evidence_sections": [
+      {
+        "section_id": "answer_drivers",
+        "title": "Answer Drivers",
+        "description": "Load-bearing evidence and cruxes.",
+        "claim_roles": [
+          "conclusion_support",
+          "crux"
+        ],
+        "relation_types": [
+          "supports",
+          "crux_for"
+        ]
+      },
+      {
+        "section_id": "bounds_and_tensions",
+        "title": "Bounds and Tensions",
+        "description": "Limits, disagreements, and dependencies.",
+        "claim_roles": [
+          "scope_limit",
+          "implementation_constraint"
+        ],
+        "relation_types": [
+          "depends_on",
+          "in_tension_with",
+          "challenges"
+        ]
+      }
+    ],
+    "profile_relation_types": [
+      {
+        "relation_type": "supports",
+        "description": "One claim increases support for another without being the decisive dependency.",
+        "use_when": "Use for direct evidence or argument support.",
+        "sharpness_markers": [
+          "supports",
+          "consistent with",
+          "evidence for"
+        ]
+      },
+      {
+        "relation_type": "challenges",
+        "description": "One claim undercuts or contradicts another.",
+        "use_when": "Use for contrary evidence, validity objections, or failed assumptions.",
+        "sharpness_markers": [
+          "contradicts",
+          "undercuts",
+          "casts doubt"
+        ]
+      },
+      {
+        "relation_type": "refines",
+        "description": "One claim narrows the population, endpoint, mechanism, condition, or interpretation of another.",
+        "use_when": "Use when the boundary being refined is explicit.",
+        "sharpness_markers": [
+          "only for",
+          "specifically",
+          "boundary",
+          "population",
+          "endpoint"
+        ]
+      },
+      {
+        "relation_type": "similar_to",
+        "description": "Claims are close enough that a reviewer may consider merging them.",
+        "use_when": "Use only for near-duplicate or strongly overlapping claims.",
+        "sharpness_markers": [
+          "same as",
+          "duplicates",
+          "substantially overlaps"
+        ]
+      },
+      {
+        "relation_type": "contextualizes",
+        "description": "One claim supplies interpretation context for another without directly supporting, challenging, or narrowing it.",
+        "use_when": "Use for comparator, background, mechanism, or source-context edges that help a reader interpret a claim as context rather than load-bearing support.",
+        "sharpness_markers": [
+          "context",
+          "compared with",
+          "interpretation",
+          "helps explain"
+        ]
+      },
+      {
+        "relation_type": "depends_on",
+        "description": "The force of one claim depends on a condition, implementation detail, or prerequisite.",
+        "use_when": "Use for conditional recommendations, feasibility dependencies, and assumptions.",
+        "sharpness_markers": [
+          "depends",
+          "requires",
+          "only if",
+          "unless",
+          "condition"
+        ]
+      },
+      {
+        "relation_type": "crux_for",
+        "description": "One claim is a decision crux for another or for the question.",
+        "use_when": "Use when changing belief in one claim would materially change the decision read.",
+        "sharpness_markers": [
+          "crux",
+          "decisive",
+          "would change",
+          "key uncertainty"
+        ]
+      },
+      {
+        "relation_type": "in_tension_with",
+        "description": "Claims can both be partly true but pull the decision in different directions.",
+        "use_when": "Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions.",
+        "sharpness_markers": [
+          "however",
+          "tradeoff",
+          "tension",
+          "limited",
+          "unclear"
+        ]
+      }
+    ],
+    "allowed_relation_types": [
+      "challenges",
+      "contextualizes",
+      "crux_for",
+      "depends_on",
+      "in_tension_with",
+      "refines",
+      "similar_to",
+      "supports"
+    ],
+    "quality_checks": [
+      "every required source should contribute at least one useful claim unless genuinely irrelevant",
+      "claims must be entailed by exact excerpts",
+      "relations must use only accepted claim IDs and ontology relation types",
+      "the final map should expose cruxes, scope limits, and source-role boundaries",
+      "near-duplicate claims should be merged or given distinct roles"
+    ]
+  }
+}
+
+Candidate map:
+{
+  "title": "LHC Black Hole Risk Staged Map",
+  "decision_question": "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?",
+  "status": "human-review-needed",
+  "prompt_procedure": "source_mapping_prompt_v2_json",
+  "pipeline": "staged_chunked_mapper_v1",
+  "epistemic_config": {
+    "profile_id": "general_decision_support",
+    "source": "default_profile"
+  },
+  "evidence_mode": "source_grounded",
+  "sources": [
+    "lsag_2008_safety_review",
+    "spc_2008_lsag_review",
+    "giddings_mangano_2008_stable_black_holes",
+    "plaga_2008_metastable_black_holes",
+    "giddings_mangano_2008_comments_plaga"
+  ],
+  "claims": [
+    {
+      "claim_id": "lhc_c001",
+      "claim": "The author proposes three measures to mitigate risk during the LHC start-up phase: proceeding in small energy steps, analyzing a larger fraction of events, and implementing safety-influenced triggers.",
+      "source_id": "plaga_2008_metastable_black_holes",
+      "source_span": "lines 537-537",
+      "excerpt": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+      "source_quote": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+      "source_alignment": {
+        "status": "exact_match",
+        "method": "exact_match",
+        "source_quote": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+        "matched_text": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+        "proposed_span_id": "plaga_2008_metastable_black_holes_s0537",
+        "resolved_span_id": "plaga_2008_metastable_black_holes_s0537",
+        "coverage": 1.0,
+        "density": 1.0
+      },
+      "entailed_by_excerpt": "yes",
+      "role": "source_claim",
+      "question_relevance": "direct",
+      "question_fit": {
+        "schema_id": "claim_question_fit_from_extraction_v1",
+        "status": "match",
+        "source": "model_question_relevance_with_deterministic_scope_flags",
+        "scope_mismatch_flags": []
+      },
+      "relevance_rationale": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+      "scope_flags": [
+        "none"
+      ],
+      "decision_importance": {
+        "schema_id": "claim_decision_importance_v1",
+        "model_level": "medium",
+        "calibrated_level": "high",
+        "decision_function": "answer_bearing",
+        "default_use": "supporting_map",
+        "rationale": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+        "calibration_reasons": [
+          "direct_question_relevance",
+          "decision_function:answer_bearing",
+          "evidence_signal",
+          "quantity_signal"
+        ]
+      },
+      "decision_importance_level": "high",
+      "decision_function": "answer_bearing",
+      "default_use": "supporting_map",
+      "importance_rationale": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+      "source_acronym_expansions": {},
+      "quantity_values": [],
+      "claim_quantities": [],
+      "whole_doc_source_card": {
+        "source_bottom_line": "The author argues that a third scenario (Scenario 3) for microscopic black holes (mBHs) allows for metastable, long-lived objects that could accrete matter at the Eddington limit and emit intense Hawking radiation, posing a potential catastrophic risk from collider production that is not ruled out by current astrophysical arguments.",
+        "natural_bottom_line": "Proposed mitigations include small energy increments, higher event analysis rates, and safety-focused triggers.",
+        "must_preserve_terms": [
+          "Small steps",
+          "Fraction of events",
+          "Trigger/Operational procedures",
+          "LHC start-up phase"
+        ],
+        "claim_context": {
+          "population": "LHC operations",
+          "exposure_or_option": "Risk mitigation measures",
+          "outcome_or_endpoint": "Reduced risk probability",
+          "evidence_design": "Policy/Operational proposal",
+          "stated_dose_or_threshold": "",
+          "stated_scope": [
+            "LHC start-up phase",
+            "Mitigation measures"
+          ],
+          "stated_limitations": [
+            "Would not exclude but reduce any remaining risk"
+          ],
+          "applicability_limits": []
+        },
+        "quantities": [],
+        "claim_quantities": [],
+        "scope_conditions": [
+          "LHC start-up",
+          "Mitigation measures"
+        ],
+        "supporting_quotes": [
+          {
+            "quote": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+            "line_hint": "537-539"
+          },
+          {
+            "quote": "3. Safety considerations influence the trigger and operational procedures.",
+            "line_hint": "541-542"
+          }
+        ]
+      },
+      "deterministic_relevance_validation": {
+        "status": "warning",
+        "reason": "question_outcome_mismatch",
+        "blocking": false,
+        "method": "deterministic_question_fit_check_v1"
+      },
+      "validation_warnings": [
+        "question_outcome_mismatch",
+        "deterministic_relevance:question_outcome_mismatch",
+        "model_direct_with_deterministic_warning",
+        "model_high_importance_with_deterministic_warning"
+      ],
+      "label_audit": {
+        "schema_id": "claim_label_audit_v1",
+        "method": "deterministic_label_routing_v1",
+        "core_decision_priority": 40,
+        "synthesis_bucket": "appendix",
+        "routing_role": "background",
+        "routing_importance_level": "medium",
+        "routing_default_use": "appendix",
+        "warnings": [
+          "deterministic_relevance:question_outcome_mismatch",
+          "model_direct_with_deterministic_warning",
+          "model_high_importance_with_deterministic_warning"
+        ],
+        "model_labels": {
+          "role": "source_claim",
+          "question_relevance": "direct",
+          "decision_importance_level": "high",
+          "decision_function": "answer_bearing",
+          "default_use": "supporting_map"
+        },
+        "deterministic_relevance_reason": "question_outcome_mismatch"
+      },
+      "extraction_method": "whole_doc_source_card",
+      "relation_triage_bucket": "core",
+      "relation_building_eligible": true,
+      "included_in_final_map": true,
+      "relation_triage_reasons": [
+        "question_mismatch:question_outcome_mismatch",
+        "direct_relevance",
+        "high_importance",
+        "supporting_label",
+        "appendix_label"
+      ],
+      "map_relation_role": "not_relation_eligible"
+    }
+  ],
+  "relations": [],
+  "crux_candidates": [],
+  "similar_but_not_identical": [],
+  "evidence_check": [
+    [
+      "Does lhc_c001 quote exact source text?",
+      "Survives",
+      "plaga_2008_metastable_black_holes lines 537-537: 2. No operation in which no or only a very tiny fraction of events are analysed."
+    ]
+  ]
+}

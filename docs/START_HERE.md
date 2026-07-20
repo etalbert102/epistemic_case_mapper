@@ -53,6 +53,9 @@ For the complete argument, read
   source spans without curated-map or erosion-audit context.
 - The agent-authored multi-model audit, explicitly awaiting human review.
 - Generic manifest, worked-region, source, export, UI, and reference validators.
+- A [paired live Gemma MLX run](../examples/live_model_runs/README.md) preserves
+  one valid-with-review eggs candidate and one rejected LHC candidate, including
+  prompts, raw outputs, repair trails, and quality diagnostics.
 - The deterministic investigator challenge for object addressability,
   frozen-snapshot restoration, and prewritten update locality.
 
@@ -79,7 +82,7 @@ For the complete argument, read
 | Epistemic uplift | Load-bearing dependencies and evidence-role boundaries become directly inspectable. | No measured improvement over top-range deep research in reviewer accuracy or speed. |
 | Generalizability | One schema operates across two grounded cases and one narrow disagreement stress test. | No unseen-case or independent second-operator result. |
 | Compounding | Stable IDs, JSON, review packets, task queues, and update ledgers support local extension. | Multi-reviewer merge and conflict resolution are not implemented. |
-| Scalability | Generic stages, model backends, and validators can absorb more sources and model passes. | The strongest maps remain curated; hands-free quality is not demonstrated. |
+| Scalability | Generic stages, model backends, and validators can absorb more sources and model passes; a paired live Gemma MLX packet shows both a reviewable candidate and a rejected run. | The strongest maps remain curated; hands-free quality is not demonstrated. |
 | Transparency | Prompts, manifests, source spans, validation rules, and limitations are retained. | Some historical model invocation records are incomplete. |
 | Adversarial robustness | Multiple model families, explicit rejected findings, critique/response structure, and fail-closed gates expose failures. | No external motivated audit has challenged source selection or relation labels. |
 | Insight | The package treats persistence and reviewability as separate from final prose quality. | Judges may reasonably view this as argument mapping plus provenance unless the handoff mechanism proves useful. |

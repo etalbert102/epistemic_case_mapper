@@ -1,0 +1,1540 @@
+{
+  "claims": [
+    {
+      "claim": "Moderate egg consumption (up to one egg/day) is not associated with increased risk of cardiovascular disease (CVD), including coronary heart disease (CHD) and stroke, in European populations.",
+      "claim_quantities": [
+        {
+          "line_hint": "30",
+          "local_interpretation": "Moderate consumption level",
+          "measures": "egg intake",
+          "quantity_role": "exposure_or_intervention_level",
+          "quantity_type": "unknown",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "up to one egg/day",
+          "value": "up to 1 egg/day"
+        }
+      ],
+      "decision_importance": "critical",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "This is the primary finding regarding the safety of moderate egg consumption for cardiovascular health.",
+      "quantity_values": [
+        "up to 1 egg/day"
+      ],
+      "question_relevance": "direct",
+      "relevance_rationale": "This is the primary finding regarding the safety of moderate egg consumption for cardiovascular health.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {
+        "CHD": "coronary heart disease",
+        "CVD": "Cardiovascular diseases"
+      },
+      "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD.",
+      "span_id": "nnr_2023_eggs_scoping_review_s0500",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Systematic reviews and meta-analyses of observational studies",
+          "exposure_or_option": "Moderate egg consumption (up to one egg/day)",
+          "outcome_or_endpoint": "Cardiovascular disease (CVD), CHD, stroke",
+          "population": "European populations",
+          "stated_dose_or_threshold": "Up to 1 egg/day",
+          "stated_limitations": [
+            "Limited evidence",
+            "Potential for residual confounding in observational studies"
+          ],
+          "stated_scope": [
+            "European studies"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "30",
+            "local_interpretation": "Moderate consumption level",
+            "measures": "egg intake",
+            "quantity_role": "exposure_or_intervention_level",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to one egg/day",
+            "value": "up to 1 egg/day"
+          }
+        ],
+        "must_preserve_terms": [
+          "one egg/day",
+          "European populations",
+          "CVD",
+          "not associated with increased risk"
+        ],
+        "natural_bottom_line": "Eating up to one egg a day does not appear to increase CVD risk in Europeans.",
+        "quantities": [
+          "up to 1 egg/day"
+        ],
+        "scope_conditions": [
+          "European populations",
+          "moderate intake"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "500-501",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "High egg intake (>1 egg/day) is associated with a higher risk of cardiovascular disease and heart failure, primarily in US-based studies.",
+      "claim_quantities": [
+        {
+          "line_hint": "157",
+          "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+          "measures": "Relative Risk",
+          "quantity_role": "effect_estimate",
+          "quantity_type": "percentage",
+          "retention_hint": "use_if_space",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14)",
+          "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+        }
+      ],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Distinguishes the risks of high consumption versus moderate consumption.",
+      "quantity_values": [
+        "RR = 1.08 (95% CI 1.02\u20131.14)"
+      ],
+      "question_relevance": "direct",
+      "relevance_rationale": "Distinguishes the risks of high consumption versus moderate consumption.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+      "span_id": "nnr_2023_eggs_scoping_review_s0157",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Meta-analysis of observational studies",
+          "exposure_or_option": "High egg intake (>1 egg/day)",
+          "outcome_or_endpoint": "Cardiovascular disease (CVD), heart failure",
+          "population": "USA populations",
+          "stated_dose_or_threshold": ">1 egg/day",
+          "stated_limitations": [
+            "Residual confounding",
+            "Limited generalizability"
+          ],
+          "stated_scope": [
+            "US studies"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "157",
+            "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14)",
+            "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+          }
+        ],
+        "must_preserve_terms": [
+          ">1 egg/day",
+          "US studies",
+          "heart failure",
+          "CVD"
+        ],
+        "natural_bottom_line": "Higher egg intake (>1/day) may be associated with higher CVD and heart failure risk, but these findings are mostly from US studies.",
+        "quantities": [
+          "RR = 1.08 (95% CI 1.02\u20131.14)"
+        ],
+        "scope_conditions": [
+          "US population",
+          "high intake"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "157-158",
+            "quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06)."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Egg consumption is not associated with an increased risk of type 2 diabetes (T2D) in European populations.",
+      "claim_quantities": [],
+      "decision_importance": "medium",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Addresses the metabolic impact of egg consumption.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Addresses the metabolic impact of egg consumption.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that egg intake is not associated with increased risk of T2D in European populations.",
+      "span_id": "nnr_2023_eggs_scoping_review_s0509",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Systematic review and meta-analysis of prospective studies",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Type 2 diabetes (T2D)",
+          "population": "European populations",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Potential residual confounding from correlated food intakes in US studies"
+          ],
+          "stated_scope": [
+            "Europe"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "European populations",
+          "T2D",
+          "no association"
+        ],
+        "natural_bottom_line": "Egg intake is not associated with increased T2D risk in European populations.",
+        "quantities": [],
+        "scope_conditions": [
+          "European population",
+          "T2D"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "509-510",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that egg intake is not associated with increased risk of T2D in European populations."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "High egg intake may increase serum LDL cholesterol concentrations, particularly in individuals who are 'hyperresponders' to dietary cholesterol.",
+      "claim_quantities": [
+        {
+          "line_hint": "540",
+          "local_interpretation": "Increase in LDL concentration with >1 egg/day intake",
+          "measures": "Mean difference in LDL cholesterol",
+          "quantity_role": "effect_estimate",
+          "quantity_type": "unknown",
+          "retention_hint": "use_if_space",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "LDL cholesterol (40 studies in healthy subjects, mean difference 0.20 mmol/L)",
+          "value": "0.20 mmol/L"
+        }
+      ],
+      "decision_importance": "medium",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Identifies a potential physiological mechanism/risk factor for CVD.",
+      "quantity_values": [
+        "0.20 mmol/L"
+      ],
+      "question_relevance": "indirect",
+      "relevance_rationale": "Identifies a potential physiological mechanism/risk factor for CVD.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {
+        "LDL": "low-density lipoprotein"
+      },
+      "source_quote": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol.",
+      "span_id": "nnr_2023_eggs_scoping_review_s0541",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Randomized controlled trials (RCTs)",
+          "exposure_or_option": "High egg intake",
+          "outcome_or_endpoint": "Serum LDL cholesterol concentrations",
+          "population": "Hyperresponders (e.g., apolipoprotein-E4/4 genotype)",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Limited research on the impact of apolipoprotein-E genotype",
+            "No meta-analyses on this specific topic yet"
+          ],
+          "stated_scope": [
+            "Hyperresponders"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "540",
+            "local_interpretation": "Increase in LDL concentration with >1 egg/day intake",
+            "measures": "Mean difference in LDL cholesterol",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "LDL cholesterol (40 studies in healthy subjects, mean difference 0.20 mmol/L)",
+            "value": "0.20 mmol/L"
+          }
+        ],
+        "must_preserve_terms": [
+          "LDL cholesterol",
+          "hyperresponders",
+          "apolipoprotein-E4 genotype"
+        ],
+        "natural_bottom_line": "High egg intake may raise LDL cholesterol, especially in people who are genetically more sensitive to dietary cholesterol.",
+        "quantities": [
+          "0.20 mmol/L"
+        ],
+        "scope_conditions": [
+          "hyperresponders",
+          "LDL cholesterol"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "541",
+            "quote": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Evidence for a higher risk of certain cancers associated with egg consumption is limited and primarily based on retrospective case-control studies.",
+      "claim_quantities": [],
+      "decision_importance": "low",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Provides context on the limitations of current cancer risk data.",
+      "quantity_values": [],
+      "question_relevance": "indirect",
+      "relevance_rationale": "Provides context on the limitations of current cancer risk data.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "the evidence for a higher risk of certain cancers comes mainly from retrospective case\u2013control studies that have a substantial risk of selection and recall bias",
+      "span_id": "nnr_2023_eggs_scoping_review_s0551",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Case-control studies",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Cancer risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Selection and recall bias",
+            "Residual confounding from other risk factors (obesity, smoking)"
+          ],
+          "stated_scope": [
+            "Cancer"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "retrospective case-control studies",
+          "selection and recall bias",
+          "limited support"
+        ],
+        "natural_bottom_line": "Evidence for egg-related cancer risk is weak and often limited by study design (case-control).",
+        "quantities": [],
+        "scope_conditions": [
+          "cancer",
+          "case-control studies"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "551",
+            "quote": "the evidence for a higher risk of certain cancers comes mainly from retrospective case\u2013control studies that have a substantial risk of selection and recall bias"
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Moderate egg intake (up to 1 egg/day) is associated with a lower risk of stroke in some observational studies.",
+      "claim_quantities": [
+        {
+          "line_hint": "501",
+          "local_interpretation": "Overall stroke risk for highest vs lowest intake category",
+          "measures": "Relative Risk",
+          "quantity_role": "effect_estimate",
+          "quantity_type": "percentage",
+          "retention_hint": "use_if_space",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "RR = 0.92 (95% CI 0.84\u20131.01)",
+          "value": "RR = 0.92 (95% CI 0.84\u20131.01)"
+        }
+      ],
+      "decision_importance": "medium",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Identifies a potential protective association for stroke.",
+      "quantity_values": [
+        "RR = 0.92 (95% CI 0.84\u20131.01)"
+      ],
+      "question_relevance": "direct",
+      "relevance_rationale": "Identifies a potential protective association for stroke.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, moderate egg intake is associated with lower risk of stroke.",
+      "span_id": "nnr_2023_eggs_scoping_review_s0503",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Systematic review and dose-response meta-analysis of prospective studies",
+          "exposure_or_option": "Moderate egg intake (up to 1 egg/day)",
+          "outcome_or_endpoint": "Stroke risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "50\u2013200 g/week (1\u20134 eggs/week)",
+          "stated_limitations": [
+            "Geographical differences in risk estimates"
+          ],
+          "stated_scope": [
+            "Stroke"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "501",
+            "local_interpretation": "Overall stroke risk for highest vs lowest intake category",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "RR = 0.92 (95% CI 0.84\u20131.01)",
+            "value": "RR = 0.92 (95% CI 0.84\u20131.01)"
+          }
+        ],
+        "must_preserve_terms": [
+          "lower risk of stroke",
+          "moderate egg intake",
+          "non-linear association"
+        ],
+        "natural_bottom_line": "Moderate egg intake may be associated with lower stroke risk.",
+        "quantities": [
+          "RR = 0.92 (95% CI 0.84\u20131.01)"
+        ],
+        "scope_conditions": [
+          "stroke",
+          "moderate intake"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "503",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, moderate egg intake is associated with lower risk of stroke."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Egg consumption is a significant source of choline (approx. 140 mg per egg), which accounts for about 35% of the adequate intake level for adults.",
+      "claim_quantities": [
+        {
+          "line_hint": "542",
+          "local_interpretation": "Amount of choline in one egg",
+          "measures": "Choline content per egg",
+          "quantity_role": "source_reported_quantity",
+          "quantity_type": "unknown",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "about 140 mg of choline in one egg",
+          "value": "140 mg"
+        },
+        {
+          "line_hint": "543",
+          "local_interpretation": "Portion of daily requirement met by one egg",
+          "measures": "Percentage of adequate intake",
+          "quantity_role": "population_descriptor",
+          "quantity_type": "percentage",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "accounts for about 35% of the adequate intake level",
+          "value": "35%"
+        }
+      ],
+      "decision_importance": "low",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Provides nutritional context for egg consumption as a source of essential nutrients.",
+      "quantity_values": [
+        "140 mg",
+        "35%"
+      ],
+      "question_relevance": "background",
+      "relevance_rationale": "Provides nutritional context for egg consumption as a source of essential nutrients.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65).",
+      "span_id": "nnr_2023_eggs_scoping_review_s0542",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Nutritional reference values",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Choline intake",
+          "population": "Adults",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "Choline"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "542",
+            "local_interpretation": "Amount of choline in one egg",
+            "measures": "Choline content per egg",
+            "quantity_role": "source_reported_quantity",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "about 140 mg of choline in one egg",
+            "value": "140 mg"
+          },
+          {
+            "line_hint": "543",
+            "local_interpretation": "Portion of daily requirement met by one egg",
+            "measures": "Percentage of adequate intake",
+            "quantity_role": "population_descriptor",
+            "quantity_type": "percentage",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "accounts for about 35% of the adequate intake level",
+            "value": "35%"
+          }
+        ],
+        "must_preserve_terms": [
+          "140 mg of choline",
+          "35% of the adequate intake level",
+          "precursor for acetylcholine"
+        ],
+        "natural_bottom_line": "One egg provides about 35% of the daily required choline for adults.",
+        "quantities": [
+          "140 mg",
+          "35%"
+        ],
+        "scope_conditions": [
+          "choline",
+          "nutritional content"
+        ],
+        "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+        "supporting_quotes": [
+          {
+            "line_hint": "542-543",
+            "quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65)."
+          }
+        ]
+      }
+    }
+  ],
+  "extractor": "whole-doc",
+  "prompt_version": "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json",
+  "source_card": {
+    "canonical_claims": [
+      {
+        "claim": "Moderate egg consumption (up to one egg/day) is not associated with increased risk of cardiovascular disease (CVD), including coronary heart disease (CHD) and stroke, in European populations.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Systematic reviews and meta-analyses of observational studies",
+          "exposure_or_option": "Moderate egg consumption (up to one egg/day)",
+          "outcome_or_endpoint": "Cardiovascular disease (CVD), CHD, stroke",
+          "population": "European populations",
+          "stated_dose_or_threshold": "Up to 1 egg/day",
+          "stated_limitations": [
+            "Limited evidence",
+            "Potential for residual confounding in observational studies"
+          ],
+          "stated_scope": [
+            "European studies"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "30",
+            "local_interpretation": "Moderate consumption level",
+            "measures": "egg intake",
+            "quantity_role": "exposure_or_intervention_level",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to one egg/day",
+            "value": "up to 1 egg/day"
+          }
+        ],
+        "decision_importance": "critical",
+        "must_preserve_terms": [
+          "one egg/day",
+          "European populations",
+          "CVD",
+          "not associated with increased risk"
+        ],
+        "natural_bottom_line": "Eating up to one egg a day does not appear to increase CVD risk in Europeans.",
+        "quantities": [
+          "up to 1 egg/day"
+        ],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "European populations",
+          "moderate intake"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "500-501",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD."
+          }
+        ],
+        "why_it_matters": "This is the primary finding regarding the safety of moderate egg consumption for cardiovascular health."
+      },
+      {
+        "claim": "High egg intake (>1 egg/day) is associated with a higher risk of cardiovascular disease and heart failure, primarily in US-based studies.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Meta-analysis of observational studies",
+          "exposure_or_option": "High egg intake (>1 egg/day)",
+          "outcome_or_endpoint": "Cardiovascular disease (CVD), heart failure",
+          "population": "USA populations",
+          "stated_dose_or_threshold": ">1 egg/day",
+          "stated_limitations": [
+            "Residual confounding",
+            "Limited generalizability"
+          ],
+          "stated_scope": [
+            "US studies"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "157",
+            "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14)",
+            "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+          }
+        ],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          ">1 egg/day",
+          "US studies",
+          "heart failure",
+          "CVD"
+        ],
+        "natural_bottom_line": "Higher egg intake (>1/day) may be associated with higher CVD and heart failure risk, but these findings are mostly from US studies.",
+        "quantities": [
+          "RR = 1.08 (95% CI 1.02\u20131.14)"
+        ],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "US population",
+          "high intake"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "157-158",
+            "quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06)."
+          }
+        ],
+        "why_it_matters": "Distinguishes the risks of high consumption versus moderate consumption."
+      },
+      {
+        "claim": "Egg consumption is not associated with an increased risk of type 2 diabetes (T2D) in European populations.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Systematic review and meta-analysis of prospective studies",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Type 2 diabetes (T2D)",
+          "population": "European populations",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Potential residual confounding from correlated food intakes in US studies"
+          ],
+          "stated_scope": [
+            "Europe"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "medium",
+        "must_preserve_terms": [
+          "European populations",
+          "T2D",
+          "no association"
+        ],
+        "natural_bottom_line": "Egg intake is not associated with increased T2D risk in European populations.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "European population",
+          "T2D"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "509-510",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that egg intake is not associated with increased risk of T2D in European populations."
+          }
+        ],
+        "why_it_matters": "Addresses the metabolic impact of egg consumption."
+      },
+      {
+        "claim": "High egg intake may increase serum LDL cholesterol concentrations, particularly in individuals who are 'hyperresponders' to dietary cholesterol.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Randomized controlled trials (RCTs)",
+          "exposure_or_option": "High egg intake",
+          "outcome_or_endpoint": "Serum LDL cholesterol concentrations",
+          "population": "Hyperresponders (e.g., apolipoprotein-E4/4 genotype)",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Limited research on the impact of apolipoprotein-E genotype",
+            "No meta-analyses on this specific topic yet"
+          ],
+          "stated_scope": [
+            "Hyperresponders"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "540",
+            "local_interpretation": "Increase in LDL concentration with >1 egg/day intake",
+            "measures": "Mean difference in LDL cholesterol",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "LDL cholesterol (40 studies in healthy subjects, mean difference 0.20 mmol/L)",
+            "value": "0.20 mmol/L"
+          }
+        ],
+        "decision_importance": "medium",
+        "must_preserve_terms": [
+          "LDL cholesterol",
+          "hyperresponders",
+          "apolipoprotein-E4 genotype"
+        ],
+        "natural_bottom_line": "High egg intake may raise LDL cholesterol, especially in people who are genetically more sensitive to dietary cholesterol.",
+        "quantities": [
+          "0.20 mmol/L"
+        ],
+        "question_relevance": "indirect",
+        "scope_conditions": [
+          "hyperresponders",
+          "LDL cholesterol"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "541",
+            "quote": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol."
+          }
+        ],
+        "why_it_matters": "Identifies a potential physiological mechanism/risk factor for CVD."
+      },
+      {
+        "claim": "Evidence for a higher risk of certain cancers associated with egg consumption is limited and primarily based on retrospective case-control studies.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Case-control studies",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Cancer risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Selection and recall bias",
+            "Residual confounding from other risk factors (obesity, smoking)"
+          ],
+          "stated_scope": [
+            "Cancer"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "low",
+        "must_preserve_terms": [
+          "retrospective case-control studies",
+          "selection and recall bias",
+          "limited support"
+        ],
+        "natural_bottom_line": "Evidence for egg-related cancer risk is weak and often limited by study design (case-control).",
+        "quantities": [],
+        "question_relevance": "indirect",
+        "scope_conditions": [
+          "cancer",
+          "case-control studies"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "551",
+            "quote": "the evidence for a higher risk of certain cancers comes mainly from retrospective case\u2013control studies that have a substantial risk of selection and recall bias"
+          }
+        ],
+        "why_it_matters": "Provides context on the limitations of current cancer risk data."
+      },
+      {
+        "claim": "Moderate egg intake (up to 1 egg/day) is associated with a lower risk of stroke in some observational studies.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Systematic review and dose-response meta-analysis of prospective studies",
+          "exposure_or_option": "Moderate egg intake (up to 1 egg/day)",
+          "outcome_or_endpoint": "Stroke risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "50\u2013200 g/week (1\u20134 eggs/week)",
+          "stated_limitations": [
+            "Geographical differences in risk estimates"
+          ],
+          "stated_scope": [
+            "Stroke"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "501",
+            "local_interpretation": "Overall stroke risk for highest vs lowest intake category",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "RR = 0.92 (95% CI 0.84\u20131.01)",
+            "value": "RR = 0.92 (95% CI 0.84\u20131.01)"
+          }
+        ],
+        "decision_importance": "medium",
+        "must_preserve_terms": [
+          "lower risk of stroke",
+          "moderate egg intake",
+          "non-linear association"
+        ],
+        "natural_bottom_line": "Moderate egg intake may be associated with lower stroke risk.",
+        "quantities": [
+          "RR = 0.92 (95% CI 0.84\u20131.01)"
+        ],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "stroke",
+          "moderate intake"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "503",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, moderate egg intake is associated with lower risk of stroke."
+          }
+        ],
+        "why_it_matters": "Identifies a potential protective association for stroke."
+      },
+      {
+        "claim": "Egg consumption is a significant source of choline (approx. 140 mg per egg), which accounts for about 35% of the adequate intake level for adults.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Nutritional reference values",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Choline intake",
+          "population": "Adults",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "Choline"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "542",
+            "local_interpretation": "Amount of choline in one egg",
+            "measures": "Choline content per egg",
+            "quantity_role": "source_reported_quantity",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "about 140 mg of choline in one egg",
+            "value": "140 mg"
+          },
+          {
+            "line_hint": "543",
+            "local_interpretation": "Portion of daily requirement met by one egg",
+            "measures": "Percentage of adequate intake",
+            "quantity_role": "population_descriptor",
+            "quantity_type": "percentage",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "accounts for about 35% of the adequate intake level",
+            "value": "35%"
+          }
+        ],
+        "decision_importance": "low",
+        "must_preserve_terms": [
+          "140 mg of choline",
+          "35% of the adequate intake level",
+          "precursor for acetylcholine"
+        ],
+        "natural_bottom_line": "One egg provides about 35% of the daily required choline for adults.",
+        "quantities": [
+          "140 mg",
+          "35%"
+        ],
+        "question_relevance": "background",
+        "scope_conditions": [
+          "choline",
+          "nutritional content"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "542-543",
+            "quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65)."
+          }
+        ],
+        "why_it_matters": "Provides nutritional context for egg consumption as a source of essential nutrients."
+      }
+    ],
+    "excluded_as_not_decision_relevant": [
+      "Specific cancer types (e.g., non-Hodgkin lymphoma, brain cancer) where evidence is critically low or inconsistent.",
+      "Metabolic syndrome results (Limited - no conclusion)."
+    ],
+    "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+    "source_id": "nnr_2023_eggs_scoping_review"
+  },
+  "source_evidence_unit_quality_report": {
+    "exact_quote_count": 7,
+    "issues": [],
+    "quantity_tuple_count": 6,
+    "quote_count": 7,
+    "schema_id": "source_evidence_unit_quality_report_v1",
+    "source_id": "nnr_2023_eggs_scoping_review",
+    "status": "ready",
+    "unit_count": 7,
+    "warning_counts": {
+      "weak_quote_claim_overlap": 1
+    }
+  },
+  "source_evidence_units": {
+    "schema_id": "source_evidence_units_v1",
+    "source_id": "nnr_2023_eggs_scoping_review",
+    "units": [
+      {
+        "caveat": "['Limited evidence', 'Potential for residual confounding in observational studies']",
+        "claim_context": {
+          "evidence_design": "Systematic reviews and meta-analyses of observational studies",
+          "exposure_or_option": "Moderate egg consumption (up to one egg/day)",
+          "outcome_or_endpoint": "Cardiovascular disease (CVD), CHD, stroke",
+          "population": "European populations",
+          "stated_dose_or_threshold": "Up to 1 egg/day",
+          "stated_limitations": "['Limited evidence', 'Potential for residual confounding in observational studies']",
+          "stated_scope": "['European studies']"
+        },
+        "comparator": "",
+        "decision_importance": "critical",
+        "endpoint": "Cardiovascular disease (CVD), CHD, stroke",
+        "estimate": "Up to 1 egg/day",
+        "evidence_type": "Systematic reviews and meta-analyses of observational studies",
+        "exposure_or_intervention": "Moderate egg consumption (up to one egg/day)",
+        "method": "Systematic reviews and meta-analyses of observational studies",
+        "must_preserve_terms": [
+          "one egg/day",
+          "European populations",
+          "CVD",
+          "not associated with increased risk"
+        ],
+        "natural_bottom_line": "Eating up to one egg a day does not appear to increase CVD risk in Europeans.",
+        "population": "European populations",
+        "proposition": "Moderate egg consumption (up to one egg/day) is not associated with increased risk of cardiovascular disease (CVD), including coronary heart disease (CHD) and stroke, in European populations.",
+        "quantities": [
+          {
+            "line_hint": "30",
+            "local_interpretation": "Moderate consumption level",
+            "measures": "egg intake",
+            "quantity_role": "exposure_or_intervention_level",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to one egg/day",
+            "value": "up to 1 egg/day"
+          }
+        ],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "500-501",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "European populations",
+          "moderate intake"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD.",
+        "source_span": "500-501",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu001",
+        "warnings": [],
+        "why_it_matters": "This is the primary finding regarding the safety of moderate egg consumption for cardiovascular health."
+      },
+      {
+        "caveat": "['Residual confounding', 'Limited generalizability']",
+        "claim_context": {
+          "evidence_design": "Meta-analysis of observational studies",
+          "exposure_or_option": "High egg intake (>1 egg/day)",
+          "outcome_or_endpoint": "Cardiovascular disease (CVD), heart failure",
+          "population": "USA populations",
+          "stated_dose_or_threshold": ">1 egg/day",
+          "stated_limitations": "['Residual confounding', 'Limited generalizability']",
+          "stated_scope": "['US studies']"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "Cardiovascular disease (CVD), heart failure",
+        "estimate": ">1 egg/day",
+        "evidence_type": "Meta-analysis of observational studies",
+        "exposure_or_intervention": "High egg intake (>1 egg/day)",
+        "method": "Meta-analysis of observational studies",
+        "must_preserve_terms": [
+          ">1 egg/day",
+          "US studies",
+          "heart failure",
+          "CVD"
+        ],
+        "natural_bottom_line": "Higher egg intake (>1/day) may be associated with higher CVD and heart failure risk, but these findings are mostly from US studies.",
+        "population": "USA populations",
+        "proposition": "High egg intake (>1 egg/day) is associated with a higher risk of cardiovascular disease and heart failure, primarily in US-based studies.",
+        "quantities": [
+          {
+            "line_hint": "157",
+            "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14)",
+            "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+          }
+        ],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "157-158",
+            "quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "US population",
+          "high intake"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+        "source_span": "157-158",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu002",
+        "warnings": [
+          "weak_quote_claim_overlap"
+        ],
+        "why_it_matters": "Distinguishes the risks of high consumption versus moderate consumption."
+      },
+      {
+        "caveat": "['Potential residual confounding from correlated food intakes in US studies']",
+        "claim_context": {
+          "evidence_design": "Systematic review and meta-analysis of prospective studies",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Type 2 diabetes (T2D)",
+          "population": "European populations",
+          "stated_limitations": "['Potential residual confounding from correlated food intakes in US studies']",
+          "stated_scope": "['Europe']"
+        },
+        "comparator": "",
+        "decision_importance": "medium",
+        "endpoint": "Type 2 diabetes (T2D)",
+        "estimate": "",
+        "evidence_type": "Systematic review and meta-analysis of prospective studies",
+        "exposure_or_intervention": "Egg consumption",
+        "method": "Systematic review and meta-analysis of prospective studies",
+        "must_preserve_terms": [
+          "European populations",
+          "T2D",
+          "no association"
+        ],
+        "natural_bottom_line": "Egg intake is not associated with increased T2D risk in European populations.",
+        "population": "European populations",
+        "proposition": "Egg consumption is not associated with an increased risk of type 2 diabetes (T2D) in European populations.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "509-510",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that egg intake is not associated with increased risk of T2D in European populations.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "European population",
+          "T2D"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that egg intake is not associated with increased risk of T2D in European populations.",
+        "source_span": "509-510",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu003",
+        "warnings": [],
+        "why_it_matters": "Addresses the metabolic impact of egg consumption."
+      },
+      {
+        "caveat": "['Limited research on the impact of apolipoprotein-E genotype', 'No meta-analyses on this specific topic yet']",
+        "claim_context": {
+          "evidence_design": "Randomized controlled trials (RCTs)",
+          "exposure_or_option": "High egg intake",
+          "outcome_or_endpoint": "Serum LDL cholesterol concentrations",
+          "population": "Hyperresponders (e.g., apolipoprotein-E4/4 genotype)",
+          "stated_limitations": "['Limited research on the impact of apolipoprotein-E genotype', 'No meta-analyses on this specific topic yet']",
+          "stated_scope": "['Hyperresponders']"
+        },
+        "comparator": "",
+        "decision_importance": "medium",
+        "endpoint": "Serum LDL cholesterol concentrations",
+        "estimate": "0.20 mmol/L",
+        "evidence_type": "Randomized controlled trials (RCTs)",
+        "exposure_or_intervention": "High egg intake",
+        "method": "Randomized controlled trials (RCTs)",
+        "must_preserve_terms": [
+          "LDL cholesterol",
+          "hyperresponders",
+          "apolipoprotein-E4 genotype"
+        ],
+        "natural_bottom_line": "High egg intake may raise LDL cholesterol, especially in people who are genetically more sensitive to dietary cholesterol.",
+        "population": "Hyperresponders (e.g., apolipoprotein-E4/4 genotype)",
+        "proposition": "High egg intake may increase serum LDL cholesterol concentrations, particularly in individuals who are 'hyperresponders' to dietary cholesterol.",
+        "quantities": [
+          {
+            "line_hint": "540",
+            "local_interpretation": "Increase in LDL concentration with >1 egg/day intake",
+            "measures": "Mean difference in LDL cholesterol",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "LDL cholesterol (40 studies in healthy subjects, mean difference 0.20 mmol/L)",
+            "value": "0.20 mmol/L"
+          }
+        ],
+        "question_relevance": "indirect",
+        "quote_lineage": [
+          {
+            "line_hint": "541",
+            "quote": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "hyperresponders",
+          "LDL cholesterol"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol.",
+        "source_span": "541",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu004",
+        "warnings": [],
+        "why_it_matters": "Identifies a potential physiological mechanism/risk factor for CVD."
+      },
+      {
+        "caveat": "['Selection and recall bias', 'Residual confounding from other risk factors (obesity, smoking)']",
+        "claim_context": {
+          "evidence_design": "Case-control studies",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Cancer risk",
+          "population": "General population",
+          "stated_limitations": "['Selection and recall bias', 'Residual confounding from other risk factors (obesity, smoking)']",
+          "stated_scope": "['Cancer']"
+        },
+        "comparator": "",
+        "decision_importance": "low",
+        "endpoint": "Cancer risk",
+        "estimate": "",
+        "evidence_type": "Case-control studies",
+        "exposure_or_intervention": "Egg consumption",
+        "method": "Case-control studies",
+        "must_preserve_terms": [
+          "retrospective case-control studies",
+          "selection and recall bias",
+          "limited support"
+        ],
+        "natural_bottom_line": "Evidence for egg-related cancer risk is weak and often limited by study design (case-control).",
+        "population": "General population",
+        "proposition": "Evidence for a higher risk of certain cancers associated with egg consumption is limited and primarily based on retrospective case-control studies.",
+        "quantities": [],
+        "question_relevance": "indirect",
+        "quote_lineage": [
+          {
+            "line_hint": "551",
+            "quote": "the evidence for a higher risk of certain cancers comes mainly from retrospective case\u2013control studies that have a substantial risk of selection and recall bias",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "cancer",
+          "case-control studies"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "the evidence for a higher risk of certain cancers comes mainly from retrospective case\u2013control studies that have a substantial risk of selection and recall bias",
+        "source_span": "551",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu005",
+        "warnings": [],
+        "why_it_matters": "Provides context on the limitations of current cancer risk data."
+      },
+      {
+        "caveat": "['Geographical differences in risk estimates']",
+        "claim_context": {
+          "evidence_design": "Systematic review and dose-response meta-analysis of prospective studies",
+          "exposure_or_option": "Moderate egg intake (up to 1 egg/day)",
+          "outcome_or_endpoint": "Stroke risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "50\u2013200 g/week (1\u20134 eggs/week)",
+          "stated_limitations": "['Geographical differences in risk estimates']",
+          "stated_scope": "['Stroke']"
+        },
+        "comparator": "",
+        "decision_importance": "medium",
+        "endpoint": "Stroke risk",
+        "estimate": "50\u2013200 g/week (1\u20134 eggs/week)",
+        "evidence_type": "Systematic review and dose-response meta-analysis of prospective studies",
+        "exposure_or_intervention": "Moderate egg intake (up to 1 egg/day)",
+        "method": "Systematic review and dose-response meta-analysis of prospective studies",
+        "must_preserve_terms": [
+          "lower risk of stroke",
+          "moderate egg intake",
+          "non-linear association"
+        ],
+        "natural_bottom_line": "Moderate egg intake may be associated with lower stroke risk.",
+        "population": "General population",
+        "proposition": "Moderate egg intake (up to 1 egg/day) is associated with a lower risk of stroke in some observational studies.",
+        "quantities": [
+          {
+            "line_hint": "501",
+            "local_interpretation": "Overall stroke risk for highest vs lowest intake category",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "RR = 0.92 (95% CI 0.84\u20131.01)",
+            "value": "RR = 0.92 (95% CI 0.84\u20131.01)"
+          }
+        ],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "503",
+            "quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, moderate egg intake is associated with lower risk of stroke.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "stroke",
+          "moderate intake"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, moderate egg intake is associated with lower risk of stroke.",
+        "source_span": "503",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu006",
+        "warnings": [],
+        "why_it_matters": "Identifies a potential protective association for stroke."
+      },
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "Nutritional reference values",
+          "exposure_or_option": "Egg consumption",
+          "outcome_or_endpoint": "Choline intake",
+          "population": "Adults",
+          "stated_scope": "['Choline']"
+        },
+        "comparator": "",
+        "decision_importance": "low",
+        "endpoint": "Choline intake",
+        "estimate": "140 mg",
+        "evidence_type": "Nutritional reference values",
+        "exposure_or_intervention": "Egg consumption",
+        "method": "Nutritional reference values",
+        "must_preserve_terms": [
+          "140 mg of choline",
+          "35% of the adequate intake level",
+          "precursor for acetylcholine"
+        ],
+        "natural_bottom_line": "One egg provides about 35% of the daily required choline for adults.",
+        "population": "Adults",
+        "proposition": "Egg consumption is a significant source of choline (approx. 140 mg per egg), which accounts for about 35% of the adequate intake level for adults.",
+        "quantities": [
+          {
+            "line_hint": "542",
+            "local_interpretation": "Amount of choline in one egg",
+            "measures": "Choline content per egg",
+            "quantity_role": "source_reported_quantity",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "about 140 mg of choline in one egg",
+            "value": "140 mg"
+          },
+          {
+            "line_hint": "543",
+            "local_interpretation": "Portion of daily requirement met by one egg",
+            "measures": "Percentage of adequate intake",
+            "quantity_role": "population_descriptor",
+            "quantity_type": "percentage",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "accounts for about 35% of the adequate intake level",
+            "value": "35%"
+          }
+        ],
+        "question_relevance": "background",
+        "quote_lineage": [
+          {
+            "line_hint": "542-543",
+            "quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65).",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "choline",
+          "nutritional content"
+        ],
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65).",
+        "source_span": "542-543",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu007",
+        "warnings": [],
+        "why_it_matters": "Provides nutritional context for egg consumption as a source of essential nutrients."
+      }
+    ]
+  },
+  "source_quantity_tuples": {
+    "canonical_record_type": "source_result_quantity_tuple_v1",
+    "schema_id": "source_quantity_tuples_v1",
+    "source_id": "nnr_2023_eggs_scoping_review",
+    "tuples": [
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "nnr_2023_eggs_scoping_review_eu001",
+        "comparator": "",
+        "design": "Systematic reviews and meta-analyses of observational studies",
+        "endpoint": "Cardiovascular disease (CVD), CHD, stroke",
+        "estimate": "up to 1 egg/day",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "Moderate egg consumption (up to one egg/day)",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Moderate consumption level",
+        "measures": "egg intake",
+        "population": "European populations",
+        "quantity_role": "exposure_or_intervention_level",
+        "quantity_type": "unknown",
+        "result_tuple_id": "nnr_2023_eggs_scoping_review_eu001_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD.",
+        "source_span": "500-501",
+        "time_horizon": "",
+        "tuple_id": "nnr_2023_eggs_scoping_review_eu001_q001",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu001",
+        "units": "",
+        "value": "up to 1 egg/day"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "nnr_2023_eggs_scoping_review_eu002",
+        "comparator": "",
+        "design": "Meta-analysis of observational studies",
+        "endpoint": "Cardiovascular disease (CVD), heart failure",
+        "estimate": "",
+        "estimate_type": "interval",
+        "exposure_or_intervention": "High egg intake (>1 egg/day)",
+        "interval_high": "-1.14",
+        "interval_low": "1.02",
+        "interval_type": "confidence_interval",
+        "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+        "measures": "Relative Risk",
+        "population": "USA populations",
+        "quantity_role": "effect_estimate",
+        "quantity_type": "percentage",
+        "result_tuple_id": "nnr_2023_eggs_scoping_review_eu002_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+        "source_span": "157-158",
+        "time_horizon": "",
+        "tuple_id": "nnr_2023_eggs_scoping_review_eu002_q001",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu002",
+        "units": "",
+        "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "nnr_2023_eggs_scoping_review_eu004",
+        "comparator": "",
+        "design": "Randomized controlled trials (RCTs)",
+        "endpoint": "Serum LDL cholesterol concentrations",
+        "estimate": "0.20 mmol/L",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "High egg intake",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Increase in LDL concentration with >1 egg/day intake",
+        "measures": "Mean difference in LDL cholesterol",
+        "population": "Hyperresponders (e.g., apolipoprotein-E4/4 genotype)",
+        "quantity_role": "effect_estimate",
+        "quantity_type": "unknown",
+        "result_tuple_id": "nnr_2023_eggs_scoping_review_eu004_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol.",
+        "source_span": "541",
+        "time_horizon": "",
+        "tuple_id": "nnr_2023_eggs_scoping_review_eu004_q001",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu004",
+        "units": "",
+        "value": "0.20 mmol/L"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "nnr_2023_eggs_scoping_review_eu006",
+        "comparator": "",
+        "design": "Systematic review and dose-response meta-analysis of prospective studies",
+        "endpoint": "Stroke risk",
+        "estimate": "",
+        "estimate_type": "interval",
+        "exposure_or_intervention": "Moderate egg intake (up to 1 egg/day)",
+        "interval_high": "-1.01",
+        "interval_low": "0.84",
+        "interval_type": "confidence_interval",
+        "local_interpretation": "Overall stroke risk for highest vs lowest intake category",
+        "measures": "Relative Risk",
+        "population": "General population",
+        "quantity_role": "effect_estimate",
+        "quantity_type": "percentage",
+        "result_tuple_id": "nnr_2023_eggs_scoping_review_eu006_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that when compared to low or no egg intake, moderate egg intake is associated with lower risk of stroke.",
+        "source_span": "503",
+        "time_horizon": "",
+        "tuple_id": "nnr_2023_eggs_scoping_review_eu006_q001",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu006",
+        "units": "",
+        "value": "RR = 0.92 (95% CI 0.84\u20131.01)"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "nnr_2023_eggs_scoping_review_eu007",
+        "comparator": "",
+        "design": "Nutritional reference values",
+        "endpoint": "Choline intake",
+        "estimate": "140 mg",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "Egg consumption",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Amount of choline in one egg",
+        "measures": "Choline content per egg",
+        "population": "Adults",
+        "quantity_role": "source_reported_quantity",
+        "quantity_type": "unknown",
+        "result_tuple_id": "nnr_2023_eggs_scoping_review_eu007_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65).",
+        "source_span": "542-543",
+        "time_horizon": "",
+        "tuple_id": "nnr_2023_eggs_scoping_review_eu007_q001",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu007",
+        "units": "",
+        "value": "140 mg"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "nnr_2023_eggs_scoping_review_eu007",
+        "comparator": "",
+        "design": "Nutritional reference values",
+        "endpoint": "Choline intake",
+        "estimate": "35%",
+        "estimate_type": "percentage",
+        "exposure_or_intervention": "Egg consumption",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Portion of daily requirement met by one egg",
+        "measures": "Percentage of adequate intake",
+        "population": "Adults",
+        "quantity_role": "population_descriptor",
+        "quantity_type": "percentage",
+        "result_tuple_id": "nnr_2023_eggs_scoping_review_eu007_q002",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65).",
+        "source_span": "542-543",
+        "time_horizon": "",
+        "tuple_id": "nnr_2023_eggs_scoping_review_eu007_q002",
+        "unit_id": "nnr_2023_eggs_scoping_review_eu007",
+        "units": "",
+        "value": "35%"
+      }
+    ]
+  }
+}

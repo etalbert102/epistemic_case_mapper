@@ -1,0 +1,30 @@
+{
+  "claim_count": 3,
+  "effective_max_claims": 9,
+  "num_predict": 10752,
+  "repair_reason": "not_needed",
+  "repair_used": false,
+  "requested_max_claims": 3,
+  "rich_claim_context_field_counts": {
+    "evidence_design": 3,
+    "exposure_or_option": 3,
+    "outcome_or_endpoint": 3,
+    "population": 3,
+    "stated_dose_or_threshold": 1
+  },
+  "rich_claim_context_schema_id": "rich_claim_context_report_v1",
+  "rich_claim_must_preserve_terms_count": 3,
+  "rich_claim_natural_bottom_line_count": 3,
+  "rich_claim_stated_limitations_count": 1,
+  "schema_id": "whole_doc_claim_extraction_report_v1",
+  "schema_rejected_claim_count": 1,
+  "source_card_acronym_expansion_count": 2,
+  "source_card_exact_quote_count": 5,
+  "source_card_quote_count": 5,
+  "source_card_short_quote_count": 0,
+  "source_evidence_unit_count": 3,
+  "source_evidence_unit_warning_counts": {},
+  "source_id": "lsag_2008_safety_review",
+  "source_quantity_tuple_count": 2,
+  "status": "ok"
+}

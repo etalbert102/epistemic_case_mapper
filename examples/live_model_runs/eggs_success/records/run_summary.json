@@ -1,0 +1,3129 @@
+{
+  "all_chunk_count": 90,
+  "backend": "ollama:gemma4:12b-mlx",
+  "backend_retries": 0,
+  "backend_timeout": 240,
+  "candidate_path": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/candidate_map.json",
+  "chunk_lines": 35,
+  "chunk_overlap_lines": 0,
+  "chunks": [
+    {
+      "chunk_id": "dga_2020_2025_pmc_summary_lines_71_105",
+      "end_line": 105,
+      "ordinal": 3,
+      "signal_score": 53,
+      "source_id": "dga_2020_2025_pmc_summary",
+      "span_count": 34,
+      "spans": [
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 71-71",
+          "span_id": "dga_2020_2025_pmc_summary_s0071",
+          "text": "On the basis of its evidence review, the Committee concluded that routine iron supplementation of all breastfed infants may not be advisable, although it acknowledged that screening for iron deficiency using appropriate biomarkers, such as serum ferritin, may be challenging because it is not as simple as measuring hemoglobin. After 6 months, other sources of iron, such as iron-rich or iron-fortified complementary foods, can be provided, so iron supplementation is generally not needed. The Committee also concluded that there is no basis for recommending vitamin D supplementation higher than 400 IU per day during infancy."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 72-72",
+          "span_id": "dga_2020_2025_pmc_summary_s0072",
+          "text": "The Committee conducted food pattern modeling to determine whether USDA food patterns could be established for infants and toddlers ages 6 to 24 months.5 A food pattern for infants 6 to 12 months old could not be established because of challenges with uncertainty about nutrient requirements and difficulty in meeting the Recommended Dietary Allowance for iron through CFB. However, combinations of CFB were described by the Committee that meet most nutrient requirements while infants are still consuming different proportions of human milk or infant formula. The Committee recommended providing infants and toddlers with a variety of animal-source foods (meat, poultry, seafood, eggs, and dairy), fruits and vegetables, nuts and seeds, and whole-grain products, beginning at 6 to 12 months old and continuing thereafter. For toddlers 12 to 24 months old whose diets do not include meat, poultry, or seafood, the Committee advised providing eggs and dairy products on a regular basis, along with soy products and nuts or seeds, fruits, vegetables, grains, and oils. The Committee also recommended not providing foods and beverages with added sugars, such as sugar-sweetened beverages, to children younger than 2 months because energy from added sugars is likely to displace energy from nutrient-dense foods and because some evidence suggests a relationship with subsequent risk of child overweight. In addition, because food preferences begin at an early age, it is important to encourage regular consumption of nutrient-dense foods and beverages."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 73-73",
+          "span_id": "dga_2020_2025_pmc_summary_s0073",
+          "text": "TWO YEARS AND OLDER"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 74-74",
+          "span_id": "dga_2020_2025_pmc_summary_s0074",
+          "text": "The Committee's extensive evidence review found that dietary patterns higher in vegetables, fruits, legumes, whole grains, low-fat or nonfat dairy, lean meat and poultry, seafood, nuts, and unsaturated vegetable oils, and low in red and processed meats, sugar-sweetened foods and beverages, and refined grains are associated with a range of beneficial health outcomes. Beneficial outcomes associated with these healthy dietary patterns include reduced risk of all-cause mortality, cardiovascular disease, type 2 diabetes, overweight and obesity, bone health, and several cancers. These core dietary pattern elements are appropriate across the life span from children to older adults."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 75-75",
+          "span_id": "dga_2020_2025_pmc_summary_s0075",
+          "text": "On the basis of its review of the evidence for a relationship between types of dietary fats consumed and cardiovascular disease risk, the Committee advised limiting intake of saturated fats to less than 10% of energy per day by replacing them with unsaturated fats and keeping dietary cholesterol intake as low as possible. The Committee also recommended 2 or more servings of cooked seafood per week for individuals 2 years and older to ensure intake of key nutrients and as part of an overall healthy dietary pattern. Serving sizes vary based on age and seafood choices should emphasize species higher in omega-3 fatty acids and low in methylmercury, following federal and local fish and seafood advisories.6 For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 76-76",
+          "span_id": "dga_2020_2025_pmc_summary_s0076",
+          "text": "The Committee also examined the relationship between beverage consumption and weight status. It concluded that nutrient-rich beverages (eg, fat-free or low-fat milk, 100% juice) contribute substantively to food group and nutrient intakes but that it is important to be mindful of their contribution to total energy intake. Because sugar-sweetened beverages contribute substantial energy to the diet and contribute very little toward meeting food group and nutrient recommendations, the Committee encouraged only limited intake of these beverages. The Committee acknowledged that low- and no-calorie sweetened beverages may be a useful aid in weight management in adults, but that evidence was limited. The Committee emphasized that the role beverages play in diet quality and energy balance varies across the life span and that recommendations should be tailored appropriately."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 77-77",
+          "span_id": "dga_2020_2025_pmc_summary_s0077",
+          "text": "On the basis of its review of the evidence regarding alcohol consumption, the Committee concluded that, for those who do not drink, it is not wise to begin drinking alcohol or purposefully continue to drink alcohol for health reasons. For adults who do drink alcohol, the Committee's review indicated that, at all levels of consumption, drinking less is generally better for health than drinking more. The Committee recommended that adults limit alcohol intake to no more than 1 drink per day for both women and men for better health."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 78-78",
+          "span_id": "dga_2020_2025_pmc_summary_s0078",
+          "text": "The Committee suggested that, for adults and for children 2 years and older, a recommendation of less than 6% of energy from added sugars is more consistent with a dietary pattern that is both nutritionally and calorically appropriate, than is a pattern with less than 10% of energy from added sugars, as was recommended in past editions of the Dietary Guidelines. The Committee's advice was based on food pattern modeling and the evidence on health impacts of added sugars intake."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 79-79",
+          "span_id": "dga_2020_2025_pmc_summary_s0079",
+          "text": "Finally, the Committee continued to recommend established USDA Food Patterns: Healthy U.S.-Style, Healthy Vegetarian Style, and Healthy Mediterranean-Style. The core components of all 3 USDA Food Patterns include fruits, vegetables, legumes, whole grains, nuts, and seeds; protein and fats from nutrient-rich food sources; and limited amounts of added sugars, saturated fat, and sodium."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 80-80",
+          "span_id": "dga_2020_2025_pmc_summary_s0080",
+          "text": "The Scientific Report of the 2020 Dietary Guidelines Advisory Committee summarizes a wealth of nutrition research completed by nutrition investigators throughout the world and served as the scientific basis for the Dietary Guidelines for Americans, 2020\u20132025."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 81-81",
+          "span_id": "dga_2020_2025_pmc_summary_s0081",
+          "text": "PUBLIC ENGAGEMENT"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 82-82",
+          "span_id": "dga_2020_2025_pmc_summary_s0082",
+          "text": "The public was encouraged to provide input at various times throughout the process of the development of the Dietary Guidelines. Before the 2020 Advisory Committee was established, the public was invited to provide comments on the topics and scientific questions to be examined by the Committee. The public was also able to nominate candidates for Committee membership. For the first time in the Committee process, draft protocols were posted online for public comments to the Committee before they were finalized. The public was also invited to submit written comments and to provide oral testimony to the Committee during the time that the Committee was reviewing the evidence. In addition, after the Committee's scientific report was submitted to the Departments, the public was able to give written comments, for a time, as well as oral comments on the report to federal staff at a public meeting. The Committee received more than 62 000 written public comments from March 12, 2019, to June 10, 2020, which consisted of approximately 4000 unique comments."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 83-83",
+          "span_id": "dga_2020_2025_pmc_summary_s0083",
+          "text": "Development of the Dietary Guidelines"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 84-84",
+          "span_id": "dga_2020_2025_pmc_summary_s0084",
+          "text": "Each edition of the Dietary Guidelines builds on the preceding edition, with the scientific justification for revisions informed by the Advisory Committee's Scientific Report, consultation with subject matter experts within federal agencies, and consideration of comments from these agencies and the public. The USDA and HHS received 38 000 comments on the Advisory Committee's Scientific Report, and these were considered in the development of the Dietary Guidelines."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 85-85",
+          "span_id": "dga_2020_2025_pmc_summary_s0085",
+          "text": "Development of the Dietary Guidelines involves a step-by-step process of writing, review, and revision supported by a writing team of federal staff from USDA and HHS. The writing team included federal nutrition scientists with expertise in the Dietary Guidelines and related research and programs as well as specialists with expertise in communicating nutrition information. It was written with the fundamental understanding that it must represent the totality of the evidence, address the needs of federal programs, work to reduce unintended consequences, follow best practices, and use plain language. The draft Dietary Guidelines then underwent several rounds of review and revisions by all agencies with nutrition policies and programs across the USDA and HHS, as well as external experts. The review finally culminated with the Secretaries of USDA and HHS. After approval by the Secretaries, the Departments released the Dietary Guidelines to federal agencies and the public for implementation across programs and through educational activities."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 86-86",
+          "span_id": "dga_2020_2025_pmc_summary_s0086",
+          "text": "The Dietary Guidelines for Americans, 2020\u20132025 includes nearly all of the science-based recommendations of the 2020 Dietary Guidelines Advisory Committee, including new dietary advice for infants and toddlers. The Dietary Guidelines includes part, but not all, of the Committee's advice on added sugars and alcohol. The new edition emphasizes the importance of limiting intakes of added sugars and alcoholic beverages but does not include the changes to quantitative limits recommended by the Committee. The evidence that the Committee reviewed supports the need to continue to limit intakes of added sugars and alcoholic beverages to promote health and prevent diseases. However, there was not a preponderance of evidence in the Committee's review of studies since the 2015\u20132020 edition to substantiate changes to the quantitative limits for either added sugars or alcohol. The Dietary Guidelines underscores the importance of limiting added sugars and alcohol intake and carries forward the quantitative limits from the 2015\u20132020 edition. The USDA and HHS encourage more research on the relationship between added sugars and alcoholic beverages and health and will continue to monitor the evidence on these topics."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 87-87",
+          "span_id": "dga_2020_2025_pmc_summary_s0087",
+          "text": "KEY CONCEPTS FROM THE DIETARY GUIDELINES FOR AMERICANS, 2020\u20132025"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 88-88",
+          "span_id": "dga_2020_2025_pmc_summary_s0088",
+          "text": "Chapter 1 of the Dietary Guidelines discusses 4 overarching guidelines (Figure 3) that serve to promote healthy dietary patterns across the life span and are supported by key recommendations that provide more specific guidance. These core recommendations are consistent with the 2015\u20132020 Dietary Guidelines."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 89-89",
+          "span_id": "dga_2020_2025_pmc_summary_s0089",
+          "text": "FIGURE 3."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 91-91",
+          "span_id": "dga_2020_2025_pmc_summary_s0091",
+          "text": "Open in a new tab"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 92-92",
+          "span_id": "dga_2020_2025_pmc_summary_s0092",
+          "text": "The four overarching guidelines of the Dietary Guidelines for Americans, 2020\u20132025."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 93-93",
+          "span_id": "dga_2020_2025_pmc_summary_s0093",
+          "text": "The 4 guidelines are as follows:"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 94-94",
+          "span_id": "dga_2020_2025_pmc_summary_s0094",
+          "text": "1\tFollow a healthy dietary pattern at every life stage: At every life stage\u2014infancy, toddlerhood, childhood, adolescence, adulthood, pregnancy, lactation, and older adulthood\u2014it is never too early or too late to eat healthfully."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 95-95",
+          "span_id": "dga_2020_2025_pmc_summary_s0095",
+          "text": "For approximately the first 6 months of life, exclusively feed infants human milk. Continue to feed infants human milk through at least the first year of life, and longer if desired. Feed infants iron-fortified infant formula during the first year of life when human milk is unavailable. Provide infants with supplemental vitamin D beginning soon after birth. At approximately 6 months old, introduce infants to nutrient-dense complementary foods. Introduce infants to potentially allergenic foods along with other complementary foods. Encourage infants and toddlers to consume a variety of foods from all food groups. Include foods rich in iron and zinc, particularly for infants fed human milk. From 3 months through older adulthood, follow a healthy dietary pattern across the life span to meet nutrient needs, help achieve a healthy body weight, and reduce the risk of chronic disease."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 96-96",
+          "span_id": "dga_2020_2025_pmc_summary_s0096",
+          "text": "2\tCustomize and enjoy nutrient-dense food and beverage choices to reflect personal preferences, cultural traditions, and budgetary considerations. A healthy dietary pattern can benefit all individuals regardless of age, race, ethnicity, or current health status. The Dietary Guidelines provides a framework intended to be customized to individual needs and preferences, as well as the foodways of the diverse cultures in the United States, which can be found at www.dietaryguidelines.gov/DGA_2020-2025_Customizing.pdf."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 97-97",
+          "span_id": "dga_2020_2025_pmc_summary_s0097",
+          "text": "3\tFocus on meeting food group needs with nutrient-dense foods and beverages, and stay within calorie limits. An underlying premise of the Dietary Guidelines is that nutritional needs should be met primarily from foods and beverages\u2014specifically, nutrient-dense foods and beverages. Nutrient-dense foods provide vitamins, minerals, and other health-promoting components and have no or little added sugars, saturated fat, and sodium. A healthy dietary pattern consists of nutrient-dense forms of foods and beverages across all food groups, in recommended amounts, and within calorie limits."
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 98-98",
+          "span_id": "dga_2020_2025_pmc_summary_s0098",
+          "text": "The core elements that make up a healthy dietary pattern include the following:"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 99-99",
+          "span_id": "dga_2020_2025_pmc_summary_s0099",
+          "text": "\u2022\tVegetables of all types\u2014dark green; red and orange; beans, peas, and lentils; starchy; and other vegetables"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 100-100",
+          "span_id": "dga_2020_2025_pmc_summary_s0100",
+          "text": "\u2022\tFruits, especially whole fruits"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 101-101",
+          "span_id": "dga_2020_2025_pmc_summary_s0101",
+          "text": "\u2022\tGrains, at least half of which are whole grain"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 102-102",
+          "span_id": "dga_2020_2025_pmc_summary_s0102",
+          "text": "\u2022\tDairy, including fat-free or low-fat milk, yogurt, and cheese, and/or lactose-free versions and fortified soy beverages and yogurt as alternatives"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 103-103",
+          "span_id": "dga_2020_2025_pmc_summary_s0103",
+          "text": "\u2022\tProtein foods, including lean meats, poultry, and eggs; seafood; beans, peas, and lentils; and nuts, seeds, and soy products"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 104-104",
+          "span_id": "dga_2020_2025_pmc_summary_s0104",
+          "text": "\u2022\tOils, including vegetable oils and oils in food, such as seafood and nuts"
+        },
+        {
+          "source_id": "dga_2020_2025_pmc_summary",
+          "source_span": "lines 105-105",
+          "span_id": "dga_2020_2025_pmc_summary_s0105",
+          "text": "4\tLimit foods and beverages higher in added sugars, saturated fat, and sodium, and limit alcoholic beverages. At every life stage, meeting food group recommendations\u2014even with nutrient-dense choices\u2014requires most of a person's daily calorie needs and sodium limits. A healthy dietary pattern does not have much room for extra added sugars, saturated fat, or sodium\u2014or for alcoholic beverages. A small amount of added sugars, saturated fat, or sodium can be added to nutrient-dense foods and beverages to help meet food group recommendations, but foods and beverages high in these components should be limited."
+        }
+      ],
+      "start_line": 71,
+      "title": "Dietary Guidelines for Americans, 2020-2025"
+    },
+    {
+      "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_106_140",
+      "end_line": 140,
+      "ordinal": 10,
+      "signal_score": 27,
+      "source_id": "aha_2019_dietary_cholesterol_pubmed",
+      "span_count": 25,
+      "spans": [
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 108-108",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0108",
+          "text": "LinkOut - more resources"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 115-115",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0115",
+          "text": "Meta-Analysis"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 116-116",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0116",
+          "text": "Circulation"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 117-117",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0117",
+          "text": ". 2020 Jan 21;141(3):e39-e53. doi: 10.1161/CIR.0000000000000743. Epub 2019 Dec 16."
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 118-118",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0118",
+          "text": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 119-119",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0119",
+          "text": "Jo Ann S Carson,\u00a0Alice H Lichtenstein,\u00a0Cheryl A M Anderson,\u00a0Lawrence J Appel,\u00a0Penny M Kris-Etherton,\u00a0Katie A Meyer,\u00a0Kristina Petersen,\u00a0Tamar Polonsky,\u00a0Linda Van Horn;\u00a0American Heart Association Nutrition Committee of the Council on Lifestyle and Cardiometabolic Health; Council on Arteriosclerosis, Thrombosis and Vascular Biology; Council on Cardiovascular and Stroke Nursing; Council on Clinical Cardiology; Council on Peripheral Vascular Disease; and Stroke Council"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 121-121",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0121",
+          "text": "\u2022\tPMID: 31838890 DOI: 10.1161/CIR.0000000000000743"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 122-122",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0122",
+          "text": "Free article"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 123-123",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0123",
+          "text": "Full text links Cite"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 124-124",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0124",
+          "text": "Abstract"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 125-125",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "text": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health."
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 126-126",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0126",
+          "text": "Keywords: AHA Scientific Statements; cholesterol; diet; eggs; risk factors."
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 127-127",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0127",
+          "text": "PubMed Disclaimer"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 129-129",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0129",
+          "text": "Publication types"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 130-130",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0130",
+          "text": "\u2022\tMeta-Analysis"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 131-131",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0131",
+          "text": "\u2022\tSystematic Review"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 132-132",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0132",
+          "text": "MeSH terms"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 133-133",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0133",
+          "text": "\u2022\tCardiovascular Diseases* / blood"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 134-134",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0134",
+          "text": "\u2022\tCardiovascular Diseases* / etiology"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 135-135",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0135",
+          "text": "\u2022\tCardiovascular Diseases* / prevention & control"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 136-136",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0136",
+          "text": "\u2022\tCholesterol, Dietary* / administration & dosage"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 137-137",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0137",
+          "text": "\u2022\tCholesterol, Dietary* / adverse effects"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 138-138",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0138",
+          "text": "\u2022\tDiet, Western*"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 139-139",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0139",
+          "text": "\u2022\tHumans"
+        },
+        {
+          "source_id": "aha_2019_dietary_cholesterol_pubmed",
+          "source_span": "lines 140-140",
+          "span_id": "aha_2019_dietary_cholesterol_pubmed_s0140",
+          "text": "\u2022\tNutrition Policy*"
+        }
+      ],
+      "start_line": 106,
+      "title": "Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association"
+    },
+    {
+      "chunk_id": "aha_2023_dietary_cholesterol_news_lines_36_70",
+      "end_line": 70,
+      "ordinal": 14,
+      "signal_score": 50,
+      "source_id": "aha_2023_dietary_cholesterol_news",
+      "span_count": 32,
+      "spans": [
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 36-36",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0036",
+          "text": "By Michael Merschel, American Heart Association News"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 37-37",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0037",
+          "text": "Please note: This article was published more than two years ago, so some information may be outdated. If you have questions about your health, always contact a health care professional."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 41-41",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0041",
+          "text": "(MangoStar_Studio/iStock via Getty Images)"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 42-42",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0042",
+          "text": "Lea en espa\u00f1ol"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 43-43",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0043",
+          "text": "For more than half a century, scientists have debated the role of dietary cholesterol in a healthy diet. Because it was often associated with saturated fat, limiting dietary cholesterol \u2013 especially by restricting egg consumption \u2013 seemed to benefit heart-health efforts."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 44-44",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0044",
+          "text": "More recently, accumulating data has caused researchers to broaden their thinking about how dietary cholesterol \u2013 and eggs \u2013 fit into a healthy eating pattern. \"We've advanced considerably,\" said professor Linda Van Horn, chief of the nutrition division in the department of preventive medicine at Northwestern University's Feinberg School of Medicine in Chicago. \"And we proceed on these issues as we learn more.\""
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 45-45",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0045",
+          "text": "Change can be confusing. So here are answers to a few common questions."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 46-46",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0046",
+          "text": "Are dietary cholesterol and blood cholesterol the same thing?"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 47-47",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0047",
+          "text": "No. Dietary cholesterol is found in food. Blood cholesterol \u2013 which includes HDL (\"good\") and LDL (\"bad\") \u2013 is one of eight essential measures of heart health identified by the American Heart Association. A diet high in saturated fat can lead to high LDL cholesterol levels and further lead to plaque buildup in the walls of your arteries. This restricts blood flow and can lead to a heart attack or stroke."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 48-48",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0048",
+          "text": "Your doctor can check your blood cholesterol levels with a blood test."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 49-49",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0049",
+          "text": "What is dietary cholesterol, then?"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 50-50",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0050",
+          "text": "Dietary cholesterol comes from animal-based foods. According to a 2019 AHA science advisory on dietary cholesterol and cardiovascular risk \u2013 which Van Horn helped write \u2013 high-fat meat, eggs, butter and full-fat dairy products are major sources. It's especially abundant in processed meats \u2013 \"sausages, burgers, hot dogs or similar foods,\" Van Horn said."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 51-51",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0051",
+          "text": "Dietary cholesterol also can be found in baked goods made with eggs, butter or cream."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 52-52",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "text": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 53-53",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0053",
+          "text": "How much dietary cholesterol can I eat?"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 54-54",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0054",
+          "text": "Although previous federal dietary guidelines recommended limiting consumption of dietary cholesterol to 300 milligrams per day, the current guidelines instead suggest keeping dietary cholesterol consumption \"as low as possible without compromising the nutritional adequacy of the diet.\" The good news is, that leaves room for flexibility. But it is not a free pass to eat all the dietary cholesterol you want."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 55-55",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0055",
+          "text": "But focusing on a number, or the lack of evidence linking dietary cholesterol to health risks, could be a misstep, Van Horn said. That's because foods high in dietary cholesterol also tend to be high in saturated fat. The exceptions are eggs and shellfish, such as shrimp and lobster. Despite being high in dietary cholesterol, shellfish is relatively healthy when not fried."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 56-56",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0056",
+          "text": "Overall, Van Horn said, \"research has shown that you really cannot isolate dietary cholesterol from that total fat intake.\" And eating too much saturated fat \u2013 along with too much sugar and sodium, and too little fiber \u2013 raises the risk of heart disease."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 57-57",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0057",
+          "text": "Instead of thinking about how much dietary cholesterol you can get away with, try thinking about eating an all-around healthy diet, with lots of fruits and vegetables, whole grains, healthy sources of protein and low-fat or fat-free dairy products, Van Horn said."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 58-58",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0058",
+          "text": "Put another way: If you're eating a healthy diet, Van Horn said, a little butter now and then (and its 31 mg of dietary cholesterol per tablespoon) on your toast should not pose a major risk."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 59-59",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0059",
+          "text": "While cholesterol-rich foods are not recommended, she said, \"they are better tolerated as a food source when they are the exception and not the rule.\""
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 60-60",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0060",
+          "text": "Does that mean I can eat eggs?"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 61-61",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0061",
+          "text": "First, go back and read the part about the importance of an all-around healthy diet."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 62-62",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0062",
+          "text": "One large, whole egg contains around 200 mg of dietary cholesterol. Because of that, Van Horn said it once was considered wise to eat no more than two or three yolks per week. Egg whites are not high in dietary cholesterol."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 63-63",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0063",
+          "text": "But research regarding the effects of eggs was complicated by the fact that eggs often are eaten with high-fat foods such as bacon, sausage and butter. These days, Van Horn said, if your LDL cholesterol level is low, a few eggs per week are considered tolerable, depending on the overall content of the diet."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 64-64",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0064",
+          "text": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 65-65",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0065",
+          "text": "What if I have high blood cholesterol?"
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 66-66",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0066",
+          "text": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 67-67",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0067",
+          "text": "Some people are genetically predisposed to high blood cholesterol levels. Health care professionals often advise such patients to pay extra attention to what they eat, control their weight and increase their level of physical activity, Van Horn said."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 68-68",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0068",
+          "text": "People with healthy blood cholesterol levels should recognize that as they age, their risk increases and tolerance for less-healthy foods can change, she said."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 69-69",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0069",
+          "text": "So, it's best to keep the emphasis on \"more plant-based eating, including whole grains, fresh fruits and vegetables, along with more fish combined calorie-conscious eating and regular physical activity,\" Van Horn said."
+        },
+        {
+          "source_id": "aha_2023_dietary_cholesterol_news",
+          "source_span": "lines 70-70",
+          "span_id": "aha_2023_dietary_cholesterol_news_s0070",
+          "text": "Why has dietary cholesterol advice changed over the years?"
+        }
+      ],
+      "start_line": 36,
+      "title": "Here's the latest on dietary cholesterol and how it fits in with a healthy diet"
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_526_560",
+      "end_line": 560,
+      "ordinal": 33,
+      "signal_score": 91,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "spans": [
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 526-526",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0526",
+          "text": "We found no association between egg consumption and cardiovascular disease risk in either men or women, which corresponds to previously published analyses of NHS and HPFS.7 This lack of an appreciable association is supported by the mean pooled hazard ratios for one egg per day increase for total cardiovascular disease (0.98, 95% confidence interval 0.92 to 1.04), coronary heart disease (0.96, 0.89 to 1.04), and stroke (1.01, 0.91 to 1.12) being close to the null; their 95% confidence intervals being quite narrow and restrained to a level where potential associations would not be clinically meaningful for such an increase in consumption; and E values suggesting the unlikeliness that confounders that could shift the association toward a substantially lower or higher risk were omitted. Overall our cohort analyses are concordant with most analyses conducted in other prospective US cohort studies.6 12 46 58 65 However, a recent study conducted in the Lifetime Risk Pooling Project,8 which comprises 30\u2009000 people from six prospective US cohorts followed for 17.5 years, reported a positive association between egg consumption and cardiovascular disease risk; this finding reignited the debate on eggs, dietary cholesterol, and cardiovascular health. In that study, each additional 0.5 egg per day increase was associated with a higher risk of coronary heart disease (hazard ratio 1.07, 95% confidence interval 1.01 to 1.12) and stroke (1.10, 1.03 to 1.18).8 The observed positive associations at such low intakes could be attributable to the lack of simultaneous control for dietary confounders (such as red meat) and body mass index, which could have led to an overestimate of the association."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 527-527",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0527",
+          "text": "Despite recent controversies raised by the Lifetime Risk Pooling Project, no association between egg consumption and risk of cardiovascular disease was found in our meta-analysis of US studies (pooled relative risk for one egg per day increase 1.01, 95% confidence interval 0.96 to 1.06, I2=30.8). The pooled relative risk was close to the null, the 95% confidence interval was narrow and restrained to non-clinically meaningful potential associations, and the heterogeneity between US studies was minimal. Therefore, our meta-analysis provides compelling evidence that supports the lack of an appreciable association between egg consumption and risk of cardiovascular disease among US studies."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 528-528",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0528",
+          "text": "Major analyses among European and Asian cohorts were also published recently. In the European Prospective Investigation into Cancer and Nutrition cohort, which comprises about 400\u2009000 people from 10 European countries, each additional 20 g of egg per day was associated with a 7% lower risk of coronary heart disease (hazard ratio 0.93, 95% confidence interval 0.88 to 0.99).11 However, the inverse association was no longer significant when the first four years of follow-up were censored, which suggests that the results could have been influenced by reverse causation.11 Our meta-analysis indicates that egg consumption is not associated with cardiovascular disease risk among Europeans (pooled relative risk for one egg per day increase 1.05, 95% confidence interval 0.92 to 1.19, I2=64.7%). However, the 95% confidence interval included a potential moderately higher risk of cardiovascular disease (up to 19% higher risk) and considerable heterogeneity existed between studies, therefore further analyses among European cohorts are required to increase the certainty of the lack of an association."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 529-529",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0529",
+          "text": "In the China Kadoorie Biobank study of nearly 0.5 million Chinese adults, higher egg consumption was associated with a lower incidence of cardiovascular disease compared with non-consumers.10 When we pooled data from studies conducted in Asia, the China Kadoorie Biobank study had the most weight, and we observed an inverse association between egg intake and cardiovascular disease risk. This result contrasts with data from US and European cohorts, and appeared to have caused the observed heterogeneity in the meta-analysis. However, a combination of factors might explain why a strong inverse association was observed in the China Kadoorie Biobank study. People with the highest egg intake consumed, on average, only 0.76 egg per day.10 This is lower than the highest levels of intake in other Asian or Western countries.66 When we consider these low levels of intake, it is possible that the association was mainly driven by the egg consumption pattern rather than by egg consumption per se."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 530-530",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0530",
+          "text": "In Asian cultures, eggs are typically incorporated into various cuisines, while in Western populations, eggs are typically consumed with red and processed meats and refined grains. Additionally even though analyses of the China Kadoorie Biobank were adjusted for household income and education level, the inverse association could reflect a social gradient. People with higher egg intake were more likely to live in urban areas: 57% of people consuming eggs seven days a week were living in urban areas, whereas only 30% of people who never or rarely consumed eggs were living in urban areas.10 Moreover, participants who consumed eggs almost daily and lived in urban areas appeared to have a lower risk of cardiovascular disease compared with participants who consumed eggs almost daily but lived in rural areas.10 Thus, data from the China Kadoorie Biobank study are probably affected by residual confounding related to egg consumption patterns and socioeconomic status. Therefore, the inverse association observed in the meta-analysis among Asian cohorts needs to be interpreted cautiously."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 531-531",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0531",
+          "text": "The results of our statistical model based replacement analyses suggest that consuming eggs instead of full fat milk, unprocessed red meat, or processed red meat is associated with lower risk of cardiovascular disease. In addition to the estimated beneficial effect on cardiovascular health, replacing red meat with eggs in the diet might also contribute to a more sustainable environment because egg production has a lower environmental impact than meat production.18 67 However, when eggs were replaced with fish, poultry, legumes, nuts, whole grains, refined grains, potatoes, reduced fat milk, cheese, or yogurt, we found no significant association with cardiovascular disease."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 532-532",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0532",
+          "text": "Results from our updated meta-analysis suggest that higher egg consumption could be associated with a higher risk of cardiovascular disease among people with type 2 diabetes. Insulin resistance is associated with increased endogenous cholesterol synthesis and decreased clearance of cholesterol rich lipoproteins.68 Therefore, high dietary cholesterol intake might exacerbate cholesterol homeostasis imbalance and increase cardiovascular disease risk in the long term among people with type 2 diabetes. However, data from short term randomized interventions suggest that higher egg consumption has no deleterious impact on cardiovascular disease risk factors among people with diabetes.69 70 Further studies are warranted to understand these discrepancies."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 533-533",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0533",
+          "text": "Strengths and weaknesses of the study"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 534-534",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0534",
+          "text": "In our cohort analyses, the high rates of follow-up and the large sample size represent major strengths. The increase in total cardiovascular disease events from 1124 in our previous publication on eggs7 to 14\u2009806 in our current study allowed for more robust analyses. The repeated measurement of lifestyle variables allowed us to adjust for changes in risk factors over time. Additionally the use of cumulative average updates of dietary variables reduced random measurement error by accounting for within person variations in intake. Finally, the updated meta-analysis provides a comprehensive overview of evidence on the association between eggs and cardiovascular disease in the US and globally."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 535-535",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0535",
+          "text": "Our findings also need to be interpreted in the context of several limitations. Our cohorts include health professionals and so the findings might not be generalizable to other populations. However, the high educational status of our study participants is an advantage because high quality and reliable data can be collected and possibilities of confounding by socioeconomic factors, which can be difficult to measure, are reduced. Additionally in our cohorts, people with higher egg intake were generally less healthy in many ways, and we recognize that our results could be affected by unmeasured or residual confounding. However, we were able to account for many dietary and lifestyle covariates, including dietary variables typically associated with egg intake such as red and processed meats. Therefore, as indicated by our E value analyses, it remains unlikely that we omitted confounders that could shift the association toward a significantly lower or higher risk."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 536-536",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0536",
+          "text": "Dietary data collection with food frequency questionnaires inevitably leads to some measurement errors. Misclassification because of random measurement error and confounding owing to unmeasured dietary items (eg, egg cooking method) could result in an underestimation of the association between egg intake and cardiovascular disease risk given the prospective nature of the study. However, we used the cumulative average updating method for dietary variables to reduce random errors caused by within person variation and to take into account long term dietary habits. Differential errors in dietary data collection could exist, but they are unlikely because diet was reported long before the diagnosis of the disease. We cannot exclude the fact that advances in diagnostic methods for cardiovascular disease in recent decades could have impacted rates of detection over the course of the follow-up in our cohorts. However, analyses that were stratified by calendar time in two year intervals allowed us to control for this limitation. Finally, the replacement analysis is a statistical modeling strategy that used data across the whole population, without identifying people in the cohort who actually replaced eggs with the replacement foods. Therefore, our results from replacement analysis should be interpreted with caution in the context of statistical modeling.37"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 537-537",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0537",
+          "text": "Conclusions and policy implications"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 538-538",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0538",
+          "text": "The results from our cohort study and updated meta-analysis show that moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall. Findings were consistent across multiple participant and study characteristics except for geographical region. We found that egg consumption was associated with a slightly lower cardiovascular disease risk among Asian cohorts. However, mean egg consumption in the three US cohorts in our study and in cohorts included in the meta-analysis was relatively low. This consumption level should be taken into account when interpreting our results because most participants consumed one to less than five eggs per week, and relatively few participants consumed at least one egg per day."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 539-539",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0539",
+          "text": "What is already known on this topic"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 540-540",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0540",
+          "text": "\u2022\tThe association between egg consumption and cardiovascular disease risk has been a topic of intense debate during the past decade"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 541-541",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0541",
+          "text": "\u2022\tFindings from previous studies on egg consumption and risk of cardiovascular disease have been inconclusive"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 542-542",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0542",
+          "text": "What this study adds"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 543-543",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0543",
+          "text": "\u2022\tResults from this cohort study and updated meta-analysis show that moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk overall"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 544-544",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0544",
+          "text": "\u2022\tResults were similar for coronary heart disease and stroke"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 545-545",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0545",
+          "text": "\u2022\tEgg consumption seems to be associated with a slightly lower cardiovascular disease risk among Asian cohorts"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 546-546",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0546",
+          "text": "Web extra."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 547-547",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0547",
+          "text": "Extra material supplied by authors"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 548-548",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0548",
+          "text": "Web appendix: Supplemental material"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 549-549",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0549",
+          "text": "droj050974.ww.pdf (1.3MB, pdf)"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 550-550",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0550",
+          "text": "Contributors: JPDC and SC contributed equally to the manuscript. JPDC and SNB have full access to all of the data in the study and take responsibility for the integrity of the data and the accuracy of the data analysis. SNB, ALS, YL, JPDC, and FBH were involved in the study conception and design. JPDC and SC conducted the systematic review and meta-analysis. JPDC, YL, SC, SNB, and ALS analyzed and interpreted the data. SNB, YL, BR, and FBH provided statistical expertise. JPDC and SNB drafted the manuscript. All the authors participated in the interpretation of the results and critical revision of the manuscript. SNB and FBH are the guarantors. The corresponding author attests that all listed authors meet authorship criteria and that no others meeting the criteria have been omitted."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 551-551",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0551",
+          "text": "Funding: The Nurses\u2019 Health Study (NHS), NHS II, and Health Professionals\u2019 Follow-Up Study cohorts are supported by the following National Institutes of Health (NIH) grants: P01 CA87969, R01 HL034594, R01 HL088521, UM1 CA186107, UM1 CA176726, UM1 CA167552, R01 HL35464, R01 HL60712, U01 CA167552. JPDC is supported by a Banting postdoctoral fellowship from the Canadian Institutes of Health Research (BPF-156628). FBH is supported by grants HL60712, HL118264, and DK112940 from the NIH. SNB is supported by a career development grant from the NIH (K01 DK107804). The funders had no role in the design and conduct of the study; collection, management, analysis, and interpretation of the data; preparation, review, or approval of the manuscript; or the decision to submit the manuscript for publication."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 552-552",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0552",
+          "text": "Competing interests: All authors have completed the ICMJE uniform disclosure form at www.icmje.org/coi_disclosure.pdf and declare: support from the National Institutes of Health and Canadian Institutes of Health Research for the submitted work; JPDC received speaker and consulting honorariums from the Dairy Farmers of Canada, outside the submitted work; YL received grants from California Walnut Commission, outside the submitted work; FBH received research support from the California Walnut Commission and honorariums for lectures from Metagenics and Standard Process and honorariums from Diet Quality Photo Navigation, outside the submitted work; no financial relationships with any organizations that might have an interest in the submitted work in the previous three years; no other relationships or activities that could appear to have influenced the submitted work."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 553-553",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0553",
+          "text": "Ethical approval: The institutional review boards of Brigham and Women\u2019s Hospital and the Harvard T H Chan School of Public Health approved this study. Return of the mailed questionnaire was considered to imply informed consent. Protocol number: 2009-P-002375."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 554-554",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0554",
+          "text": "Data sharing: Data described in the manuscript, code book, and analytic code will not be made publicly available. Further information including the procedures for obtaining and accessing data from the Nurses\u2019 Health Studies and Health Professionals\u2019 Follow-up Study is described at https://www.nurseshealthstudy.org/researchers (email: nhsaccess@channing.harvard.edu) and https://sites.sph.harvard.edu/hpfs/for-collaborators"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 555-555",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0555",
+          "text": "The manuscript\u2019s guarantors affirm that the manuscript is an honest, accurate, and transparent account of the study being reported; that no important aspects of the study have been omitted; and that any discrepancies from the study as planned (and, if relevant, registered) have been explained."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 556-556",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0556",
+          "text": "Dissemination to participants and related patient and public communities: No patients were involved in setting the research question or the outcome measures, nor were they involved in the design and implementation of the study. We plan to disseminate these findings to participants in our annual newsletter and to the general public in a press release."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 557-557",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0557",
+          "text": "References"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 558-558",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0558",
+          "text": "\u2022\t1.Prevention CfDCa. Heart Disease Factors 2017 [updated November 28, 2017. Available from: https://www.cdc.gov/heartdisease/facts.htm."
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 559-559",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0559",
+          "text": "\u2022\t2. Krauss RM, Eckel RH, Howard B, et al. AHA Dietary Guidelines: revision 2000: a statement for healthcare professionals from the Nutrition Committee of the American Heart Association. Circulation 2000;102:2284-99. 10.1161/01.CIR.102.18.2284\u00a0\u00a0\u00a0 [DOI] [PubMed] [Google Scholar]"
+        },
+        {
+          "source_id": "bmj_2020_egg_consumption_cvd",
+          "source_span": "lines 560-560",
+          "span_id": "bmj_2020_egg_consumption_cvd_s0560",
+          "text": "\u2022\t3.USDA. Scientific Report of the 2015 Dietary Guidelines Advisory Committee. 2015. https://ods.od.nih.gov/pubs/2015_dgac_scientific_report.pdf [Google Scholar]"
+        }
+      ],
+      "start_line": 526,
+      "title": "Egg consumption and risk of cardiovascular disease: three large prospective US cohort studies, systematic review, and updated meta-analysis"
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_456_490",
+      "end_line": 490,
+      "ordinal": 51,
+      "signal_score": 81,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 35,
+      "spans": [
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 456-456",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0456",
+          "text": "aAbsolute risk difference was estimated using 3 R packages: riskRegression,33 survival,34 and pec,35 and 95% CIs were derived from 100 bootstrap samples. A follow-up time of 30 years (not all subgroups had the maximum follow-up of 31.3 years), mean of the included covariates, and a difference of half an egg per day consumed were used."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 457-457",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0457",
+          "text": "bCohort- and sex-stratified standard proportional hazard models were used for all-cause mortality."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 458-458",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0458",
+          "text": "cThe maximum follow-up time for the older group was 22.8 years. All other subgroups used 30 years as specified in footnote \u201ca.\u201d"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 459-459",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0459",
+          "text": "dHispanic and Chinese participants were combined with white participants (all categorized as other) due to small sample size."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 460-460",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0460",
+          "text": "eBody mass index was calculated as weight in kilograms divided by height in meters squared."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 461-461",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0461",
+          "text": "fFasting glucose (\u2265126 mg/dL) or HbA1c (\u22656.5%) or taking glucose-lowering medications."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 462-462",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0462",
+          "text": "gBlood pressure (\u2265140/90 mm Hg) or taking antihypertensive medications."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 463-463",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0463",
+          "text": "hTotal cholesterol (\u2265240 mg/dL) or taking lipid-lowering medications."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 464-464",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0464",
+          "text": "iLow-density lipoprotein cholesterol (<70 mg/dL) or non\u2013high density lipoprotein cholesterol (<100 mg/dL) among those who did not take lipid-lowering medications."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 465-465",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0465",
+          "text": "jAlternate Healthy Eating Index (aHEI) 2010 score in the highest quartile (\u226551.5). The original version of the aHEI-2010 score has a range of 0 to 110 points, but the score in this study had a range of 0 to 100 points due to the removal of the meat item."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 466-466",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0466",
+          "text": "kPercent of energy consumed from saturated fat in the highest quartile (\u226513.8%)."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 467-467",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0467",
+          "text": "lPercent of energy consumed from saturated fat (<7%)."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 468-468",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0468",
+          "text": "Secondary Outcomes: CVD Subtypes and Cause-Specific Mortality"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 469-469",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0469",
+          "text": "The associations of dietary cholesterol or egg consumption with CVD subtypes and cause-specific mortality were monotonic (P value for quadratic terms >0.1)."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 470-470",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0470",
+          "text": "CVD Subtypes"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 471-471",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0471",
+          "text": "Dietary cholesterol (per 300 mg/day; adjusted HR, 1.10 [95% CI, 0.98-1.23]) or egg consumption (per half an egg/day; adjusted HR, 1.05 [95% CI, 0.99-1.11]) was not significantly associated with CHD in model 2 (eFigure 1 and eFigure 6 in the Supplement). Dietary cholesterol consumption was significantly associated with stroke (adjusted HR, 1.26 [95% CI, 1.09-1.46]; eFigure 2 in the Supplement). This association was no longer significant after adjusting for egg consumption alone (adjusted HR, 1.19 [95% CI, 0.91-1.57]) or consumption of eggs, unprocessed red meat, and processed meat together (adjusted HR, 1.02 [95% CI, 0.75-1.38]). Dietary cholesterol consumption was significantly associated with heart failure (adjusted HR, 1.14 [95% CI, 1.05-1.24]; eFigure 3 in the Supplement). This association was no longer significant after adjusting for CVD risk factors (adjusted HR, 1.11 [95% CI, 0.98-1.27]) or animal protein consumption (adjusted HR, 1.06 [95% CI, 0.91-1.23]). Egg consumption was significantly associated with stroke (adjusted HR, 1.11 [95% CI, 1.03-1.18]; eFigure 7 in the Supplement), but not heart failure (adjusted HR, 1.06 [95% CI, 0.996-1.12]; eFigure 8 in the Supplement). The association between egg consumption and stroke was no longer significant after adjusting for dietary cholesterol consumption (adjusted HR, 1.03 [95% CI, 0.91-1.17])."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 472-472",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0472",
+          "text": "Cause-Specific Mortality"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 473-473",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0473",
+          "text": "Dietary cholesterol consumption was significantly associated with CVD mortality (adjusted HR, 1.22 [95% CI, 1.07-1.39]; eFigure 4 in the Supplement). This association was no longer significant after adjusting for animal protein consumption (adjusted HR, 1.07 [95% CI, 0.91-1.25]), egg consumption (adjusted HR, 1.23 [95% CI, 0.95-1.59]), or consumption of eggs, unprocessed red meat, and processed meat (adjusted HR, 1.13 [95% CI, 0.85-1.50]). Dietary cholesterol consumption was significantly associated with non-CVD mortality (adjusted HR, 1.16 [95% CI, 1.08-1.26]; eFigure 5 in the Supplement). This association was no longer significant after adjusting for egg consumption (adjusted HR, 1.10 [95% CI, 0.95-1.26]) or consumption of eggs, unprocessed red meat, and processed meat (adjusted HR, 1.03 [95% CI, 0.88-1.21]). Egg consumption was significantly associated with CVD mortality (adjusted HR, 1.08 [95% CI, 1.01-1.15]; eFigure 9 in the Supplement) and non-CVD mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; eFigure 10 in the Supplement), but these associations were no longer significant after adjusting for dietary cholesterol consumption for CVD mortality (adjusted HR, 0.99 [95% CI, 0.88-1.12]) and non-CVD mortality (adjusted HR, 1.04 [95% CI, 0.97-1.11]), as well as adjusting for animal protein consumption for CVD mortality (adjusted HR, 1.05 [95% CI, 0.99-1.12])"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 474-474",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0474",
+          "text": "Sensitivity Analyses"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 475-475",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0475",
+          "text": "Excluding events within the first 2 and 5 years or censoring participants at 10- and 20-year follow-up did not materially alter the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality (Figure 2; Figure 4). Compared with the included participants (N\u2009=\u200929\u2009615), participants who were excluded (n\u2009=\u20094882) were older (54.4 vs 51.6 years), more likely to be black (42.5% vs 31.1%), and less likely to have an education of some college or more (43.6% vs 54.7%) (eTable 7 in the Supplement). The adjusted HRs (95% CIs) were similar between complete case analyses and multiple imputation-based analyses (eTable 8 in the Supplement). Dropping any 1 of the 6 cohorts did not considerably alter the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality (eTable 9 in the Supplement). These significant associations were similar when the exposure variables were divided into quintiles or by other convenient cutoffs (eTables 10-13 in the Supplement). The adjusted HRs (95% CIs) obtained from subdistribution hazard models were similar to those obtained from cause-specific hazard models (eTable 14 in the Supplement)."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 476-476",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0476",
+          "text": "Discussion"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 477-477",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0477",
+          "text": "Among 29\u2009615 adults pooled from 6 prospective cohort studies in the United States with a median follow-up of 17.5 years, higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality, in a dose-response manner."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 478-478",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0478",
+          "text": "A recent meta-analysis did not report a conclusive association between dietary cholesterol consumption and CVD, primarily due to the heterogeneity of the available studies and sparse data.1 As a major source of dietary cholesterol, egg consumption has been differentially associated with CHD, stroke, heart failure, and mortality. Recent meta-analyses showed that frequent egg consumption (generally \u22651 per day), as compared with infrequent consumption (generally <1 per week or never), was associated with significantly higher risk of heart failure,10 significantly lower risk of stroke,6,8 or no significant association with stroke or stroke mortality,5,7 and higher risk of all-cause mortality (pooled HR 1.09, 95% CI [0.997-1.20]).8 No significant association with CHD was reported.5,6,7,8 Another meta-analysis, which analyzed all CVD subtypes together, reported a significant positive dose-response association between egg consumption and CVD.9 As highlighted by these meta-analyses,1,5,6,7,8,9,10 residual confounding was a potential reason for inconsistent results. For example, egg consumption was commonly correlated with unhealthy behaviors such as low physical activity, current smoking, and unhealthy dietary patterns.38 Also, cholesterol-containing foods are usually rich in saturated fat and animal protein.2 Failure to consider these factors and others could lead to differential conclusions. In contrast, the current study included comprehensive assessment of these factors. Also, the current study had longer follow-up than the majority of the previous studies and may have provided more power to detect associations.1,5,6,7,8,9,10"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 479-479",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0479",
+          "text": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet. These findings are consistent with the evidence that a reduction of dietary cholesterol intake, in addition to isocaloric replacement of saturated fat by unsaturated fat, was significantly associated with reduced total cholesterol (primarily LDL cholesterol) concentration.39 Further, the significant association between egg consumption and incident CVD was fully accounted for by the cholesterol content in eggs, which also largely explained the significant association between egg consumption and all-cause mortality, offering additional support for the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality. Although the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were no longer significant after accounting for egg, unprocessed red meat, and processed meat consumption, it remains unclear if cholesterol from these foods is more harmful than other cholesterol-containing foods. Statistically, the remaining variation in dietary cholesterol consumption from other foods may not be sufficient to materially modify the associations. Egg consumption contributed 25% to the total dietary cholesterol consumption and meat consumption contributed 42%.27 Mechanistically, eggs and processed or unprocessed red meat are rich in other nutrients such as choline, iron, carnitine, and added sodium (for processed meat) that have been implicated in CVD risk via different pathways. Further, the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were similar between participants who consumed a higher-quality diet and those who did not, suggesting that people may need to minimize dietary cholesterol and egg yolk intake when consuming a healthier eating pattern, as recommended by the Institute of Medicine.40"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 480-480",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0480",
+          "text": "The magnitudes of the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were modest but consistent across event subtypes including stroke, heart failure (except for egg consumption: adjusted HR 1.06, 95% CI [0.996-1.12]), CVD mortality, and non-CVD mortality, as well as for subgroups according to age, race/ethnicity, smoking status, CVD risk factors (ie, diabetes, hypertension, and hyperlipidemia), and diet quality. The nonsignificant association for CHD was consistent with the literature.5,6,7,8 US mean dietary cholesterol consumption of approximately 290 mg per day is higher than the global average of 228 mg per day,41 and was relatively stable from 2001-2002 to 2013-2014.27 Egg consumption has been relatively low in the United States, but overall per capita egg consumption increased by 11% from 23.0 g per day in 2001-2002 to 25.5 g per day in 2011-2012.28 The recommendations for dietary cholesterol and egg consumption from the 2015-2020 Dietary Guidelines, if carried forward in subsequent versions of Dietary Guidelines, might lead to further increases in egg and dietary cholesterol consumption in the United States, which could be harmful for prevention of CVD and premature death. Findings of the current study suggest that cholesterol from egg yolk may be harmful in the context of the current US diet, in which overnutrition and overweight/obesity are more common than malnutrition and underweight. This is consistent with the evidence that frequent egg consumption has been significantly associated with diabetes risk only in US studies.42"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 481-481",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0481",
+          "text": "Limitations"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 482-482",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0482",
+          "text": "This study has several limitations. First, appropriate interpretation of the study findings requires consideration of measurement error for self-reported diet data. Further, this study relied on single measurement of egg and dietary cholesterol consumption. Exposure misclassification may be of concern, but results were similar when censoring participants at different time points. Second, all cohorts used different dietary assessment tools except 2 Framingham cohorts, which created heterogeneities for data analyses. This was addressed by the following: (1) implementing a rigorous methodology to harmonize diet data; (2) performing cohort-stratified analyses; and (3) conducting several sensitivity analyses. Third, residual confounding was likely, although a number of covariates were adjusted. Fourth, data were not available for investigating subtypes of CHD, stroke, and heart failure, as well as more detailed cause-specific mortality such as cancer mortality. Fifth, generalizing our results to non-US populations requires caution due to different nutrition and food environments and chronic disease epidemiology. Sixth, the study findings are observational and cannot establish causality."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 483-483",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0483",
+          "text": "Conclusions"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 484-484",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0484",
+          "text": "Among US adults, higher consumption of dietary cholesterol or eggs was significantly associated with higher risk of incident CVD and all-cause mortality in a dose-response manner. These results should be considered in the development of dietary guidelines and updates."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 485-485",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0485",
+          "text": "Supplement."
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 486-486",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0486",
+          "text": "eAppendix. Description of Diet Data Harmonization Methodology"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 487-487",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0487",
+          "text": "Harmonization eTable 1. Characteristics of Dietary Intake Assessment in 6 LRPP Cohorts"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 488-488",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0488",
+          "text": "Harmonization eTable 2. Correlation Coefficients of Selected Nutrients From the Published Validation Studies"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 489-489",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0489",
+          "text": "Harmonization eTable 3. Food Grouping Rationale in the LRPP"
+        },
+        {
+          "source_id": "jama_2019_dietary_cholesterol_eggs",
+          "source_span": "lines 490-490",
+          "span_id": "jama_2019_dietary_cholesterol_eggs_s0490",
+          "text": "Harmonization eTable 4. Key Nutrients in the LRPP"
+        }
+      ],
+      "start_line": 456,
+      "title": "Associations of Dietary Cholesterol or Egg Consumption With Incident Cardiovascular Disease and Mortality"
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_246_280",
+      "end_line": 280,
+      "ordinal": 64,
+      "signal_score": 51,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "spans": [
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 246-246",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0246",
+          "text": "22%"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 247-247",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0247",
+          "text": "2 eggs"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 248-248",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0248",
+          "text": "5"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 249-249",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0249",
+          "text": "320"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 250-250",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0250",
+          "text": "7.32"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 251-251",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0251",
+          "text": "2.20\u201312.44"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 252-252",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0252",
+          "text": "0%"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 253-253",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0253",
+          "text": "\u2265 3 eggs"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 254-254",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0254",
+          "text": "5"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 255-255",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0255",
+          "text": "339"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 256-256",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0256",
+          "text": "9.87"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 257-257",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0257",
+          "text": "2.09\u201317.65"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 258-258",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0258",
+          "text": "42%"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 259-259",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0259",
+          "text": "HDL-c"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 260-260",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0260",
+          "text": "1 egg"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 261-261",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0261",
+          "text": "6"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 262-262",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0262",
+          "text": "276"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 263-263",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0263",
+          "text": "0.28"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 264-264",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0264",
+          "text": "\u22122.85\u20133.42"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 265-265",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0265",
+          "text": "0%"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 266-266",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0266",
+          "text": "2 eggs"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 267-267",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0267",
+          "text": "5"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 268-268",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0268",
+          "text": "320"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 269-269",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0269",
+          "text": "0.35"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 270-270",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0270",
+          "text": "\u22122.35\u20133.04"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 271-271",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0271",
+          "text": "0%"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 272-272",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0272",
+          "text": "\u2265 3 eggs"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 273-273",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0273",
+          "text": "5"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 274-274",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0274",
+          "text": "339"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 275-275",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0275",
+          "text": "2.55"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 276-276",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0276",
+          "text": "0.16\u20134.94"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 277-277",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0277",
+          "text": "0%"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 278-278",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0278",
+          "text": "Open in a new tab"
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 279-279",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0279",
+          "text": "In the subgroup analysis for LDL-c, one-egg group (MD = 8.37; 95% CI: 1.06 to 15.69; I2 = 22%), two-egg group (MD = 7.32; 95% CI: 2.20 to 12.44; I2 = 0%) and three-or-more-eggs group (MD = 9.87; 95% CI: 2.09 to 17.65; I2 = 42%) resulted in significantly higher LDL-c than control group."
+        },
+        {
+          "source_id": "li_2020_egg_cholesterol_rct_meta",
+          "source_span": "lines 280-280",
+          "span_id": "li_2020_egg_cholesterol_rct_meta_s0280",
+          "text": "About the subgroup analysis for HDL-c, one-egg (MD = 0.28; 95% CI: \u22122.85 to 3.42; I2 = 0%) and two-eggs (MD = 0.35; 95% CI: \u22122.35 to 3.04; I2 = 0%) showed no significant lower elevations than control group. Interestingly, in the subgroup of three-or-more-eggs, MEC had higher HDL-c than control group (MD = 2.55 mg/dL; 95% CI: 0.16 to 4.94; I2 = 0%). Therefore, egg consumption only slightly influenced the HDL-c."
+        }
+      ],
+      "start_line": 246,
+      "title": "Association between Egg Consumption and Cholesterol Concentration: A Systematic Review and Meta-Analysis of Randomized Controlled Trials"
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_526_560",
+      "end_line": 560,
+      "ordinal": 85,
+      "signal_score": 97,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "spans": [
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 526-526",
+          "span_id": "nnr_2023_eggs_scoping_review_s0526",
+          "text": "A meta-analysis with 11 prospective cohort studies did not find an association between egg intake and risk of breast cancer (RR = 1.03, 95% CI 0.96\u20131.12 for each 50 g/day higher intake) (22)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 527-527",
+          "span_id": "nnr_2023_eggs_scoping_review_s0527",
+          "text": "Ovarian cancer"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 528-528",
+          "span_id": "nnr_2023_eggs_scoping_review_s0528",
+          "text": "In a meta-analysis of nine prospective cohort studies, egg intake was not associated with risk of ovarian cancer (RR = 1.12, 95% CI 0.96\u20131.30) (23)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 529-529",
+          "span_id": "nnr_2023_eggs_scoping_review_s0529",
+          "text": "In summary, the strength of evidence is regarded as Limited \u2013 suggestive that egg intake is not associated with cancer risk in studies conducted in Europe. For the cancer outcomes for which geographic information is not available, the strength of evidence is regarded as Limited \u2013 no conclusion."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 530-530",
+          "span_id": "nnr_2023_eggs_scoping_review_s0530",
+          "text": "Total mortality"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 531-531",
+          "span_id": "nnr_2023_eggs_scoping_review_s0531",
+          "text": "A meta-analysis of seven prospective cohort studies did not find evidence for an association between egg intake and the risk of total mortality (RR = 1.11, 95% CI 0.97\u20131.26 for highest vs. lowest intake category) (8). A more recent meta-analysis with 24 prospective cohort studies came to the same conclusion (RR = 1.02, 95% CI 0.94\u20131.11 for highest vs. lowest category), although it found an association with increased risk in the studies conducted in the USA (n = 7, RR = 1.18, 95% CI 1.10\u20131.26), but not in Europe (n = 8, RR = 1.03, 95% CI 0.78\u20131.35) or in Asia (n = 9, RR = 0.89, 95% CI 0.80\u20130.99) (9). The strength of evidence is regarded as Probable that egg intake is not associated with risk of total mortality in European populations."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 532-532",
+          "span_id": "nnr_2023_eggs_scoping_review_s0532",
+          "text": "Other outcomes"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 533-533",
+          "span_id": "nnr_2023_eggs_scoping_review_s0533",
+          "text": "Metabolic syndrome"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 534-534",
+          "span_id": "nnr_2023_eggs_scoping_review_s0534",
+          "text": "A meta-analysis including four prospective cohort studies and 14 cross-sectional studies found that higher egg intake was associated with a lower risk of metabolic syndrome (RR = 0.92, 95% CI 0.88\u20130.96) (24). However, the association was only found in the cross-sectional studies (RR = 0.91, 95% CI 0.88\u20130.95) not in the prospective studies (RR = 0.99, 95% CI 0.77\u20131.26). Only one of the studies in the meta-analysis was conducted in Europe. The strength of evidence is regarded as Limited \u2013 no conclusion."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 535-535",
+          "span_id": "nnr_2023_eggs_scoping_review_s0535",
+          "text": "Mechanisms"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 536-536",
+          "span_id": "nnr_2023_eggs_scoping_review_s0536",
+          "text": "Egg contains nutrients that may have beneficial or unfavorable effects on health. Several systematic reviews and meta-analyses of RCTs have investigated the effects of increased egg intake (commonly 1\u20134 eggs/day) on disease risk factors, mainly serum lipid profile, blood pressure, and inflammation markers. Most of the meta-analyses include a heterogenous group of studies with either healthy subjects or subjects with a history of disease, e.g. T2D, metabolic syndrome or coronary artery disease, or subjects with hypertension or hypercholesterolemia. However, many meta-analyses have reported the results stratified by the health status of the subjects. As the target group for the NNR2023 is the general population, the results from the studies with healthy subjects were considered relevant in this section."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 537-537",
+          "span_id": "nnr_2023_eggs_scoping_review_s0537",
+          "text": "The major potentially unhealthy nutrient in an egg is cholesterol. Also, choline has been suggested to have unfavorable health effects due to its conversion to TMAO. The potentially beneficial compounds in eggs include the bioactive compounds, such as protein-derived peptides, egg yolk lipids, the carotenoids lutein and zeaxanthin, and phosphatidylcholine and other phospholipids that may have beneficial effects on, e.g. inflammation, lipid oxidation, lipid and glucose metabolism, blood pressure, atherosclerosis progression, and cognitive performance (5, 55\u201362)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 538-538",
+          "span_id": "nnr_2023_eggs_scoping_review_s0538",
+          "text": "Serum lipid profile"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 539-539",
+          "span_id": "nnr_2023_eggs_scoping_review_s0539",
+          "text": "Egg intake, due to its high cholesterol content, may raise serum total and low-density lipoprotein (LDL) cholesterol (the \u2018bad\u2019 cholesterol) concentrations and therefore increase the risk of CVD. The apolipoprotein-B-containing lipoproteins, especially LDL, have a major causal role in the development of atherosclerotic CVD (63). High egg intake may also increase the serum high-density lipoprotein (HDL) cholesterol (the \u2018good\u2019 cholesterol) concentrations, although the role of increased HDL cholesterol concentrations in atherosclerotic CVD is still unclear (63). One medium-sized egg (55 g) contains about 200 mg of cholesterol, which is 2/3 of the 300 mg/day that was recommended as the maximum amount of dietary cholesterol in several guidelines in the past. However, such specific limits have been removed from many of the recent guidelines."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 540-540",
+          "span_id": "nnr_2023_eggs_scoping_review_s0540",
+          "text": "A meta-analysis of 17 RCTs with healthy subjects found a higher LDL/HDL cholesterol ratio and higher LDL cholesterol concentrations with increased egg intake, without evidence for significant heterogeneity between the studies (50). For example, the mean LDL cholesterol concentration was 0.21 mmol/L (95% CI 0.12\u20130.31 mmol/L) higher in the egg group vs. the control group. Another meta-analysis found that the intake of >1 egg/day increased serum total cholesterol (48 studies with healthy subjects, mean difference 0.26 mmol/L, 95% CI 0.20\u20130.31 mmol/L), LDL cholesterol (40 studies in healthy subjects, mean difference 0.20 mmol/L, 95% CI 0.15\u20130.25 mmol/L), and HDL cholesterol (44 studies in healthy subjects, mean difference 0.04 mmol/L, 95% CI 0.02\u20130.06 mmol/L) concentrations and the total/HDL cholesterol ratio (14 studies in healthy subjects), but there was evidence for significant heterogeneity (51)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 541-541",
+          "span_id": "nnr_2023_eggs_scoping_review_s0541",
+          "text": "The impact of egg intake on the serum LDL cholesterol concentration may be more pronounced among those who are so called hyperresponders to dietary cholesterol. A Finnish RCT reported in 1998 that adding two egg yolks to a diet for 4 weeks had a greater impact on the serum LDL cholesterol concentration among subjects with the apolipoprotein-E4/4 genotype than among subjects with the E3/4 or E3/3 genotypes (64). However, there are no meta-analyses on this topic as there is still very limited research on the impact of the apolipoprotein-E genotype (and other potential genetic factors) on serum lipid responses due to high egg intake."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 542-542",
+          "span_id": "nnr_2023_eggs_scoping_review_s0542",
+          "text": "Trimethylamine-N-oxide"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 543-543",
+          "span_id": "nnr_2023_eggs_scoping_review_s0543",
+          "text": "Egg is a major source of choline in the diet, with about 140 mg of choline in one egg. This accounts for about 35% of the adequate intake level of 400 mg/day for adults set by the European Food Safety Authority Panel (65). Although choline is an essential nutrient that is needed as a precursor for the neurotransmitter acetylcholine and for the membrane constituent phosphatidylcholine and is required for normal liver and brain function, it is also metabolized into trimethylamine by gut microbiota and then further in the liver to TMAO, a purported risk factor for CVD (3). However, the data on the impact of egg intake on the TMAO production are controversial, with substantial interindividual variation in the response (66). A major source of variability may be the differences in gut microbiota because not all strains of bacteria are capable of converting choline to trimethylamine (67)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 544-544",
+          "span_id": "nnr_2023_eggs_scoping_review_s0544",
+          "text": "Blood pressure"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 545-545",
+          "span_id": "nnr_2023_eggs_scoping_review_s0545",
+          "text": "A meta-analysis of 15 RCTs (8 among healthy subjects) found no significant effect of increased egg consumption on systolic or diastolic blood pressure overall or in the studies with healthy subjects (49)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 546-546",
+          "span_id": "nnr_2023_eggs_scoping_review_s0546",
+          "text": "Inflammation"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 547-547",
+          "span_id": "nnr_2023_eggs_scoping_review_s0547",
+          "text": "A meta-analysis of nine RCTs (five with healthy subjects) did not find an effect of increased egg intake on inflammation markers in all studies or in studies with healthy subjects (48)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 548-548",
+          "span_id": "nnr_2023_eggs_scoping_review_s0548",
+          "text": "Food-based dietary guidelines"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 549-549",
+          "span_id": "nnr_2023_eggs_scoping_review_s0549",
+          "text": "Although RCTs suggest that high egg intake (>1 egg/day) may increase serum LDL cholesterol concentrations, prospective cohort studies have found that moderate egg intake (up to 1 egg/day) may be associated with lower risk of certain CVD outcomes, such as non-fatal CVD and CHD and stroke, although this may be limited to studies conducted in Asia. A clear biological mechanism by which moderate egg consumption might lower the risk of CVD is lacking. In contrast, intakes of \u22651 egg/week have been associated with an increased risk of overall CVD and heart failure. The latter finding is difficult to interpret considering the lack of biological mechanisms behind this association. Furthermore, the increased risk of CVD and heart failure was mainly observed in the US studies, limiting the generalizability of the findings and further suggests that residual confounding or other biases may explain the observed associations."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 550-550",
+          "span_id": "nnr_2023_eggs_scoping_review_s0550",
+          "text": "Regarding the risk of T2D, the lack of an overall association in the studies conducted in Europe or in Asia and the association with higher risk in the studies from the US may reflect different egg consumption habits between populations and residual cofounding from correlated food intakes and other risk factors for T2D in the US studies."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 551-551",
+          "span_id": "nnr_2023_eggs_scoping_review_s0551",
+          "text": "The totality of evidence from observational studies on egg consumption and cancer risk provides limited support for a role of egg consumption as a risk factor for major cancers, although a modestly elevated risk of certain cancers associated with egg consumption cannot be ruled out. However, the evidence for a higher risk of certain cancers comes mainly from retrospective case\u2013control studies that have a substantial risk of selection and recall bias in nutrition research and are a source of significant heterogeneity in the case of most cancers (Table 1). Considering the observational design of the available studies, any observed weak association may be driven by residual confounding from other risk factors for cancers, such as other dietary factors, obesity, physical inactivity, and smoking. Finally, as with CVD and T2D, the increased risk has been mainly observed in the studies conducted in the USA."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 552-552",
+          "span_id": "nnr_2023_eggs_scoping_review_s0552",
+          "text": "Data gaps for future research"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 553-553",
+          "span_id": "nnr_2023_eggs_scoping_review_s0553",
+          "text": "As there are no RCTs about the effects of egg intake on the incidence of diseases, the evidence for the relationship of egg intake with disease risk is based on the findings from observational studies, which are susceptible to residual confounding and reverse causation bias. For example, results of a prospective study of 409,885 adults in nine European countries (the European Prospective Investigation Into Cancer and Nutrition study) showed that egg consumption was associated with lower risk of ischemic heart disease, but the association was attenuated after removing the first 4 years of follow-up, suggesting that reverse causation bias may have influenced the results in the overall analysis (68). Similarly, in observational studies, higher egg intake has been associated with higher CVD risk in subjects with T2D (10, 12), but RCTs among subjects with prediabetes or T2D have found little evidence for adverse effects on CVD risk factors with increased egg intake in studies lasting up to 12 months (47, 69)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 554-554",
+          "span_id": "nnr_2023_eggs_scoping_review_s0554",
+          "text": "Because of the financial and practical limitations, for most dietary factors, there will never be RCTs that would investigate the effects on incidence of diseases. Also, most RCTs have evaluated the impact of increased egg intake only on few \u2018traditional\u2019 disease risk markers, such as serum lipid profile, blood pressure, and inflammation, which may not give a complete picture of the health effects of egg intake. However, short-term RCTs with a comprehensive panel of examinations and measurements, including more advanced measurements, such as wide-scale \u2018-omics\u2019 techniques, would give a detailed image of the physiological and metabolic effects of high egg intake. Currently, there are no such studies for most dietary factors, including eggs. Furthermore, there is no research on whether high egg intake could influence gut microbiota in humans, although animal models have suggested beneficial effects with certain bioactive compounds that are rich in eggs (70, 71). On the other hand, there is also very little research data whether the composition of the gut microbiota has an influence on the physiological effects of egg intake, as has been suggested in the case of TMAO production from choline (66)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 555-555",
+          "span_id": "nnr_2023_eggs_scoping_review_s0555",
+          "text": "Another important topic with limited research data is the overall health effects of high egg intake among the hyperresponders to dietary cholesterol. Although high egg yolk intake increased serum LDL cholesterol concentrations most among those with the apolipoprotein-E4 genotype in a Finnish RCT (64), a Finnish observational study found that higher egg intake did not associate with carotid atherosclerosis or risk of CHD or stroke even among the participants with the apolipoprotein-E4 genotype (72, 73). There are little similar research data from experimental studies for the impact of the apolipoprotein-E genotype (or other genetic factors) on other disease risk factors besides serum cholesterol concentrations."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 556-556",
+          "span_id": "nnr_2023_eggs_scoping_review_s0556",
+          "text": "Because egg is a rich source of lutein and zeaxanthin, two carotenoids that largely maintain macular pigment function, there has been interest in the impact of egg intake for the prevention of age-related macular degeneration, which leads to loss of vision. A recent meta-analysis of five RCTs concluded that egg intake may reduce the progression of age-related macular degeneration (74). However, some of the studies used lutein-enriched eggs and when the analyses were stratified by the intervention type (normal eggs or lutein-enriched eggs), the results did not reach statistical significance anymore. More evidence from RCTs and observational studies is needed before any conclusions can be drawn about the impact of egg intake on eye health."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 557-557",
+          "span_id": "nnr_2023_eggs_scoping_review_s0557",
+          "text": "Finally, several observational studies have suggested that moderate egg intake may have a neutral or an inverse association with the risk of cognitive decline or mortality from neurodegenerative diseases, including Alzheimer\u2019s disease (75\u201380). One possible explanation is the high choline and lutein content in eggs (81, 82). There are no systematic reviews or meta-analyses of this topic, so this outcome was not included in this scoping review. Currently, there is no evidence from RCTs whether increased egg intake could have an effect on cognitive decline, although such studies would be warranted based on the findings in observational studies, and the fact that the number of people with Alzheimer\u2019s disease and other dementias is increasing around the world (83)."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 558-558",
+          "span_id": "nnr_2023_eggs_scoping_review_s0558",
+          "text": "Limitations"
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 559-559",
+          "span_id": "nnr_2023_eggs_scoping_review_s0559",
+          "text": "A major limitation in the meta-analyses of observational studies is that they seldom consider the replacement food. In RCTs with egg intake, the control group has most often consumed either no eggs, egg whites, lean animal protein, egg substitutes, or oatmeal. In observational studies, if higher egg intake is associated with a disease risk, the question to ask is \u2018compared to what?\u2019 Compared to all other foods in the diet or just to certain specific food(s)? Such substitution analyses are unfortunately rarely done in the observational studies, although the comparison food(s) may have a significant impact on the observed associations of egg intake with disease risk. This is nicely illustrated in the editorial (84) to the recent meta-analysis of egg intake and CVD risk (13). This may also at least partly explain the significant heterogeneity with most disease outcomes (as shown in Table 1) and the geographical differences in the risk estimates."
+        },
+        {
+          "source_id": "nnr_2023_eggs_scoping_review",
+          "source_span": "lines 560-560",
+          "span_id": "nnr_2023_eggs_scoping_review_s0560",
+          "text": "Another limitation is that most observational studies have investigated the associations with disease risk with up to one egg/day because only a small proportion of the study populations commonly consume higher amounts. Therefore, there are little data for the associations between long-term intake of more than one egg/day and risk of diseases. Experimental studies have commonly used higher amounts of eggs (1\u20133 eggs/day), but in contrast, the studies usually last only for a few weeks or months, again making it difficult to draw conclusions of the long-term health effects of high egg intake. Finally, in the current evidence base, there are very little research data on the health effects of egg intake on children or adolescents or on pregnant or lactating women."
+        }
+      ],
+      "start_line": 526,
+      "title": "Eggs - a scoping review for Nordic Nutrition Recommendations 2023"
+    }
+  ],
+  "claim_consolidation": {
+    "changed": true,
+    "duplicate_pairs": [
+      {
+        "left": "eggs_c004",
+        "right": "eggs_c009",
+        "score": 0.8889
+      },
+      {
+        "left": "eggs_c014",
+        "right": "eggs_c015",
+        "score": 0.9091
+      }
+    ],
+    "input_claim_count": 30,
+    "merged_groups": [
+      {
+        "canonical_claim_id": "eggs_c009",
+        "merged_claim_ids": [
+          "eggs_c004",
+          "eggs_c009"
+        ],
+        "supporting_sources": [
+          "aha_2019_dietary_cholesterol_pubmed",
+          "aha_2023_dietary_cholesterol_news"
+        ]
+      },
+      {
+        "canonical_claim_id": "eggs_c015",
+        "merged_claim_ids": [
+          "eggs_c014",
+          "eggs_c015"
+        ],
+        "supporting_sources": [
+          "jama_2019_dietary_cholesterol_eggs"
+        ]
+      }
+    ],
+    "method": "tfidf_overlap_polarity_guarded_components",
+    "output_claim_count": 28,
+    "schema_id": "claim_consolidation_report_v1"
+  },
+  "claim_count": 26,
+  "claim_extraction_method": "whole_doc_source_card",
+  "claim_relation_triage": {
+    "artifact": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/claim_relation_triage_report.json",
+    "bucket_counts": {
+      "appendix": 1,
+      "core": 17,
+      "routed_away_extraneous": 2,
+      "supporting": 8
+    },
+    "eligible_claim_count": 25,
+    "excluded_claim_count": 2,
+    "relation_excluded_claim_count": 3,
+    "routed_away_claim_count": 2,
+    "schema_id": "claim_relation_triage_summary_v1"
+  },
+  "coverage_backfill": {
+    "backfilled_claim_count": 0,
+    "backfilled_claim_ids": [],
+    "concept_gap_backfill": {
+      "backfilled_claim_count": 0,
+      "method": "disabled",
+      "rejected": [],
+      "rejection_counts": {},
+      "schema_id": "source_concept_gap_backfill_v1",
+      "selected": []
+    },
+    "concept_gap_backfilled_claim_count": 0,
+    "deterministic_claim_insertion": "disabled",
+    "method": "warnings_only_for_budget_skipped_chunks",
+    "no_signal_chunk_count": 2,
+    "no_signal_chunk_ids": [
+      "nnr_2023_eggs_scoping_review_lines_596_630",
+      "nnr_2023_eggs_scoping_review_lines_701_701"
+    ],
+    "schema_id": "coverage_backfill_v2",
+    "skipped_chunk_backfilled_claim_count": 0,
+    "skipped_chunk_count": 83,
+    "skipped_chunk_ids": [
+      "dga_2020_2025_pmc_summary_lines_1_35",
+      "dga_2020_2025_pmc_summary_lines_36_70",
+      "dga_2020_2025_pmc_summary_lines_106_140",
+      "dga_2020_2025_pmc_summary_lines_141_175",
+      "dga_2020_2025_pmc_summary_lines_176_199",
+      "aha_2019_dietary_cholesterol_pubmed_lines_1_35",
+      "aha_2019_dietary_cholesterol_pubmed_lines_36_70",
+      "aha_2019_dietary_cholesterol_pubmed_lines_71_105",
+      "aha_2019_dietary_cholesterol_pubmed_lines_141_175",
+      "aha_2019_dietary_cholesterol_pubmed_lines_176_192",
+      "aha_2023_dietary_cholesterol_news_lines_1_35",
+      "aha_2023_dietary_cholesterol_news_lines_71_105",
+      "aha_2023_dietary_cholesterol_news_lines_106_140",
+      "aha_2023_dietary_cholesterol_news_lines_141_175",
+      "bmj_2020_egg_consumption_cvd_lines_1_35",
+      "bmj_2020_egg_consumption_cvd_lines_36_70",
+      "bmj_2020_egg_consumption_cvd_lines_71_105",
+      "bmj_2020_egg_consumption_cvd_lines_106_140",
+      "bmj_2020_egg_consumption_cvd_lines_141_175",
+      "bmj_2020_egg_consumption_cvd_lines_176_210",
+      "bmj_2020_egg_consumption_cvd_lines_211_245",
+      "bmj_2020_egg_consumption_cvd_lines_246_280",
+      "bmj_2020_egg_consumption_cvd_lines_281_315",
+      "bmj_2020_egg_consumption_cvd_lines_316_350",
+      "bmj_2020_egg_consumption_cvd_lines_351_385",
+      "bmj_2020_egg_consumption_cvd_lines_386_420",
+      "bmj_2020_egg_consumption_cvd_lines_421_455",
+      "bmj_2020_egg_consumption_cvd_lines_456_490",
+      "bmj_2020_egg_consumption_cvd_lines_491_525",
+      "bmj_2020_egg_consumption_cvd_lines_561_595",
+      "bmj_2020_egg_consumption_cvd_lines_596_630",
+      "bmj_2020_egg_consumption_cvd_lines_631_665",
+      "bmj_2020_egg_consumption_cvd_lines_666_684",
+      "jama_2019_dietary_cholesterol_eggs_lines_1_35",
+      "jama_2019_dietary_cholesterol_eggs_lines_36_70",
+      "jama_2019_dietary_cholesterol_eggs_lines_71_105",
+      "jama_2019_dietary_cholesterol_eggs_lines_106_140",
+      "jama_2019_dietary_cholesterol_eggs_lines_141_175",
+      "jama_2019_dietary_cholesterol_eggs_lines_176_210",
+      "jama_2019_dietary_cholesterol_eggs_lines_211_245",
+      "jama_2019_dietary_cholesterol_eggs_lines_246_280",
+      "jama_2019_dietary_cholesterol_eggs_lines_281_315",
+      "jama_2019_dietary_cholesterol_eggs_lines_316_350",
+      "jama_2019_dietary_cholesterol_eggs_lines_351_385",
+      "jama_2019_dietary_cholesterol_eggs_lines_386_420",
+      "jama_2019_dietary_cholesterol_eggs_lines_421_455",
+      "jama_2019_dietary_cholesterol_eggs_lines_491_525",
+      "jama_2019_dietary_cholesterol_eggs_lines_526_560",
+      "jama_2019_dietary_cholesterol_eggs_lines_561_595",
+      "jama_2019_dietary_cholesterol_eggs_lines_596_630",
+      "jama_2019_dietary_cholesterol_eggs_lines_631_650",
+      "li_2020_egg_cholesterol_rct_meta_lines_1_35",
+      "li_2020_egg_cholesterol_rct_meta_lines_36_70",
+      "li_2020_egg_cholesterol_rct_meta_lines_71_105",
+      "li_2020_egg_cholesterol_rct_meta_lines_106_140",
+      "li_2020_egg_cholesterol_rct_meta_lines_141_175",
+      "li_2020_egg_cholesterol_rct_meta_lines_176_210",
+      "li_2020_egg_cholesterol_rct_meta_lines_211_245",
+      "li_2020_egg_cholesterol_rct_meta_lines_281_315",
+      "li_2020_egg_cholesterol_rct_meta_lines_316_350",
+      "li_2020_egg_cholesterol_rct_meta_lines_351_385",
+      "li_2020_egg_cholesterol_rct_meta_lines_386_420",
+      "li_2020_egg_cholesterol_rct_meta_lines_421_445",
+      "nnr_2023_eggs_scoping_review_lines_1_35",
+      "nnr_2023_eggs_scoping_review_lines_36_70",
+      "nnr_2023_eggs_scoping_review_lines_71_105",
+      "nnr_2023_eggs_scoping_review_lines_106_140",
+      "nnr_2023_eggs_scoping_review_lines_141_175",
+      "nnr_2023_eggs_scoping_review_lines_176_210",
+      "nnr_2023_eggs_scoping_review_lines_211_245",
+      "nnr_2023_eggs_scoping_review_lines_246_280",
+      "nnr_2023_eggs_scoping_review_lines_281_315",
+      "nnr_2023_eggs_scoping_review_lines_316_350",
+      "nnr_2023_eggs_scoping_review_lines_351_385",
+      "nnr_2023_eggs_scoping_review_lines_386_420",
+      "nnr_2023_eggs_scoping_review_lines_421_455",
+      "nnr_2023_eggs_scoping_review_lines_456_490",
+      "nnr_2023_eggs_scoping_review_lines_491_525",
+      "nnr_2023_eggs_scoping_review_lines_561_595",
+      "nnr_2023_eggs_scoping_review_lines_596_630",
+      "nnr_2023_eggs_scoping_review_lines_631_665",
+      "nnr_2023_eggs_scoping_review_lines_666_700",
+      "nnr_2023_eggs_scoping_review_lines_701_701"
+    ],
+    "suppressed_candidate_count": 81,
+    "suppressed_candidates": [
+      {
+        "chunk_id": "dga_2020_2025_pmc_summary_lines_1_35",
+        "excerpt": "The US Departments of Agriculture (USDA) and of Health and Human Services (HHS) update the Dietary Guidelines every 5 years, based on the current science. Although many recommendations have remained relatively consistent over time, the Dietary Guidelines also has evolved as scientific knowledge has grown. The 2020\u20132025 Dietary Guidelines for Americans reflects this in 3 important ways. The first is its recognition that diet-related chronic diseases, such as cardiovascular disease, type 2 diabetes, obesity, and some types of cancer, are very prevalent among Americans and pose a major public health problem. A fundamental premise of the Dietary Guidelines is that everyone, no matter their age, race, or ethnicity, economic circumstances, or health status, can benefit from shifting food and beverage choices to better support healthy dietary patterns. The second is its focus on dietary patterns. Researchers and public health experts understand that nutrients and foods are not consumed in isolation. Rather, people consume them in various combinations over time\u2014a dietary pattern\u2014and these foods and beverages act synergistically to affect health. The 2020\u20132025 Dietary Guidelines carries forward this emphasis on the importance of a healthy dietary pattern as a whole\u2014rather than on individual nutrients, foods, or food groups in isolation. The third is its focus on a life span approach. This edition of the Dietary Guidelines highlights the importance of encouraging healthy dietary patterns at every life stage from infancy through older adulthood. For the first time since the 1985 edition, the 2020\u20132025 Dietary Guidelines includes recommendations for healthy dietary patterns for infants and toddlers.",
+        "line_range": "1-35",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 21,
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 34-34"
+      },
+      {
+        "chunk_id": "dga_2020_2025_pmc_summary_lines_36_70",
+        "excerpt": "The Committee encouraged exclusive breastfeeding, ideally for the first 6 months of life, with continued breastfeeding through the first year of life or longer as desired by the mother and infant. On the basis of the evidence reviewed, the Committee concluded that complementary foods and beverages (CFB) should not be introduced before 4 months old. The Committee found that introduction at 4 to 5 months old as compared with 6 months old does not offer long-term advantages or disadvantages. It recommended that CFB include foods that are rich in iron and zinc, either intrinsically (eg, meats) or due to fortification (eg, iron-fortified infant cereal), particularly from the age of 6 to 12 months among breastfed infants. Complementary foods and beverages should also contain adequate amounts of polyunsaturated fatty acids. The Committee concluded that, once CFB are introduced, adding peanut and egg in developmentally appropriate forms in the first year of life (6-12 months old) may reduce the risk of food allergy to these foods. The Committee found no evidence that avoiding other potentially allergenic foods (fish, shellfish, cow milk products, tree nuts, seeds, wheat, and soy) in the first year of life is beneficial with regard to preventing food allergies or other atopic diseases.",
+        "line_range": "36-70",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 47,
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 70-70"
+      },
+      {
+        "chunk_id": "dga_2020_2025_pmc_summary_lines_106_140",
+        "excerpt": "\u2022\tAdded sugars\u2014less than 10% of calories per day starting at the age of 2 years. Avoid foods and beverages with added sugars for those younger than 2 years.",
+        "line_range": "106-140",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 35,
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 107-107"
+      },
+      {
+        "chunk_id": "dga_2020_2025_pmc_summary_lines_141_175",
+        "excerpt": "\u2022\t2.Congress.gov . H.R. 1608\u2014National Nutrition Monitoring and Related Research Act of 1990. https://www.congress.gov/bill/101st-congress/house-bill/1608. Accessed June 7, 2021.",
+        "line_range": "141-175",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 18,
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 141-141"
+      },
+      {
+        "chunk_id": "dga_2020_2025_pmc_summary_lines_176_199",
+        "excerpt": "NLM on X (formerly known as Twitter)",
+        "line_range": "176-199",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 19,
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_span": "lines 180-180"
+      },
+      {
+        "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_1_35",
+        "excerpt": "Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you\u2019re on a federal government site.",
+        "line_range": "1-35",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 21,
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 6-6"
+      },
+      {
+        "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_36_70",
+        "excerpt": "Save Email Send to",
+        "line_range": "36-70",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 5,
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 36-36"
+      },
+      {
+        "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_71_105",
+        "excerpt": "Publication types",
+        "line_range": "71-105",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 2,
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 80-80"
+      },
+      {
+        "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_141_175",
+        "excerpt": "\u2022\tRecommended Dietary Allowances*",
+        "line_range": "141-175",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 18,
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 141-141"
+      },
+      {
+        "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_176_192",
+        "excerpt": ".cls-11, .cls-12 { fill: #737373; } .cls-11 { fill-rule: evenodd; }",
+        "line_range": "176-192",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 16,
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_span": "lines 176-176"
+      },
+      {
+        "chunk_id": "aha_2023_dietary_cholesterol_news_lines_1_35",
+        "excerpt": "3\tHere's the latest on dietary cholesterol and how it fits in with a healthy diet",
+        "line_range": "1-35",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 23,
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 31-31"
+      },
+      {
+        "chunk_id": "aha_2023_dietary_cholesterol_news_lines_71_105",
+        "excerpt": "Decades ago, nutrition research was focused on an isolated nutrient or a specific food, Van Horn said. \"Nutrition research has shifted that focus to the broader totality of eating patterns and food frequency,\" she said. \"Since nobody eats a nutrient or a food in isolation, the overall dietary intake over the day, the week or the year influences biological factors. These include blood cholesterol, blood pressure, blood glucose \u2013 all the risk factors that are examined, evaluated and studied to prevent heart disease.\"",
+        "line_range": "71-105",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 31,
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 72-72"
+      },
+      {
+        "chunk_id": "aha_2023_dietary_cholesterol_news_lines_106_140",
+        "excerpt": "\u2022\tAbout the American Heart Association",
+        "line_range": "106-140",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 34,
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 117-117"
+      },
+      {
+        "chunk_id": "aha_2023_dietary_cholesterol_news_lines_141_175",
+        "excerpt": "This link is provided for convenience only and is not an endorsement of either the linked-to entity or any product or service.",
+        "line_range": "141-175",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 14,
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_span": "lines 172-172"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_1_35",
+        "excerpt": "To evaluate the association between egg intake and cardiovascular disease risk among women and men in the United States, and to conduct a meta-analysis of prospective cohort studies.",
+        "line_range": "1-35",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 26,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 31-31"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_36_70",
+        "excerpt": "NHS, NHS II, and HPFS are prospective cohort studies of US health professionals. In 1976, NHS enrolled 121\u2009701 female registered nurses between the ages of 30 and 55 years to investigate the long term health effects of various contraceptive methods in women.19 20 NHS II includes 116\u2009430 female registered nurses between the ages of 25 and 44 years and began in 1989 with the goal of investigating oral contraceptives, diet, and lifestyle factors in a population younger than NHS.20 HPFS is the male counterpart to NHS and NHS II, and included 51\u2009529 male health professionals between the ages of 40 and 75 years at study inception in 1986. In all three cohorts, participants completed validated questionnaires every two years that captured information on disease diagnosis, disease risk factors, drug use, and lifestyle characteristics, with follow-up rates exceeding 90%. For the current analysis, baseline was defined as the year when diet was first assessed in the cohorts: 1980 in NHS, 1986 in HPFS, and 1991 in NHS II. Of the participants who completed a baseline food frequency questionnaire (NHS, n=98\u2009047; NHS II, n=97\u2009813; HPFS, n=51\u2009529), we excluded those who reported a diagnosis of cardiovascular disease, cancer, or type 2 diabetes, or had coronary artery surgery before completion of the baseline; these diagnoses could result in changes in diet.21 We also excluded participants with missing age at baseline and those who reported implausible energy intake on the food frequency questionnaire (<500 or >3500 kcal/day for women and <800 or >4200 kcal/day for men). Additionally, we excluded participants who left more than 70 items blank on the food frequency questionnaire, and those who had missing information on baseline egg intake. The final sample included 83\u2009349 participants in NHS, 90\u2009214 participants in NHS II, and 42\u2009055 participants in HPFS. Supplemental figure 1 shows the flow chart of participants.",
+        "line_range": "36-70",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 68,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 53-53"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_71_105",
+        "excerpt": "Extracted data included first author name, publication year, cohort name, country where the study was conducted, follow-up duration, number of participants, sex, age range at baseline, method used to assess diet, and method used to identify events. Additionally, we obtained data about cardiovascular disease endpoints, number of events, categories of egg consumption, risk estimates (95% confidence intervals) from the multivariable model, and covariates in the maximally adjusted model. Study authors were contacted by email if information was missing. We used the Newcastle-Ottawa scale to assess the risk of bias in included studies.42 Age, sex, body mass index, smoking status, physical activity, alcohol intake, and energy intake were considered primary confounders of the association between egg consumption and cardiovascular disease risk. Hypertension, dyslipidemia, and red meat intake were considered secondary confounders. Two authors (JPDC and SC) independently screened the literature (title and abstract, then full article), extracted the data, and conducted the risk of bias assessment in individual studies. Disagreement and discordance were resolved by consensus between the two authors.",
+        "line_range": "71-105",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 64,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 74-74"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_106_140",
+        "excerpt": "Incidence rate (per 105 person years)",
+        "line_range": "106-140",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 35,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 107-107"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_141_175",
+        "excerpt": "Incidence rate (per 105 person years)",
+        "line_range": "141-175",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 35,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 153-153"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_176_210",
+        "excerpt": "Incidence rate (per 105 person years)",
+        "line_range": "176-210",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 35,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 199-199"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_211_245",
+        "excerpt": "We used the pooled hazard ratio for cardiovascular disease risk for each one egg per day increase (0.98, 95% confidence interval 0.92 to 1.04) for E value calculations. We estimated that an unmeasured confounder associated with egg consumption and cardiovascular disease by a risk ratio of 1.28-fold each could shift the confidence interval to exclude the null toward an inverse association (that is, to bring the upper confidence limit of 1.04 to an upper limit of 0.99), but weaker confounding could not. Conversely, an unmeasured confounder associated with egg consumption and cardiovascular disease by a risk ratio of at least 1.43-fold each could shift the confidence interval to exclude the null toward a positive association (that is, to bring the lower confidence limit of 0.92 to a lower limit of 1.01).",
+        "line_range": "211-245",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 59,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 240-240"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_246_280",
+        "excerpt": "Association of egg consumption with cardiovascular disease risk for one egg per day increase using random effects meta-analysis. Weights of each estimate are represented by size of square. Hollow squares represent individual estimate effects and solid lines represent 95% confidence intervals. Overall effect estimate and 95% confidence interval are represented by diamond and dotted line. I2 refers to proportion of heterogeneity among studies. CHD=coronary heart disease; CVD=cardiovascular disease; HPFS=Health Professionals\u2019 Follow-Up Study; i-stroke=ischemic stroke; NHS=Nurses\u2019 Health Study; T2D=type 2 diabetes",
+        "line_range": "246-280",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 43,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 248-248"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_281_315",
+        "excerpt": "Cardiovascular disease composite\u2021",
+        "line_range": "281-315",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 25,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 306-306"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_316_350",
+        "excerpt": "We found no evidence of publication bias for the association between egg consumption and cardiovascular disease risk for one egg per day increase (supplemental fig 5), but evidence indicated substantial heterogeneity (I2=62.3%). No single study appeared to cause the heterogeneity, although the study by Qin and colleagues10 of the China Kadoorie Biobank cohort and the study by Zhong and colleagues8 of the Lifetime Risk Pooling Project pulled the association in opposite directions (supplemental fig 6). We found no significant interaction in prespecified subgroup meta-regressions for cardiovascular disease risk for one egg per day increase. However, geographical location (US, Europe, Asia) appeared to be the main source of heterogeneity (P for interaction=0.07). An increase of one egg per day was associated with a lower risk of cardiovascular disease among studies conducted in Asia (relative risk 0.92, 95% confidence interval 0.85 to 0.99), but not among studies conducted in the US (1.01, 0.96 to 1.06) or Europe (1.05, 0.92 to 1.19; table 3). Heterogeneity was minimal among US studies (I2=30.8%), moderate among Asian studies (I2=44.8%), and substantial among European studies (I2=64.7%). In other subgroup analyses, heterogeneity was minimal among studies conducted in men and women separately, among studies with at least 10 years of follow-up, and among studies with low risk of bias (table 3). These different strata all provided similar results and suggested no association between one egg per day increase and risk of cardiovascular disease.",
+        "line_range": "316-350",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 42,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 348-348"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_351_385",
+        "excerpt": "Pooled relative risk (95% CI)",
+        "line_range": "351-385",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 37,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 355-355"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_386_420",
+        "excerpt": "0.99 (0.91 to 1.08)",
+        "line_range": "386-420",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 23,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 397-397"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_421_455",
+        "excerpt": "1.05 (0.87 to 1.27)",
+        "line_range": "421-455",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 29,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 425-425"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_456_490",
+        "excerpt": "Risk of bias*",
+        "line_range": "456-490",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 25,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 477-477"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_491_525",
+        "excerpt": "We found no association between egg consumption and risk of cardiovascular disease in three large US cohorts. Results from the updated meta-analysis lend further support to the overall lack of an association between moderate egg consumption (up to one egg per day) and cardiovascular disease risk. However, evidence of considerable heterogeneity existed between studies (I2=62.3%), probably caused by discrepancies in the association between egg consumption and cardiovascular disease risk among studies conducted in the US, Europe, and Asia. No association existed between egg consumption and cardiovascular disease risk among US (minimal heterogeneity, I2=30.8%) and European cohorts (substantial heterogeneity, I2=64.7%), but an inverse association was found in Asian cohorts (moderate heterogeneity, I2=44.8%).49 Subgroup analyses revealed additional strata (studies conducted only among men or women, studies with \u226510 years of follow-up, or studies with low risk of bias) with minimal heterogeneity among which no association between egg consumption and cardiovascular disease risk was observed. Finally, when we restricted the meta-analysis to people with type 2 diabetes only, high egg consumption was associated with a higher risk of cardiovascular disease, but considerable heterogeneity between studies was observed concomitantly.",
+        "line_range": "491-525",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 39,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 524-524"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_561_595",
+        "excerpt": "\u2022\t27.World Health Organization Regional Office for Europe Ischemic Heart Disease Registers: Report of the Fifth Working Group (including a Second Revision of the Operating Protocol). Copenhagen, Denmark; 26-29 April. 1971. https://locatorplus.gov/cgi-bin/Pwebrecon.cgi?DB=local&v1=1&ti=1,1&Search_Arg=0410334&Search_Code=0359&CNT=20&SID=1",
+        "line_range": "561-595",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 1,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 584-584"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_596_630",
+        "excerpt": "\u2022\t42.Wells GASB, O\u2019Connell D, Peterson J, Welch V, Losos M, Tugwell P. The Newcastle\u2013Ottawa Scale (NOS) for assessing the quality if nonrandomized studies in meta-analyses. 2009 http://www.ohri.ca/PROGRAMS/CLINICAL_EPIDEMIOLOGY/OXFORD.ASP.",
+        "line_range": "596-630",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 4,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 599-599"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_631_665",
+        "excerpt": "Articles from The BMJ are provided here courtesy of BMJ Publishing Group",
+        "line_range": "631-665",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 20,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 634-634"
+      },
+      {
+        "chunk_id": "bmj_2020_egg_consumption_cvd_lines_666_684",
+        "excerpt": "\u2022\tHHS Vulnerability Disclosure",
+        "line_range": "666-684",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 16,
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_span": "lines 675-675"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_1_35",
+        "excerpt": "Among 29\u2009615 adults pooled from 6 prospective cohort studies in the United States with a median follow-up of 17.5 years, each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted hazard ratio [HR], 1.17; adjusted absolute risk difference [ARD], 3.24%) and all-cause mortality (adjusted HR, 1.18; adjusted ARD, 4.43%), and each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06; adjusted ARD, 1.11%) and all-cause mortality (adjusted HR, 1.08; adjusted ARD, 1.93%).",
+        "line_range": "1-35",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 28,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 35-35"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_36_70",
+        "excerpt": "This analysis included 29\u2009615 participants (mean [SD] age, 51.6 [13.5] years at baseline) of whom 13\u2009299 (44.9%) were men and 9204 (31.1%) were black. During a median follow-up of 17.5 years (interquartile range, 13.0-21.7; maximum, 31.3), there were 5400 incident CVD events and 6132 all-cause deaths. The associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were monotonic (all P values for nonlinear terms, .19-.83). Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]). Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06 [95% CI, 1.03-1.10]; adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]) and all-cause mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; adjusted ARD, 1.93% [95% CI, 1.10%-2.76%]). The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+        "line_range": "36-70",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 60,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 50-50"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_71_105",
+        "excerpt": "This study included 29\u2009615 participants with 524\u2009376 person-years of follow-up data (Table). Mean (SD) age was 51.6 (13.5) years at baseline, 9204 (31.1%) were black, 13\u2009299 (44.9%) were men. The 6 cohorts differed considerably in terms of sample size, age, sex, race/ethnicity, education level, BMI, and behavioral and clinical CVD risk factors, as well as incident CVD and all-cause mortality rates. Overall median dietary cholesterol consumption was 241 mg per day (interquartile range [IQR], 164-350) and the overall mean (SD) was 285 (184) mg per day. Overall median egg consumption was 0.14 per day (IQR, 0.07-0.43) and the overall mean (SD) was 0.34 (0.46) per day. Participants\u2019 characteristics, according to 5 levels of dietary cholesterol or egg consumption are shown in eTables 1 and 2 in the Supplement. The unadjusted incidence per 1000 person-years was 10.9 (95% CI, 10.6-11.2) for incident CVD and 11.7 (95% CI, 11.4-12.0) for all-cause mortality (eTable3 in the Supplement). The energy-adjusted Pearson correlations between dietary cholesterol or egg consumption and a range of dietary factors are shown in eTable 4 in the Supplement.",
+        "line_range": "71-105",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 40,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 77-77"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_106_140",
+        "excerpt": "Race/ethnicity, No. (%)",
+        "line_range": "106-140",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 31,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 120-120"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_141_175",
+        "excerpt": "Education level, No. (%)",
+        "line_range": "141-175",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 31,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 155-155"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_176_210",
+        "excerpt": "Smoking status, No. (%)",
+        "line_range": "176-210",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 31,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 183-183"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_211_245",
+        "excerpt": "Diabetes, No. (%)",
+        "line_range": "211-245",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 37,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 239-239"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_246_280",
+        "excerpt": "Antihypertensive medication use, No (%)",
+        "line_range": "246-280",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 41,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 246-246"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_281_315",
+        "excerpt": "Dietary cholesterol, median (IQR), mg/dd",
+        "line_range": "281-315",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 29,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 281-281"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_316_350",
+        "excerpt": "All-cause mortality",
+        "line_range": "316-350",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 29,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 330-330"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_351_385",
+        "excerpt": "During a median follow-up of 17.5 years (IQR, 13.0-21.7; maximum 31.3), there were a total of 5400 incident CVD events (2088 fatal and nonfatal CHD events, 1302 fatal and nonfatal stroke events, 1897 fatal and nonfatal heart failure events, and 113 other CVD deaths) and 6132 all-cause deaths. The associations between dietary cholesterol consumption and incident CVD and all-cause mortality were monotonic (P value >.1 for quadratic cholesterol term; Figure 1). Based on model 2, each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]; Figure 2A) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]; Figure 2B). These associations remained significant after further adjusting for CVD risk factors (eg, BMI, diabetes, blood pressure, and serum lipids), dietary fats, animal protein, fiber, sodium, cholesterol-containing foods, or dietary patterns with 2 exceptions: (1) the associations between dietary cholesterol consumption and incident CVD (adjusted HR, 1.13 [95% CI, 0.97-1.31]; adjusted ARD, 2.79% [95% CI, \u22120.76% to 6.34%]) and all-cause mortality (adjusted HR, 1.05 [95% CI, 0.92-1.21]; adjusted ARD, 1.25% [95% CI, \u22122.65% to 5.15%]) were no longer significant after adjusting for consumption of eggs, unprocessed red meat, and processed meat; and (2) the association between dietary cholesterol consumption and all-cause mortality was no longer significant after adjusting for egg consumption (adjusted HR, 1.13 [95% CI, 0.99-1.27]; adjusted ARD, 3.05% [95% CI, \u22120.59% to 6.70%]).",
+        "line_range": "351-385",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 45,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 367-367"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_386_420",
+        "excerpt": "See the Figure 1 footnote for conditions included in the incident cardiovascular disease (CVD) definition. Adjustment covariates included age, sex, race/ethnicity (white, black, Hispanic, Chinese), education (<high school, high school, \u2265some college), total energy, smoking status (current, former, never), smoking pack-years (0, 0.1-4.9, 5.0-9.9, 10-19.9, 20-29.9, 30-39.9, \u226540), cohort-specific physical activity z score, alcohol consumption (gram), and use of hormone therapy (y/n), where relevant. Mean dietary cholesterol consumption in the United States was 293 mg/d, based on the National Health and Nutrition Examination Survey 2013-2014 data.27 The results can be interpreted using the following sex-specific estimates as an example: in men, each additional 300 mg of dietary cholesterol consumed per day was significantly associated with a higher relative risk (RR) of incident CVD (adjusted hazard ratio [HR], 1.14 [95% CI, 1.05-1.23]) and a higher absolute risk of incident CVD (adjusted absolute risk difference [ARD], 2.70% [95% CI, 0.08%-5.33%]) over a follow-up of 30 years. In women, each additional 300 mg of dietary cholesterol consumed per day was significantly associated with a higher RR of incident CVD (adjusted HR, 1.26 [95% CI, 1.14-1.40]) and a higher absolute risk of incident CVD (adjusted ARD, 5.12% [95% CI, 2.21%-8.02%]) over a follow-up of 30 years. The difference between men and women was borderline significant (P value for interaction\u2009=\u2009.051).",
+        "line_range": "386-420",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 55,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 406-406"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_421_455",
+        "excerpt": "See the Figure 1 footnote for conditions included in the incident cardiovascular disease (CVD) definition. Adjustment covariates included age, sex, race/ethnicity (white, black, Hispanic, Chinese), education (<high school, high school, \u2265some college), total energy, smoking status (current, former, never), smoking pack-years (0, 0.1-4.9, 5.0-9.9, 10-19.9, 20-29.9, 30-39.9, \u226540), cohort-specific physical activity z score, alcohol consumption (gram), and use of hormone therapy (y/n), where relevant. Mean egg consumption in the United States was approximately half an egg per day, based on the National Health and Nutrition Examination Survey 2011-2012 data.28 The results can be interpreted using the following sex-specific estimates as an example: in men, each additional half an egg consumed per day was not significantly associated with a higher relative risk (RR) of incident CVD (adjusted hazard ratio [HR], 1.03 [95% CI, 0.99-1.08]) and a higher absolute risk of incident CVD (adjusted absolute risk difference [ARD], 1.02% [95% CI, \u22120.34% to 2.38%]) over a follow-up of 30 years. In women, each additional half an egg consumed per day was significantly associated with a higher RR of incident CVD (adjusted HR, 1.13 [95% CI, 1.07-1.20]) and a higher absolute risk of incident CVD (adjusted ARD, 1.86% [95% CI, 0.62%-3.10%]) over a follow-up of 30 years. The association was stronger in women than in men (P value for interaction\u2009=\u2009.009).",
+        "line_range": "421-455",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 67,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 439-439"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_491_525",
+        "excerpt": "\u2022\t4.US Department of Agriculture Agricultural Research Service, Nutrient Data Laboratory. USDA National Nutrient Database for Standard Reference, Release 28. Version Current: September 2015. https://ndb.nal.usda.gov/ndb/. Accessed January 31, 2019.",
+        "line_range": "491-525",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 31,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 523-523"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_526_560",
+        "excerpt": "\u2022\t33.R Package \u201criskRegression\u201d (Version 2019.01.29): risk regression models and prediction scores for survivalanalysis with competing risks. https://cran.r-project.org/web/packages/riskRegression/riskRegression.pdf. Accessed January 31, 2019.",
+        "line_range": "526-560",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 8,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 552-552"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_561_595",
+        "excerpt": "eTable 8. Associations of Dietary Cholesterol or Egg Consumption With Incident CVD and All-Cause Mortality, With Missing Data Imputed by Multiple Imputation by Chained Equations",
+        "line_range": "561-595",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 34,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 581-581"
+      },
+      {
+        "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_596_630",
+        "excerpt": "eFigure 10. Association Between Each Additional Half an Egg Consumed Per Day and Noncardiovascular Mortality",
+        "line_range": "596-630",
+        "reason": "deterministic_backfill_disabled",
+        "role": "source_claim",
+        "signal_score": 20,
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_span": "lines 597-597"
+      }
+    ],
+    "warning": "Some source chunks were skipped by budget. The runner reports coverage risk but does not insert deterministic backfill claims into the map."
+  },
+  "coverage_claim_count": 0,
+  "decision_question": "For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?",
+  "epistemic_config_profile": "general_decision_support",
+  "failures": [],
+  "initial_claim_count": 26,
+  "initial_relation_count": 15,
+  "label_audit_bucket_counts": {
+    "appendix": 7,
+    "core": 12,
+    "supporting": 7
+  },
+  "label_audit_warning_counts": {
+    "deterministic_relevance:question_outcome_mismatch": 6,
+    "deterministic_relevance:question_population_mismatch": 1,
+    "model_direct_with_deterministic_warning": 4,
+    "model_high_importance_with_deterministic_warning": 7,
+    "model_main_map_demoted_by_audit": 3
+  },
+  "llm_claim_count": 30,
+  "max_chunks_per_source": 1,
+  "max_claims_per_source": 3,
+  "max_relation_pairs": 20,
+  "max_total_chunks": 8,
+  "output_path": "artifacts/truth_boundary_verification_eggs_live/generated_map.json",
+  "post_triage_extracted_claim_count": 28,
+  "pre_consolidation_claim_count": 30,
+  "quality_repair": {
+    "accepted": true,
+    "candidate_path": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/map_quality_repaired_candidate.json",
+    "critique_path": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/map_critique.json",
+    "initial_score": 78,
+    "initial_status": "usable_with_review",
+    "ran": true,
+    "reason": "accepted_targeted_repair",
+    "repair_plan_path": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/map_repair_plan.json",
+    "repaired_score": 78,
+    "repaired_status": "usable_with_review",
+    "targeted_relation_repair": {
+      "accepted": 7,
+      "attempted": 8,
+      "rejected": 1,
+      "rejected_relations": [
+        {
+          "pair_id": "pair_003",
+          "proposal": {
+            "crux_candidates": [],
+            "edge_basis": "uncertain",
+            "failure_condition": "The edge is not warranted because the claims represent different levels of evidence (epidemiological association vs. clinical guidance) and do not share a conditional or mechanistic link.",
+            "pair_id": "pair_003",
+            "rationale": "The claims are not directly related in a way that supports, conditions, or tensions with each other regarding the decision. eggs_c019 provides evidence on the association between dietary cholesterol and mortality (an outcome), while eggs_c006 is a high-level clinical guideline recommending a shift toward overall dietary patterns rather than specific nutrient targets. While both relate to heart health, one does not provide a mechanism or condition for the other.",
+            "relation_confidence": "high",
+            "relation_type": "none",
+            "similar_but_not_identical": [],
+            "source_anchor_a": "",
+            "source_anchor_b": "",
+            "source_claim": "eggs_c019",
+            "target_claim": "eggs_c006",
+            "why_decision_relevant": ""
+          },
+          "reason": "no_relation"
+        }
+      ]
+    },
+    "validation_failures": []
+  },
+  "quality_repair_prompt": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/map_quality_repair_prompt.txt",
+  "quality_report": "artifacts/truth_boundary_verification_eggs_live/map_artifacts/map_quality_report.json",
+  "quality_score": 78,
+  "quality_status": "usable_with_review",
+  "region_id": "eggs_observational_vs_rct",
+  "rejected_claims": [],
+  "rejected_relations": [
+    {
+      "batch_id": "batch_001",
+      "pair_id": "pair_001",
+      "proposal": {
+        "crux_candidates": [],
+        "edge_basis": "uncertain",
+        "failure_condition": "The claims were to point in different directions.",
+        "pair_id": "pair_001",
+        "rationale": "Both claims report that moderate egg consumption (up to one per day) is not associated with increased cardiovascular disease risk. Because they reach the same conclusion, there is no tension, challenge, or refinement between them.",
+        "relation_confidence": "high",
+        "relation_type": "none",
+        "similar_but_not_identical": [
+          "eggs_c010 and eggs_c024 both conclude that moderate egg intake is not associated with CVD risk, though they differ slightly in population (US vs European)."
+        ],
+        "source_anchor_a": "",
+        "source_anchor_b": "",
+        "source_claim": "eggs_c024",
+        "target_claim": "eggs_c010",
+        "why_decision_relevant": ""
+      },
+      "reason": "no_relation"
+    },
+    {
+      "batch_id": "batch_002",
+      "pair_id": "pair_007",
+      "proposal": {
+        "crux_candidates": [],
+        "edge_basis": "uncertain",
+        "failure_condition": "",
+        "pair_id": "pair_007",
+        "rationale": "While eggs_c019 provides methodological context regarding the independence of dietary cholesterol from fat quality, it does not directly refine, challenge, or support the specific outcome finding in eggs_c009 regarding cardiovascular risk.",
+        "relation_confidence": "medium",
+        "relation_type": "none",
+        "similar_but_not_identical": [],
+        "source_anchor_a": "",
+        "source_anchor_b": "",
+        "source_claim": "eggs_c019",
+        "target_claim": "eggs_c009",
+        "why_decision_relevant": ""
+      },
+      "reason": "no_relation"
+    },
+    {
+      "batch_id": "batch_005",
+      "pair_id": "pair_017",
+      "proposal": {
+        "crux_candidates": [],
+        "edge_basis": "uncertain",
+        "failure_condition": "The claims are for different life stages and outcomes.",
+        "pair_id": "pair_017",
+        "rationale": "The claims describe entirely different populations and contexts: eggs_c002 is a dietary recommendation for infants/toddlers (6-12 months old), while eggs_c024 is an outcome finding regarding cardiovascular disease risk in European adults. There is no logical dependency or refinement between these two.",
+        "relation_confidence": "high",
+        "relation_type": "none",
+        "similar_but_not_identical": [],
+        "source_anchor_a": "",
+        "source_anchor_b": "",
+        "source_claim": "eggs_c002",
+        "target_claim": "eggs_c024",
+        "why_decision_relevant": ""
+      },
+      "reason": "no_relation"
+    }
+  ],
+  "relation_batch_count": 5,
+  "relation_batch_size": 5,
+  "relation_count": 22,
+  "relation_eligible_claim_count": 25,
+  "relation_sharpening": {
+    "changed": [],
+    "changed_count": 0
+  },
+  "routed_away_claim_count": 2,
+  "selected_chunk_count": 7,
+  "skipped_chunk_count": 83,
+  "skipped_chunks": [
+    {
+      "chunk_id": "dga_2020_2025_pmc_summary_lines_1_35",
+      "end_line": 35,
+      "ordinal": 1,
+      "reason": "max_chunks_per_source",
+      "signal_score": 21,
+      "source_id": "dga_2020_2025_pmc_summary",
+      "span_count": 25,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "dga_2020_2025_pmc_summary_lines_36_70",
+      "end_line": 70,
+      "ordinal": 2,
+      "reason": "max_chunks_per_source",
+      "signal_score": 47,
+      "source_id": "dga_2020_2025_pmc_summary",
+      "span_count": 33,
+      "start_line": 36
+    },
+    {
+      "chunk_id": "dga_2020_2025_pmc_summary_lines_106_140",
+      "end_line": 140,
+      "ordinal": 4,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "dga_2020_2025_pmc_summary",
+      "span_count": 33,
+      "start_line": 106
+    },
+    {
+      "chunk_id": "dga_2020_2025_pmc_summary_lines_141_175",
+      "end_line": 175,
+      "ordinal": 5,
+      "reason": "max_chunks_per_source",
+      "signal_score": 18,
+      "source_id": "dga_2020_2025_pmc_summary",
+      "span_count": 26,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "dga_2020_2025_pmc_summary_lines_176_199",
+      "end_line": 199,
+      "ordinal": 6,
+      "reason": "max_chunks_per_source",
+      "signal_score": 19,
+      "source_id": "dga_2020_2025_pmc_summary",
+      "span_count": 19,
+      "start_line": 176
+    },
+    {
+      "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_1_35",
+      "end_line": 35,
+      "ordinal": 7,
+      "reason": "max_chunks_per_source",
+      "signal_score": 21,
+      "source_id": "aha_2019_dietary_cholesterol_pubmed",
+      "span_count": 23,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_36_70",
+      "end_line": 70,
+      "ordinal": 8,
+      "reason": "max_chunks_per_source",
+      "signal_score": 5,
+      "source_id": "aha_2019_dietary_cholesterol_pubmed",
+      "span_count": 5,
+      "start_line": 36
+    },
+    {
+      "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_71_105",
+      "end_line": 105,
+      "ordinal": 9,
+      "reason": "max_chunks_per_source",
+      "signal_score": 2,
+      "source_id": "aha_2019_dietary_cholesterol_pubmed",
+      "span_count": 3,
+      "start_line": 71
+    },
+    {
+      "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_141_175",
+      "end_line": 175,
+      "ordinal": 11,
+      "reason": "max_chunks_per_source",
+      "signal_score": 18,
+      "source_id": "aha_2019_dietary_cholesterol_pubmed",
+      "span_count": 21,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "aha_2019_dietary_cholesterol_pubmed_lines_176_192",
+      "end_line": 192,
+      "ordinal": 12,
+      "reason": "max_chunks_per_source",
+      "signal_score": 16,
+      "source_id": "aha_2019_dietary_cholesterol_pubmed",
+      "span_count": 17,
+      "start_line": 176
+    },
+    {
+      "chunk_id": "aha_2023_dietary_cholesterol_news_lines_1_35",
+      "end_line": 35,
+      "ordinal": 13,
+      "reason": "max_chunks_per_source",
+      "signal_score": 23,
+      "source_id": "aha_2023_dietary_cholesterol_news",
+      "span_count": 26,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "aha_2023_dietary_cholesterol_news_lines_71_105",
+      "end_line": 105,
+      "ordinal": 15,
+      "reason": "max_chunks_per_source",
+      "signal_score": 31,
+      "source_id": "aha_2023_dietary_cholesterol_news",
+      "span_count": 27,
+      "start_line": 71
+    },
+    {
+      "chunk_id": "aha_2023_dietary_cholesterol_news_lines_106_140",
+      "end_line": 140,
+      "ordinal": 16,
+      "reason": "max_chunks_per_source",
+      "signal_score": 34,
+      "source_id": "aha_2023_dietary_cholesterol_news",
+      "span_count": 34,
+      "start_line": 106
+    },
+    {
+      "chunk_id": "aha_2023_dietary_cholesterol_news_lines_141_175",
+      "end_line": 175,
+      "ordinal": 17,
+      "reason": "max_chunks_per_source",
+      "signal_score": 14,
+      "source_id": "aha_2023_dietary_cholesterol_news",
+      "span_count": 31,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_1_35",
+      "end_line": 35,
+      "ordinal": 18,
+      "reason": "max_chunks_per_source",
+      "signal_score": 26,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 26,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_36_70",
+      "end_line": 70,
+      "ordinal": 19,
+      "reason": "max_chunks_per_source",
+      "signal_score": 68,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 36
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_71_105",
+      "end_line": 105,
+      "ordinal": 20,
+      "reason": "max_chunks_per_source",
+      "signal_score": 64,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 71
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_106_140",
+      "end_line": 140,
+      "ordinal": 21,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 106
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_141_175",
+      "end_line": 175,
+      "ordinal": 22,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_176_210",
+      "end_line": 210,
+      "ordinal": 23,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 176
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_211_245",
+      "end_line": 245,
+      "ordinal": 24,
+      "reason": "max_chunks_per_source",
+      "signal_score": 59,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 211
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_246_280",
+      "end_line": 280,
+      "ordinal": 25,
+      "reason": "max_chunks_per_source",
+      "signal_score": 43,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 29,
+      "start_line": 246
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_281_315",
+      "end_line": 315,
+      "ordinal": 26,
+      "reason": "max_chunks_per_source",
+      "signal_score": 25,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 25,
+      "start_line": 281
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_316_350",
+      "end_line": 350,
+      "ordinal": 27,
+      "reason": "max_chunks_per_source",
+      "signal_score": 42,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 30,
+      "start_line": 316
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_351_385",
+      "end_line": 385,
+      "ordinal": 28,
+      "reason": "max_chunks_per_source",
+      "signal_score": 37,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 29,
+      "start_line": 351
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_386_420",
+      "end_line": 420,
+      "ordinal": 29,
+      "reason": "max_chunks_per_source",
+      "signal_score": 23,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 23,
+      "start_line": 386
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_421_455",
+      "end_line": 455,
+      "ordinal": 30,
+      "reason": "max_chunks_per_source",
+      "signal_score": 29,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 29,
+      "start_line": 421
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_456_490",
+      "end_line": 490,
+      "ordinal": 31,
+      "reason": "max_chunks_per_source",
+      "signal_score": 25,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 23,
+      "start_line": 456
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_491_525",
+      "end_line": 525,
+      "ordinal": 32,
+      "reason": "max_chunks_per_source",
+      "signal_score": 39,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 29,
+      "start_line": 491
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_561_595",
+      "end_line": 595,
+      "ordinal": 34,
+      "reason": "max_chunks_per_source",
+      "signal_score": 1,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 561
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_596_630",
+      "end_line": 630,
+      "ordinal": 35,
+      "reason": "max_chunks_per_source",
+      "signal_score": 4,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 35,
+      "start_line": 596
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_631_665",
+      "end_line": 665,
+      "ordinal": 36,
+      "reason": "max_chunks_per_source",
+      "signal_score": 20,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 24,
+      "start_line": 631
+    },
+    {
+      "chunk_id": "bmj_2020_egg_consumption_cvd_lines_666_684",
+      "end_line": 684,
+      "ordinal": 37,
+      "reason": "max_chunks_per_source",
+      "signal_score": 16,
+      "source_id": "bmj_2020_egg_consumption_cvd",
+      "span_count": 16,
+      "start_line": 666
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_1_35",
+      "end_line": 35,
+      "ordinal": 38,
+      "reason": "max_chunks_per_source",
+      "signal_score": 28,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 26,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_36_70",
+      "end_line": 70,
+      "ordinal": 39,
+      "reason": "max_chunks_per_source",
+      "signal_score": 60,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 34,
+      "start_line": 36
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_71_105",
+      "end_line": 105,
+      "ordinal": 40,
+      "reason": "max_chunks_per_source",
+      "signal_score": 40,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 28,
+      "start_line": 71
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_106_140",
+      "end_line": 140,
+      "ordinal": 41,
+      "reason": "max_chunks_per_source",
+      "signal_score": 31,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 29,
+      "start_line": 106
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_141_175",
+      "end_line": 175,
+      "ordinal": 42,
+      "reason": "max_chunks_per_source",
+      "signal_score": 31,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 29,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_176_210",
+      "end_line": 210,
+      "ordinal": 43,
+      "reason": "max_chunks_per_source",
+      "signal_score": 31,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 29,
+      "start_line": 176
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_211_245",
+      "end_line": 245,
+      "ordinal": 44,
+      "reason": "max_chunks_per_source",
+      "signal_score": 37,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 35,
+      "start_line": 211
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_246_280",
+      "end_line": 280,
+      "ordinal": 45,
+      "reason": "max_chunks_per_source",
+      "signal_score": 41,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 35,
+      "start_line": 246
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_281_315",
+      "end_line": 315,
+      "ordinal": 46,
+      "reason": "max_chunks_per_source",
+      "signal_score": 29,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 29,
+      "start_line": 281
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_316_350",
+      "end_line": 350,
+      "ordinal": 47,
+      "reason": "max_chunks_per_source",
+      "signal_score": 29,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 29,
+      "start_line": 316
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_351_385",
+      "end_line": 385,
+      "ordinal": 48,
+      "reason": "max_chunks_per_source",
+      "signal_score": 45,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 32,
+      "start_line": 351
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_386_420",
+      "end_line": 420,
+      "ordinal": 49,
+      "reason": "max_chunks_per_source",
+      "signal_score": 55,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 32,
+      "start_line": 386
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_421_455",
+      "end_line": 455,
+      "ordinal": 50,
+      "reason": "max_chunks_per_source",
+      "signal_score": 67,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 33,
+      "start_line": 421
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_491_525",
+      "end_line": 525,
+      "ordinal": 52,
+      "reason": "max_chunks_per_source",
+      "signal_score": 31,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 35,
+      "start_line": 491
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_526_560",
+      "end_line": 560,
+      "ordinal": 53,
+      "reason": "max_chunks_per_source",
+      "signal_score": 8,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 35,
+      "start_line": 526
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_561_595",
+      "end_line": 595,
+      "ordinal": 54,
+      "reason": "max_chunks_per_source",
+      "signal_score": 34,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 35,
+      "start_line": 561
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_596_630",
+      "end_line": 630,
+      "ordinal": 55,
+      "reason": "max_chunks_per_source",
+      "signal_score": 20,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 24,
+      "start_line": 596
+    },
+    {
+      "chunk_id": "jama_2019_dietary_cholesterol_eggs_lines_631_650",
+      "end_line": 650,
+      "ordinal": 56,
+      "reason": "max_chunks_per_source",
+      "signal_score": 17,
+      "source_id": "jama_2019_dietary_cholesterol_eggs",
+      "span_count": 17,
+      "start_line": 631
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_1_35",
+      "end_line": 35,
+      "ordinal": 57,
+      "reason": "max_chunks_per_source",
+      "signal_score": 32,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 26,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_36_70",
+      "end_line": 70,
+      "ordinal": 58,
+      "reason": "max_chunks_per_source",
+      "signal_score": 38,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 34,
+      "start_line": 36
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_71_105",
+      "end_line": 105,
+      "ordinal": 59,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "start_line": 71
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_106_140",
+      "end_line": 140,
+      "ordinal": 60,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "start_line": 106
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_141_175",
+      "end_line": 175,
+      "ordinal": 61,
+      "reason": "max_chunks_per_source",
+      "signal_score": 35,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_176_210",
+      "end_line": 210,
+      "ordinal": 62,
+      "reason": "max_chunks_per_source",
+      "signal_score": 42,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 32,
+      "start_line": 176
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_211_245",
+      "end_line": 245,
+      "ordinal": 63,
+      "reason": "max_chunks_per_source",
+      "signal_score": 39,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 31,
+      "start_line": 211
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_281_315",
+      "end_line": 315,
+      "ordinal": 65,
+      "reason": "max_chunks_per_source",
+      "signal_score": 49,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "start_line": 281
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_316_350",
+      "end_line": 350,
+      "ordinal": 66,
+      "reason": "max_chunks_per_source",
+      "signal_score": 8,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "start_line": 316
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_351_385",
+      "end_line": 385,
+      "ordinal": 67,
+      "reason": "max_chunks_per_source",
+      "signal_score": 3,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 35,
+      "start_line": 351
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_386_420",
+      "end_line": 420,
+      "ordinal": 68,
+      "reason": "max_chunks_per_source",
+      "signal_score": 19,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 26,
+      "start_line": 386
+    },
+    {
+      "chunk_id": "li_2020_egg_cholesterol_rct_meta_lines_421_445",
+      "end_line": 445,
+      "ordinal": 69,
+      "reason": "max_chunks_per_source",
+      "signal_score": 20,
+      "source_id": "li_2020_egg_cholesterol_rct_meta",
+      "span_count": 20,
+      "start_line": 421
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_1_35",
+      "end_line": 35,
+      "ordinal": 70,
+      "reason": "max_chunks_per_source",
+      "signal_score": 31,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 26,
+      "start_line": 1
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_36_70",
+      "end_line": 70,
+      "ordinal": 71,
+      "reason": "max_chunks_per_source",
+      "signal_score": 41,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 36
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_71_105",
+      "end_line": 105,
+      "ordinal": 72,
+      "reason": "max_chunks_per_source",
+      "signal_score": 32,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 24,
+      "start_line": 71
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_106_140",
+      "end_line": 140,
+      "ordinal": 73,
+      "reason": "max_chunks_per_source",
+      "signal_score": 45,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 32,
+      "start_line": 106
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_141_175",
+      "end_line": 175,
+      "ordinal": 74,
+      "reason": "max_chunks_per_source",
+      "signal_score": 38,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 30,
+      "start_line": 141
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_176_210",
+      "end_line": 210,
+      "ordinal": 75,
+      "reason": "max_chunks_per_source",
+      "signal_score": 32,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 30,
+      "start_line": 176
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_211_245",
+      "end_line": 245,
+      "ordinal": 76,
+      "reason": "max_chunks_per_source",
+      "signal_score": 46,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 211
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_246_280",
+      "end_line": 280,
+      "ordinal": 77,
+      "reason": "max_chunks_per_source",
+      "signal_score": 47,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 31,
+      "start_line": 246
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_281_315",
+      "end_line": 315,
+      "ordinal": 78,
+      "reason": "max_chunks_per_source",
+      "signal_score": 41,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 27,
+      "start_line": 281
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_316_350",
+      "end_line": 350,
+      "ordinal": 79,
+      "reason": "max_chunks_per_source",
+      "signal_score": 43,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 31,
+      "start_line": 316
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_351_385",
+      "end_line": 385,
+      "ordinal": 80,
+      "reason": "max_chunks_per_source",
+      "signal_score": 41,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 351
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_386_420",
+      "end_line": 420,
+      "ordinal": 81,
+      "reason": "max_chunks_per_source",
+      "signal_score": 45,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 386
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_421_455",
+      "end_line": 455,
+      "ordinal": 82,
+      "reason": "max_chunks_per_source",
+      "signal_score": 43,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 421
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_456_490",
+      "end_line": 490,
+      "ordinal": 83,
+      "reason": "max_chunks_per_source",
+      "signal_score": 49,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 456
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_491_525",
+      "end_line": 525,
+      "ordinal": 84,
+      "reason": "max_chunks_per_source",
+      "signal_score": 87,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 491
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_561_595",
+      "end_line": 595,
+      "ordinal": 86,
+      "reason": "max_chunks_per_source",
+      "signal_score": 4,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 561
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_596_630",
+      "end_line": 630,
+      "ordinal": 87,
+      "reason": "max_chunks_per_source",
+      "signal_score": 0,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 35,
+      "start_line": 596
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_631_665",
+      "end_line": 665,
+      "ordinal": 88,
+      "reason": "max_chunks_per_source",
+      "signal_score": 10,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 32,
+      "start_line": 631
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_666_700",
+      "end_line": 700,
+      "ordinal": 89,
+      "reason": "max_chunks_per_source",
+      "signal_score": 25,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 25,
+      "start_line": 666
+    },
+    {
+      "chunk_id": "nnr_2023_eggs_scoping_review_lines_701_701",
+      "end_line": 701,
+      "ordinal": 90,
+      "reason": "max_chunks_per_source",
+      "signal_score": 0,
+      "source_id": "nnr_2023_eggs_scoping_review",
+      "span_count": 0,
+      "start_line": 701
+    }
+  ]
+}

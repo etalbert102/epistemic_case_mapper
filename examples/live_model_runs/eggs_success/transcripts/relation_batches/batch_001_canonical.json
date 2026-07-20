@@ -1,0 +1,72 @@
+{
+  "relations": [
+    {
+      "crux_candidates": [],
+      "edge_basis": "uncertain",
+      "failure_condition": "The claims were to point in different directions.",
+      "pair_id": "pair_001",
+      "rationale": "Both claims report that moderate egg consumption (up to one per day) is not associated with increased cardiovascular disease risk. Because they reach the same conclusion, there is no tension, challenge, or refinement between them.",
+      "relation_confidence": "high",
+      "relation_type": "none",
+      "similar_but_not_identical": [
+        "eggs_c010 and eggs_c024 both conclude that moderate egg intake is not associated with CVD risk, though they differ slightly in population (US vs European)."
+      ],
+      "source_anchor_a": "",
+      "source_anchor_b": "",
+      "source_claim": "eggs_c024",
+      "target_claim": "eggs_c010",
+      "why_decision_relevant": ""
+    },
+    {
+      "crux_candidates": [
+        "Whether the inverse association in Asian cohorts (eggs_c011) applies to the general population is a crux for the decision."
+      ],
+      "edge_basis": "source_inferred",
+      "failure_condition": "If the Asian cohort finding was also neutral or positive (increased risk).",
+      "pair_id": "pair_002",
+      "rationale": "While eggs_c010 reports no association with CVD risk in a general population, eggs_c011 identifies an inverse association (lower risk) specifically in Asian cohorts. This represents a tension between a neutral finding and a potentially protective finding in a specific subgroup.",
+      "relation_confidence": "medium",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "inverse association was seen in Asian cohorts",
+      "source_anchor_b": "not associated with incident cardiovascular disease risk",
+      "source_claim": "eggs_c011",
+      "target_claim": "eggs_c010",
+      "why_decision_relevant": "The tension highlights that the effect of eggs may vary by population, potentially moving from neutral to beneficial."
+    },
+    {
+      "crux_candidates": [
+        "The discrepancy between eggs_c015 and eggs_c029 is a crux for determining if egg consumption is harmful or beneficial."
+      ],
+      "edge_basis": "source_explicit",
+      "failure_condition": "If the outcomes (CVD vs Stroke) were considered non-comparable for this decision.",
+      "pair_id": "pair_003",
+      "rationale": "These claims point in opposite directions on the same decision-relevant proposition: eggs_c015 associates higher egg consumption with increased CVD risk, while eggs_c029 suggests moderate intake is associated with lower stroke risk.",
+      "relation_confidence": "high",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "significantly associated with higher risk of incident CVD",
+      "source_anchor_b": "associated with lower risk of stroke",
+      "source_claim": "eggs_c015",
+      "target_claim": "eggs_c029",
+      "why_decision_relevant": "This preserves the direct conflict between evidence suggesting harm and evidence suggesting benefit."
+    },
+    {
+      "crux_candidates": [
+        "Whether the adjustment for cholesterol in eggs_c016 invalidates the findings in eggs_c010 is a crux."
+      ],
+      "edge_basis": "source_inferred",
+      "failure_condition": "If the adjustment for cholesterol was not considered a valid way to isolate the effect of eggs.",
+      "pair_id": "pair_004",
+      "rationale": "eggs_c016 provides a methodological challenge to the significance of the association by showing that the risk associated with egg consumption disappears (becomes non-significant) once adjusted for dietary cholesterol.",
+      "relation_confidence": "high",
+      "relation_type": "challenges",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "no longer significant after adjusting for dietary cholesterol",
+      "source_anchor_b": "not associated with incident cardiovascular disease risk",
+      "source_claim": "eggs_c016",
+      "target_claim": "eggs_c010",
+      "why_decision_relevant": "It suggests that the 'neutral' finding in eggs_c010 may be driven by cholesterol rather than the egg itself."
+    }
+  ]
+}

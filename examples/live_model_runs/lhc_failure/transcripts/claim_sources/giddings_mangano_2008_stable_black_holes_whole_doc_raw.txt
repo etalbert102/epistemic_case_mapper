@@ -1,0 +1,341 @@
+```json
+{
+  "source_id": "giddings_mangano_2008_stable_black_holes",
+  "source_bottom_line": "The study concludes that hypothetical stable TeV-scale black holes produced at the LHC would not pose a catastrophic risk to Earth because their accretion rates are insufficient to cause macroscopic growth on timescales shorter than the solar system's lifetime, and any such scenarios are further constrained by the observed stability of white dwarfs and neutron stars.",
+  "canonical_claims": [
+    {
+      "claim": "Stable TeV-scale black holes produced at the LHC would not pose a risk to Earth on timescales shorter than the Earth's natural lifetime.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "safety_assessment"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "This is the primary conclusion regarding the safety of LHC operations concerning black hole production.",
+      "natural_bottom_line": "LHC-produced stable black holes pose no significant risk to Earth's survival over its natural lifetime.",
+      "must_preserve_terms": [
+        "TeV-scale black holes",
+        "LHC",
+        "Earth's natural lifetime",
+        "no risk of any significance whatsoever"
+      ],
+      "claim_context": {
+        "population": "Earth",
+        "exposure_or_option": "LHC operation producing stable TeV-scale black holes",
+        "outcome_or_endpoint": "Risk to Earth on timescales shorter than its natural lifetime",
+        "evidence_design": "Theoretical analysis and conservative calculations based on known physical laws",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "TeV-scale gravity scenarios",
+          "stable black holes"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "this study finds no basis for concerns that TeV-scale black holes from the LHC could pose a risk to Earth on time scales shorter than the Earth’s natural lifetime.",
+          "line_hint": "35-37"
+        },
+        {
+          "quote": "conservative arguments based on detailed calculations and the best-available scientific knowledge, including solid astronomical data, conclude, from multiple perspectives, that there is no risk of any significance whatsoever from such black holes.",
+          "line_hint": "37-40"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "hypothetical stable black holes"
+      ]
+    },
+    {
+      "claim": "In scenarios where the crossover radius (RC) is less than 200 Å, the solar system's lifetime is too short to allow significant growth of captured stable black holes.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "mechanism_analysis"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This provides a specific physical bound on the growth of black holes in certain extra-dimensional configurations.",
+      "natural_bottom_line": "For most viable models, the time required for significant growth exceeds the solar system's lifetime.",
+      "must_preserve_terms": [
+        "RC < 200 Å",
+        "solar system lifetime",
+        "significant growth"
+      ],
+      "claim_context": {
+        "population": "Earth/Solar System",
+        "exposure_or_option": "Stable black holes with RC < 200 Å",
+        "outcome_or_endpoint": "Significant growth of captured black holes",
+        "evidence_design": "Theoretical modeling of accretion in higher-dimensional gravity",
+        "stated_dose_or_threshold": "RC < 200 Å",
+        "stated_scope": [
+          "Earth capture scenario"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the first scenario shows that, if the radius of crossover from higher-dimensional gravity to four-dimensional gravity is less than about 200 Å, the natural lifetime of the solar system is too short to allow significant growth of stable black holes that may be captured inside the Earth.",
+          "line_hint": "216-219"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "200 Å",
+          "quantity_role": "threshold_or_guideline",
+          "measures": "length",
+          "local_interpretation": "Crossover radius (RC)",
+          "source_quote": "less than about 200 Å",
+          "line_hint": "217",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "RC < 200 Å"
+      ]
+    },
+    {
+      "claim": "In scenarios where the crossover radius (RC) exceeds 200 Å, stable black holes cannot exist for a crossover radius greater than ~15 Å due to observational data on white dwarf and neutron star lifetimes.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "mechanism_analysis"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This provides a secondary bound based on the observed stability of other astronomical objects.",
+      "natural_bottom_line": "Even in cases where growth might be faster, observational data from dense stars rules out large crossover radii.",
+      "must_preserve_terms": [
+        "RC > 200 Å",
+        "RC > 15 Å",
+        "white dwarfs",
+        "neutron stars"
+      ],
+      "claim_context": {
+        "population": "White dwarfs and neutron stars",
+        "exposure_or_option": "Stable black holes with RC > 200 Å",
+        "outcome_or_endpoint": "Existence of stable black holes for large RC",
+        "evidence_design": "Comparison of accretion models to observed stellar lifetimes",
+        "stated_dose_or_threshold": "RC > 15 Å",
+        "stated_scope": [
+          "Dense-star scenario"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "In this case, however, examination of the latter dense-star scenario then produces an argument that, given observational data setting the lifetimes of such objects at a billion years or more, such stable black holes cannot in fact exist for a crossover radius greater than ≃ 15Å.",
+          "line_hint": "220-224"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "15 Å",
+          "quantity_role": "threshold_or_guideline",
+          "measures": "length",
+          "local_interpretation": "Maximum crossover radius (RC)",
+          "source_quote": "greater than ≃ 15Å",
+          "line_hint": "223",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "RC > 200 Å"
+      ]
+    },
+    {
+      "claim": "Charged TeV-scale black holes would stop in the Earth for masses up to about 7 TeV, and in the Sun if heavier.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "mechanism_analysis"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This addresses the specific scenario of charged black holes, which would be subject to electromagnetic stopping power.",
+      "natural_bottom_line": "Charged black holes are stopped by Earth's matter for masses up to 7 TeV; heavier ones would stop in the Sun.",
+      "must_preserve_terms": [
+        "charged black holes",
+        "stop in the Earth",
+        "mass of about 7 TeV",
+        "Sun"
+      ],
+      "claim_context": {
+        "population": "Charged black holes",
+        "exposure_or_option": "Cosmic-ray produced charged black holes",
+        "outcome_or_endpoint": "Stopping distance in Earth/Sun",
+        "evidence_design": "Comparison to muon energy loss and stopping power",
+        "stated_dose_or_threshold": "7 TeV",
+        "stated_scope": [
+          "Charged black holes"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the Earth provides enough stopping power for black holes with unit electric charge up to a mass of the order of 7 TeV.",
+          "line_hint": "432-433"
+        },
+        {
+          "quote": "For larger masses, one can appeal to the stopping power of the Sun. With a core density of about 150 gr/cm3 , over a radius of the order of 0.2 solar radii, namely 1.4 × 10^5 km, the Sun column density can stop black holes of mass well in excess of 100 TeV.",
+          "line_hint": "435-437"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "7 TeV",
+          "quantity_role": "threshold_or_guideline",
+          "measures": "mass",
+          "local_interpretation": "Maximum mass for Earth stopping power",
+          "source_quote": "order of 7 TeV",
+          "line_hint": "433",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "charged black holes"
+      ]
+    },
+    {
+      "claim": "The accretion of a white dwarf by a captured black hole would occur on time scales much shorter than the observed lifetime of the white dwarf.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "safety_assessment"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This provides a secondary safety check: if black holes were produced, they would have already destroyed the white dwarf by now.",
+      "natural_bottom_line": "Accretion of a white dwarf occurs on timescales much shorter than its observed lifetime, ruling out certain high-growth scenarios.",
+      "must_preserve_terms": [
+        "white dwarf",
+        "accretion time scales",
+        "observed lifetimes",
+        "ruled out"
+      ],
+      "claim_context": {
+        "population": "White dwarfs",
+        "exposure_or_option": "Captured black holes",
+        "outcome_or_endpoint": "Accretion/destruction of the white dwarf",
+        "evidence_design": "Comparison of accretion rates to observed stellar ages",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "White dwarf constraints"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the implication of these arguments is that such scenarios, where Earth could be disrupted on time scales short as compared to its natural lifetime, are ruled out.",
+          "line_hint": "2465-2467"
+        },
+        {
+          "quote": "In particular, we have argued that in such scenarios cosmic rays will produce black holes on such astronomical objects, and that these objects will stop even these very high-momentum black holes. We then studied accretion, showing that accreting black holes will disrupt such objects on time scales short as compared to their observed lifetimes.",
+          "line_hint": "2461-2463"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "D = 5",
+        "D = 6",
+        "D = 7"
+      ]
+    },
+    {
+      "claim": "Neutron stars provide a robust bound because they can promptly slow down and capture black holes produced by cosmic rays.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "mechanism_analysis"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Neutron stars provide a high-density environment that acts as a 'trap' for black holes, providing an additional layer of safety.",
+      "natural_bottom_line": "Neutron stars can rapidly slow down and capture cosmic-ray produced black holes due to their extreme density.",
+      "must_preserve_terms": [
+        "neutron stars",
+        "slow down",
+        "capture",
+        "promptly"
+      ],
+      "claim_context": {
+        "population": "Neutron stars",
+        "exposure_or_option": "Cosmic-ray produced black holes",
+        "outcome_or_endpoint": "Capture and slowing of black holes",
+        "evidence_design": "Analysis of stopping power in high-density environments",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Neutron star bounds"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "Thus neutron stars can promptly slow down such black holes, and then quickly bring them to below the escape velocity, which for a neutron star is close to v ~ 1.",
+          "line_hint": "1632-1633"
+        },
+        {
+          "quote": "the accretion times are very rapid compared to the neutron star’s lifetime, O(Gyr)",
+          "line_hint": "2423-2424"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "Neutron stars"
+      ]
+    },
+    {
+      "claim": "The probability of an LHC-produced black hole being trapped by Earth's gravity is low, as the velocity spectrum of produced black holes typically exceeds the escape velocity.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "mechanism_analysis"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "This addresses the initial capture of a black hole, which is a prerequisite for any subsequent accretion risk.",
+      "natural_bottom_line": "Most LHC-produced black holes will have velocities high enough to escape Earth's gravity.",
+      "must_preserve_terms": [
+        "trapped",
+        "velocity spectrum",
+        "escape velocity",
+        "probability"
+      ],
+      "claim_context": {
+        "population": "LHC-produced black holes",
+        "exposure_or_option": "Earth's gravitational field",
+        "outcome_or_endpoint": "Trapping probability",
+        "evidence_design": "Analysis of production kinematics and escape velocity",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "LHC production"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the velocity spectrum of black holes produced during the LHC lifetime in allowed extra-dimensional scenarios is such that they would typically escape the Earth’s attraction.",
+          "line_hint": "277-280"
+        },
+        {
+          "quote": "As soon as M & 7 TeV the expected number of trapped black holes falls below 1 even with the looser inelasticity value of y = 0.7.",
+          "line_hint": "3804-3806"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "vE ~ 11 km/s",
+          "quantity_role": "threshold_or_guideline",
+          "measures": "velocity",
+          "local_interpretation": "Earth escape velocity",
+          "source_quote": "vE ~ 11 km s-1 ~ 3.7 x 10-5 c",
+          "line_hint": "689",
+          "retention_hint": "use_if_space"
+        }
+      ],
+      "scope_conditions": [
+        "LHC production"
+      ]
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "Conversion factors and fundamental constants",
+    "Detailed derivation of Bondi accretion equations",
+    "Specific calculations for D=5, 6, 7 in white dwarfs (intermediate steps)"
+  ]
+}
+```

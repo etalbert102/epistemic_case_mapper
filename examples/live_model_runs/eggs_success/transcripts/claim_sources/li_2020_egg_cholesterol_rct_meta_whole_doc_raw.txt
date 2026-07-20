@@ -1,0 +1,266 @@
+```json
+{
+  "source_id": "li_2020_egg_cholesterol_rct_meta",
+  "source_bottom_line": "In healthy adults, increased egg consumption (MEC) significantly elevates LDL-c levels and the LDL-c/HDL-c ratio, particularly with longer intervention periods (> 2 months). While some studies show a slight increase in HDL-c, the primary concern is the rise in LDL-c, suggesting that individuals with borderline high cholesterol should monitor or restrict egg intake.",
+  "canonical_claims": [
+    {
+      "claim": "Increased egg consumption (MEC) significantly elevates the LDL-c/HDL-c ratio in healthy subjects compared to control groups.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "lipid_profiles",
+        "cardiovascular_risk"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "The LDL-c/HDL-c ratio is a key predictor of cardiovascular disease; an increase in this ratio indicates a higher risk profile.",
+      "natural_bottom_line": "More egg consumption leads to a significantly higher LDL-c/HDL-c ratio.",
+      "must_preserve_terms": [
+        "LDL-c/HDL-c ratio",
+        "MD = 0.14",
+        "95% CI: 0.05 to 0.22",
+        "healthy subjects"
+      ],
+      "claim_context": {
+        "population": "Healthy subjects (excluding those with hypertension, diabetes, or hypercholesterolemia)",
+        "exposure_or_option": "More egg consumption (MEC)",
+        "outcome_or_endpoint": "LDL-c/HDL-c ratio",
+        "evidence_design": "Systematic review and meta-analysis of 17 Randomized Controlled Trials (RCTs)",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Healthy population"
+        ],
+        "stated_limitations": [
+          "Intervention duration < 1 year",
+          "Variations in egg consumption amounts within MEC groups"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "Overall, 17 RCTs met the eligibility criteria and pooled results showed MEC group had a higher LDL-c/HDL-c ratio than the control group (MD = 0.14, p = 0.001, I2 = 25%).",
+          "line_hint": "30"
+        },
+        {
+          "quote": "Overall, more egg consumption (MEC) group exhibited significant elevation in the ratio than did control groups (MD = 0.14; 95% CI: 0.05 to 0.22; I2 = 25%).",
+          "line_hint": "189-190"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "0.14",
+          "quantity_role": "effect_estimate",
+          "measures": "Mean Difference (MD)",
+          "local_interpretation": "Increase in LDL-c/HDL-c ratio for the MEC group compared to control",
+          "source_quote": "MD = 0.14; 95% CI: 0.05 to 0.22",
+          "line_hint": "189",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "0.05 to 0.22",
+          "quantity_role": "uncertainty_interval",
+          "measures": "95% Confidence Interval (CI)",
+          "local_interpretation": "Confidence interval for the MD of LDL-c/HDL-c ratio",
+          "source_quote": "95% CI: 0.05 to 0.22",
+          "line_hint": "189",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Healthy subjects",
+        "No combination therapy (e.g., buttermilk/skimmed milk)"
+      ]
+    },
+    {
+      "claim": "Increased egg consumption (MEC) significantly increases LDL-c concentrations in healthy individuals.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "lipid_profiles",
+        "cardiovascular_risk"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "Elevated LDL-c is a primary driver of cardiovascular disease risk.",
+      "natural_bottom_line": "More egg consumption significantly increases LDL-c levels.",
+      "must_preserve_terms": [
+        "LDL-c",
+        "MD = 8.14",
+        "95% CI: 4.46 to 11.82",
+        "healthy subjects"
+      ],
+      "claim_context": {
+        "population": "Healthy subjects",
+        "exposure_or_option": "More egg consumption (MEC)",
+        "outcome_or_endpoint": "LDL-c concentration",
+        "evidence_design": "Systematic review and meta-analysis of 13 RCTs",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Healthy population"
+        ],
+        "stated_limitations": [
+          "Variations in egg consumption amounts within MEC groups"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The 13 RCTs we included in this study showed that the MEC group had a significantly higher concentration of LDL-c than the control group (MD = 8.14; 95% CI: 4.46 to 11.82; I2 = 18%)",
+          "line_hint": "194-195"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "8.14",
+          "quantity_role": "effect_estimate",
+          "measures": "Mean Difference (MD) in mg/dL",
+          "local_interpretation": "Increase in LDL-c concentration for the MEC group compared to control",
+          "source_quote": "MD = 8.14; 95% CI: 4.46 to 11.82",
+          "line_hint": "194",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "4.46 to 11.82",
+          "quantity_role": "uncertainty_interval",
+          "measures": "95% Confidence Interval (CI)",
+          "local_interpretation": "Confidence interval for the MD of LDL-c concentration",
+          "source_quote": "95% CI: 4.46 to 11.82",
+          "line_hint": "194",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Healthy subjects",
+        "No combination therapy (e.g., buttermilk/skimmed milk)"
+      ]
+    },
+    {
+      "claim": "The impact of egg consumption on LDL-c and the LDL-c/HDL-c ratio is more pronounced in interventions lasting longer than 2 months.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "time_horizon",
+        "dose_response"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Identifies that the risk/effect is cumulative and may be more significant with sustained high consumption.",
+      "natural_bottom_line": "Longer intervention periods (> 2 months) lead to higher LDL-c and a higher LDL-c/HDL-c ratio.",
+      "must_preserve_terms": [
+        "> 2 months",
+        "MD = 8.48 mg/dL (LDL-c)",
+        "MD = 0.17 (LDL-c/HDL-c ratio)"
+      ],
+      "claim_context": {
+        "population": "Healthy subjects",
+        "exposure_or_option": "More egg consumption (MEC)",
+        "outcome_or_endpoint": "LDL-c and LDL-c/HDL-c ratio",
+        "evidence_design": "Subgroup analysis of intervention duration",
+        "stated_dose_or_threshold": "> 2 months",
+        "stated_scope": [
+          "Healthy population"
+        ],
+        "stated_limitations": [
+          "Variations in egg consumption amounts within MEC groups"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the MEC group seemed to have a larger effect size than the subset of intervention within two months.",
+          "line_hint": "30"
+        },
+        {
+          "quote": "the MEC group exhibited higher LDL-c than the control group in both subgroups of intervention within 2 months (MD = 8.09 mg/dL; 95% CI: 3.04 to 13.14, I2 = 30%) and over 2 months (MD = 8.48 mg/dL; 95% CI: 2.77 to 14.18, I2 = 9%).",
+          "line_hint": "195"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "8.09 mg/dL",
+          "quantity_role": "effect_estimate",
+          "measures": "Mean Difference (MD)",
+          "local_interpretation": "LDL-c increase for intervention < 2 months",
+          "source_quote": "MD = 8.09 mg/dL; 95% CI: 3.04 to 13.14",
+          "line_hint": "195",
+          "retention_hint": "use_if_space"
+        },
+        {
+          "value": "8.48 mg/dL",
+          "quantity_role": "effect_estimate",
+          "measures": "Mean Difference (MD)",
+          "local_interpretation": "LDL-c increase for intervention > 2 months",
+          "source_quote": "MD = 8.48 mg/dL; 95% CI: 2.77 to 14.18",
+          "line_hint": "195",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "0.17",
+          "quantity_role": "effect_estimate",
+          "measures": "Mean Difference (MD)",
+          "local_interpretation": "LDL-c/HDL-c ratio increase for intervention > 2 months",
+          "source_quote": "over 2 months (MD = 0.17; 95% CI: 0.03 to 0.32; I2 = 34%)",
+          "line_hint": "189",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Healthy subjects",
+        "Intervention duration > 2 months"
+      ]
+    },
+    {
+      "claim": "Egg consumption has a negligible or only slight effect on HDL-c levels in healthy individuals.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "lipid_profiles"
+      ],
+      "decision_importance": "low",
+      "why_it_matters": "While LDL-c increases, the corresponding HDL-c does not increase significantly enough to offset the risk.",
+      "natural_bottom_line": "Egg consumption did not effectively increase HDL-c levels.",
+      "must_preserve_terms": [
+        "HDL-c",
+        "MD = 1.27; 95% CI: -0.28 to 2.83",
+        "non-significant"
+      ],
+      "claim_context": {
+        "population": "Healthy subjects",
+        "exposure_or_option": "More egg consumption (MEC)",
+        "outcome_or_endpoint": "HDL-c concentration",
+        "evidence_design": "Systematic review and meta-analysis of 13 RCTs",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Healthy population"
+        ],
+        "stated_limitations": [
+          "Variations in egg consumption amounts within MEC groups"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the MEC group did not show significant difference with the control group (MD = 1.27; 95% CI: −0.28 to 2.83; I2 = 0%) when pooled together.",
+          "line_hint": "200-201"
+        },
+        {
+          "quote": "Therefore, egg consumption only slightly influenced the HDL-c.",
+          "line_hint": "280"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.27",
+          "quantity_role": "effect_estimate",
+          "measures": "Mean Difference (MD)",
+          "local_interpretation": "HDL-c difference for pooled MEC group",
+          "source_quote": "MD = 1.27; 95% CI: −0.28 to 2.83",
+          "line_hint": "201",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Healthy subjects"
+      ]
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "Nutritional content of eggs (proteins, minerals, vitamins)",
+    "Mechanism of cholesterol absorption and transport",
+    "General prevalence of hyperlipidemia in the US"
+  ]
+}
+```

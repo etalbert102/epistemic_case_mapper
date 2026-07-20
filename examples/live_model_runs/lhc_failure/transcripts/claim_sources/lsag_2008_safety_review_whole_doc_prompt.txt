@@ -1,0 +1,1376 @@
+# Task
+
+Extract a compact source-level claim card from one whole source document.
+
+# Metadata
+
+Prompt version: whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json
+Source ID: lsag_2008_safety_review
+Source title: Review of the Safety of LHC Collisions
+Decision question: Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?
+
+# Rules
+
+- Read the whole document before choosing claims.
+- Return 3 to 9 canonical claims for this source, not one claim per paragraph or table row.
+- A canonical claim should be something a decision analyst would want in the main evidence map.
+- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.
+- Prefer one canonical claim per distinct result cluster until the claim budget is reached.
+- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.
+- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.
+- Keep related statistics together only when they answer the same population-endpoint-dose proposition.
+- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.
+- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.
+- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.
+- Preserve key quantities inside the relevant canonical claim rather than as separate claims.
+- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.
+- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.
+- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.
+- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.
+- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.
+- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.
+- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.
+- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.
+- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.
+- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.
+- Output JSON only.
+
+# Preferred Output Schema
+
+Return only JSON matching this schema:
+{
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string"
+    },
+    "source_bottom_line": {
+      "type": "string"
+    },
+    "canonical_claims": {
+      "type": "array",
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "question_relevance": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect",
+              "scope_limit",
+              "background",
+              "irrelevant"
+            ]
+          },
+          "scope_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_importance": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "why_it_matters": {
+            "type": "string"
+          },
+          "natural_bottom_line": {
+            "type": "string"
+          },
+          "must_preserve_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_context": {
+            "type": "object",
+            "properties": {
+              "population": {
+                "type": "string"
+              },
+              "exposure_or_option": {
+                "type": "string"
+              },
+              "outcome_or_endpoint": {
+                "type": "string"
+              },
+              "evidence_design": {
+                "type": "string"
+              },
+              "stated_dose_or_threshold": {
+                "type": "string"
+              },
+              "stated_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stated_limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "applicability_limits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "population",
+              "exposure_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "stated_dose_or_threshold",
+              "stated_scope",
+              "stated_limitations",
+              "applicability_limits"
+            ]
+          },
+          "supporting_quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "quote": {
+                  "type": "string"
+                },
+                "line_hint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quote",
+                "line_hint"
+              ]
+            }
+          },
+          "quantities": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "quantity_role": {
+                      "type": "string",
+                      "enum": [
+                        "baseline_or_absolute_risk",
+                        "context",
+                        "cost_or_resource",
+                        "effect_estimate",
+                        "exposure_or_intervention_level",
+                        "population_descriptor",
+                        "source_reported_quantity",
+                        "study_descriptor",
+                        "threshold_or_guideline",
+                        "time_horizon",
+                        "uncertainty_interval"
+                      ]
+                    },
+                    "measures": {
+                      "type": "string"
+                    },
+                    "local_interpretation": {
+                      "type": "string"
+                    },
+                    "source_quote": {
+                      "type": "string"
+                    },
+                    "line_hint": {
+                      "type": "string"
+                    },
+                    "retention_hint": {
+                      "type": "string",
+                      "enum": [
+                        "audit_only",
+                        "must_retain",
+                        "use_if_space"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "quantity_role",
+                    "measures",
+                    "local_interpretation",
+                    "source_quote",
+                    "line_hint",
+                    "retention_hint"
+                  ]
+                }
+              ]
+            }
+          },
+          "scope_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "claim",
+          "question_relevance",
+          "scope_flags",
+          "decision_importance",
+          "why_it_matters",
+          "natural_bottom_line",
+          "must_preserve_terms",
+          "claim_context",
+          "supporting_quotes",
+          "quantities",
+          "scope_conditions"
+        ]
+      }
+    },
+    "excluded_as_not_decision_relevant": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "source_id",
+    "source_bottom_line",
+    "canonical_claims",
+    "excluded_as_not_decision_relevant"
+  ]
+}
+
+# Source Document With Line Numbers
+
+1:                                                           CERN-PH-TH/2008-136
+2: 
+3:            Review of the Safety of LHC Collisions
+4: 
+5:                       LHC Safety Assessment Group
+6:               John Ellis1, Gian Giudice1, Michelangelo Mangano1,
+7:                       Igor Tkachev2 and Urs Wiedemann1
+8:                   1
+9:                      Theory Division, Physics Department, CERN,
+10:                           CH 1211 Geneva 23, Switzerland
+11:          2
+12:            Institute for Nuclear Research of Russian Academy of Sciences,
+13:                                Moscow 117312, Russia
+14: 
+15: 
+16: 
+17:                                     Abstract
+18: 
+19: The safety of collisions at the Large Hadron Collider (LHC) was studied in
+20: 2003 by the LHC Safety Study Group, who concluded that they presented no
+21: danger. Here we review their 2003 analysis in light of additional experimental
+22: results and theoretical understanding, which enable us to confirm, update and
+23: extend the conclusions of the LHC Safety Study Group. The LHC reproduces
+24: in the laboratory, under controlled conditions, collisions at centre-of-mass
+25: energies less than those reached in the atmosphere by some of the cosmic rays
+26: that have been bombarding the Earth for billions of years. We recall the rates
+27: for the collisions of cosmic rays with the Earth, Sun, neutron stars, white
+28: dwarfs and other astronomical bodies at energies higher than the LHC. The
+29: stability of astronomical bodies indicates that such collisions cannot be
+30: dangerous. Specifically, we study the possible production at the LHC of
+31: hypothetical objects such as vacuum bubbles, magnetic monopoles, microscopic
+32: black holes and strangelets, and find no associated risks. Any microscopic black
+33: holes produced at the LHC are expected to decay by Hawking radiation before
+34: they reach the detector walls. If some microscopic black holes were stable, those
+35: produced by cosmic rays would be stopped inside the Earth or other
+36: astronomical bodies. The stability of astronomical bodies constrains strongly
+37: the possible rate of accretion by any such microscopic black holes, so that they
+38: present no conceivable danger. In the case of strangelets, the good agreement of
+39: measurements of particle production at RHIC with simple thermodynamic
+40: models constrains severely the production of strangelets in heavy-ion collisions
+41: at the LHC, which also present no danger.
+42: 
+43: 
+44: 
+45: 
+46:                                         1
+47: 
+48: 1 - Introduction
+49: 
+50: The controlled experimental conditions offered by accelerators permit the detailed
+51: study of many natural phenomena occurring in the Universe. Many of the
+52: fundamental particles, such as muons, pions and strange particles, were first
+53: discovered among the cosmic rays, and were subsequently studied with
+54: accelerators. As the energies of accelerators have increased, they have also revealed
+55: many heavier and less stable particles, such as those containing heavier quarks, as
+56: well as the carrier particles of the weak interactions. Though not present in ordinary
+57: stable matter, these particles played important roles in the early history of the
+58: Universe, and may still be important today in energetic astronomical bodies such as
+59: those producing the cosmic rays.
+60: 
+61: The energies of accelerators have been increasing regularly over the past decades,
+62: though they are still far below those of the most energetic cosmic rays. With each
+63: increase in accelerator energy, one may ask whether there could be any risk
+64: associated with new phenomena that might be revealed. It has always been
+65: reassuring that higher-energy cosmic rays have been bombarding the Earth since its
+66: creation with no disastrous side-effects. On the other hand, the particles produced
+67: in cosmic-ray collisions typically have different velocities with respect to the Earth
+68: from those produced by accelerators, so the circumstances are not directly
+69: comparable. The question has therefore been asked whether Earth's immunity to
+70: cosmic-ray collisions also applies to accelerator collisions.
+71: 
+72: The Large Hadron Collider (LHC) accelerator is nearing completion at CERN. It is
+73: designed to collide pairs of protons each with energies of 7 TeV (somewhat more
+74: than 7000 times the rest mass-energy of the proton), and pairs of lead nuclei each
+75: with energies of about 2.8 TeV per proton or neutron (nucleon). Though
+76: considerably higher than the energies of previous accelerators, these energies are
+77: still far below those of the highest-energy cosmic-ray collisions that are observed
+78: regularly on Earth. In light of safety questions about previous accelerators, and in
+79: advance of similar questions about the LHC, the CERN management requested a
+80: report on the safety of the LHC by the LHC Safety Study Group, a panel of
+81: independent experts, which was published in 2003 [1]. This report concluded that
+82: there is no basis for any conceivable threat from the LHC.
+83: 
+84: The advent of LHC operations now revives interest in safety questions, so the
+85: CERN management has commissioned us to review the arguments presented in the
+86: 2003 report and previous studies of the possible production of new particles, and to
+87: update them in light of experimental results from the Brookhaven relativistic
+88: heavy-ion collider (RHIC), in particular, as well as of recent theoretical speculations
+89: about new phenomena.
+90: 
+91: We consider all the speculative scenarios for new particles and states of matter that
+92: have been discussed in the scientific literature and raise potential safety issues. Our
+93: methodology is based on empirical reasoning using experimental observations, and
+94: hence could be extended to other exotic phenomena that might be cause for
+95: concerns in the future.
+96: 
+97: We focus our attention mainly on two phenomena of current interest, namely the
+98: possible production of microscopic black holes, such as might appear in certain
+99: theoretical models featuring additional dimensions of space, and the possible
+100: production of ‘strangelets', hypothetical pieces of matter analogous to conventional
+101: 
+102: 
+103: 
+104:                                           2
+105: 
+106: nuclei, but containing also many of the heavier strange quarks. These were both
+107: considered carefully in the 2003 report of the LHC Safety Study Group [1]. Their
+108: conclusions for strangelets, obtained in connection with heavy-ion collisions, apply
+109: with equal or greater force to proton-proton collisions at the LHC.
+110: 
+111: In the case of microscopic black holes, there has been much theoretical speculation
+112: since 2003 about their existence and their possible experimental signatures, as
+113: reviewed in [2], where references may be found. In the case of strangelets, detailed
+114: experimental measurements at the Brookhaven National Laboratory’s Relativistic
+115: Heavy-Ion Collider (RHIC) of the production of particles containing different
+116: numbers of strange quarks [3] enable one to refine previous arguments that, in the
+117: event they exist, strangelets would be less likely to be produced at the LHC than at
+118: RHIC.
+119: 
+120: Before discussing these two hypothetical phenomena in more detail, we first review
+121: in Section 2 estimates of the rates of collisions of high-energy cosmic rays with
+122: different astronomical bodies, such as the Earth, Sun, and others. We estimate that
+123: the Universe is replicating the total number of collisions to be made by the LHC
+124: over 1013 times per second, and has already done so some 1031 times since the origin
+125: of the Universe. The fact that astronomical bodies withstand cosmic-ray
+126: bombardment imposes strong upper limits on many hypothetical sources of
+127: danger. In particular, as we discuss in Section 3, neither the creation of vacuum
+128: bubbles nor the production of magnetic monopoles at the LHC is a case for concern.
+129: 
+130: In the case of the hypothetical microscopic black holes, as we discuss in Section 4, if
+131: they can be produced in the collisions of elementary particles, they must also be
+132: able to decay back into them. Theoretically, it is expected that microscopic black
+133: holes would indeed decay via Hawking radiation, which is based on basic physical
+134: principles on which there is general consensus. If, nevertheless, some hypothetical
+135: microscopic black holes should be stable, we review arguments showing that they
+136: would be unable to accrete matter in a manner dangerous for the Earth [2]. If some
+137: microscopic black holes were produced by the LHC, they would also have been
+138: produced by cosmic rays and have stopped in the Earth or some other
+139: astronomical body, and the stability of these astronomical bodies means that they
+140: cannot be dangerous.
+141: 
+142: In the case of the equally hypothetical strangelets, we review in Section 5 the data
+143: accumulated at RHIC on the abundances and velocities of strongly-interacting
+144: particles, including those containing one or more strange quarks, produced at RHIC
+145: and in previous heavy-ion collision experiments [3]. All these data are very
+146: consistent with a simple thermodynamic production mechanism that depends only
+147: on the effective temperature and the net density of baryons (nucleons). The effective
+148: temperature agrees well with first-principles theoretical calculations, and the net
+149: density of baryons decreases as the energy increases, again in agreement with
+150: theoretical calculations. Calculations for heavy-ion collisions at the LHC give a
+151: similar effective temperature and a lower net density of baryons than at RHIC. This
+152: means that the LHC could only produce strangelets at a lower rate, if they exist at
+153: all.
+154: 
+155: We conclude by reiterating the conclusion of the LHC Safety Group in 2003 [1]:
+156: there is no basis for any conceivable threat from the LHC. Indeed, theoretical and
+157: experimental developments since 2003 have reinforced this conclusion.
+158: 
+159: 
+160: 
+161: 
+162:                                           3
+163: 
+164: 2 – The LHC compared with Cosmic-Ray Collisions
+165: 
+166: The LHC is designed to collide two counter-rotating beams of protons or heavy
+167: ions. Proton-proton collisions are foreseen at an energy of 7 TeV per beam. An
+168: equivalent energy in the centre of mass would be obtained in the collision of a
+169: cosmic-ray proton with a fixed target such as the Earth or some other astronomical
+170: body if its energy reaches or exceeds 108 GeV, i.e., 1017 eV [4]. When the LHC attains
+171: its design collision rate, it will produce about a billion proton-proton collisions per
+172: second in each of the major detectors ATLAS and CMS. The effective amount of
+173: time each year that the LHC will produce collisions at this average luminosity is
+174: about ten million seconds. Hence, each of the two major detectors is expecting to
+175: obtain about 1017 proton-proton collisions over the planned duration of the
+176: experiments.
+177: 
+178: As seen in Fig. 1, the highest-energy cosmic rays observed attain energies of around
+179: 1020 eV, and the total flux of cosmic rays with energies of 1017 eV or more that hit
+180: each square centimeter of the Earth’s surface is measured to be about 5x10–14 per
+181: second [5]. The area of the Earth’s surface is about 5x1018 square centimeters, and
+182: the age of the Earth is about 4.5 billion years. Therefore, over 3x1022 cosmic rays
+183: with energies of 1017 eV or more, equal to or greater than the LHC energy, have
+184: struck the Earth’s surface since its formation. This means [6] that Nature has
+185: already conducted the equivalent of about a hundred thousand LHC experimental
+186: programmes on Earth already – and the planet still exists.
+187: 
+188: 
+189: 
+190: 
+191: Fig. 1: The spectrum of ultra-high-energy cosmic rays, as measured by several experiments
+192: [5]. Every cosmic ray with an energy shown in this plot, namely above 1017 eV, liberates in
+193: its collision with the atmosphere more energy in its centre-of-mass frame than does a proton-
+194: proton collision at the LHC.
+195: 
+196: Other astronomical bodies are even larger. For example, the radius of Jupiter is
+197: about ten times that of the Earth, and the radius of the Sun is a factor of ten larger
+198: still. The surface area of the Sun is therefore 10,000 times that of the Earth, and
+199: Nature has therefore already conducted the LHC experimental programme about
+200: one billion times [6] via the collisions of cosmic rays with the Sun – and the Sun still
+201: exists.
+202: 
+203: 
+204: 
+205: 
+206:                                              4
+207: 
+208: Moreover, our Milky Way galaxy contains about 1011 stars with sizes similar to our
+209: Sun, and there are about 1011 similar galaxies in the visible Universe. Cosmic rays
+210: have been hitting all these stars at rates similar to collisions with our own Sun. This
+211: means that Nature has already completed about 1031 LHC experimental
+212: programmes since the beginning of the Universe. Moreover, each second, the
+213: Universe is continuing to repeat about 3x1013 complete LHC experiments. There is
+214: no indication that any of these previous “LHC experiments” has ever had any
+215: large-scale consequences. The stars in our galaxy and others still exist, and
+216: conventional astrophysics can explain all the astrophysical black holes detected.
+217: 
+218: Thus, the continued existence of the Earth and other astronomical bodies can be
+219: used to constrain or exclude speculations about possible new particles that might be
+220: produced by the LHC.
+221: 
+222: 
+223: 3 – Vacuum Bubbles and Magnetic Monopoles
+224: 
+225: These large rates for the collisions of cosmic rays at energies higher than the LHC
+226: imply directly that there can be no danger to the Earth from the production of
+227: bubbles of new vacuum or magnetic monopoles at the LHC [1].
+228: 
+229: It has often been suggested that the Universe might not be absolutely stable,
+230: because the state that we call the ‘vacuum’ might not be the lowest-energy state. In
+231: this case, our ‘vacuum’ would eventually decay into such a lower-energy state.
+232: Since this has not happened, the lifetime before any such decay must be longer than
+233: the age of the Universe. The possible concern about high-energy particle collisions
+234: is that they might stimulate the production of small ‘bubbles’ of such a lower-
+235: energy state, which would then expand and destroy not just the Earth, but
+236: potentially the entire Universe.
+237: 
+238: However, if LHC collisions could produce vacuum bubbles, so also could cosmic-
+239: ray collisions. This possibility was first studied in [7], and the conclusions drawn
+240: there were reiterated in [8]. These bubbles of new vacuum would have expanded to
+241: consume large parts of the visible Universe several billion years ago already. The
+242: continued existence of the Universe means that such vacuum bubbles are not
+243: produced in cosmic-ray collisions, and hence the LHC will also not produce any
+244: vacuum bubbles.
+245: 
+246: There have also been suggestions over the years that there might exist magnetic
+247: monopoles, particles with non-zero free magnetic charge. As was originally pointed
+248: out by Dirac, any free magnetic charge would be quantized, and necessarily much
+249: larger in magnitude than the electric charge of the electron or proton. For this
+250: reason, searches for magnetic monopoles have looked for heavily-ionizing particles
+251: as well as for quanta of magnetic charge, and this search will be continued at the
+252: LHC.
+253: 
+254: In some grand unified theories, though not in the Standard Model of particle
+255: physics, magnetic monopoles might also catalyze nucleon decay, by transforming
+256: protons and neutrons into electrons or positrons and unstable mesons. In this case,
+257: successive collisions with large numbers of nuclei would release considerable
+258: energy. The magnetic monopoles that might have such properties are expected to
+259: weigh 1015 GeV or more, far too heavy to be produced at the LHC. Nevertheless,
+260: here we consider the possibility of producing light proton-eating magnetic
+261: monopoles at the LHC.
+262: 
+263: 
+264: 
+265: 
+266:                                           5
+267: 
+268: A quantitative discussion of the impact of such magnetic monopoles on Earth was
+269: presented in [1], where it was concluded that only a microgram of matter would be
+270: destroyed before the monopole exited the Earth. Independently of this conclusion,
+271: if monopoles could be produced by the LHC, high-energy cosmic rays would
+272: already have created many of them when striking the Earth and other astronomical
+273: bodies. Since they would have large magnetic charges, any monopoles produced by
+274: cosmic rays would have been stopped by the material of the Earth [2]. The
+275: continued existence of the Earth and other astronomical bodies after billions of
+276: years of high-energy cosmic-ray bombardment means that any monopoles
+277: produced could not catalyze proton decay at any appreciable rate. If the collisions
+278: made in the LHC could produce dangerous monopoles, high-energy cosmic rays
+279: would already have done so.
+280: 
+281: The continued existences of the Earth and other astronomical bodies such as the
+282: Sun mean that any magnetic monopoles produced by high-energy cosmic rays must
+283: be harmless. Likewise, if any monopoles are produced at the LHC, they will be
+284: harmless.
+285: 
+286: 4 – Microscopic Black Holes
+287: 
+288: As has already been discussed, the LHC will make collisions with a much lower
+289: centre-of-mass energy than some of the cosmic rays that have been bombarding the
+290: Earth and other astronomical bodies for billions of years. We estimate that, over the
+291: history of the Universe, Nature has carried out the equivalent of 1031 LHC projects
+292: (defined by the integrated luminosity for cosmic-ray collisions at a centre-of-mass
+293: energy of 14 TeV or more), and continues to do so at the rate of over 1013 per
+294: second, via the collisions of energetic cosmic rays with different astronomical
+295: bodies.
+296: 
+297: There is, however, one significant difference between cosmic-ray collisions with a
+298: body at rest and collisions at the LHC, namely that any massive new particles
+299: produced by the LHC collisions will tend to have low velocities, whereas cosmic-
+300: ray collisions would produce them with high velocities. This point has been
+301: considered in detail [2] since the 2003 report by the LHC Safety Study Group [1]. As
+302: we now discuss, the original conclusion that LHC collisions present no dangers is
+303: validated and strengthened by this more recent work.
+304: 
+305: We recall that the black holes observed in the Universe have very large masses,
+306: considerably greater than that of our Sun. On the other hand, each collision of a pair
+307: of protons in the LHC will release an amount of energy comparable to that of two
+308: colliding mosquitos, so any black hole produced would be much smaller than those
+309: known to astrophysicists. In fact, according to the conventional gravitational theory
+310: of General Relativity proposed by Einstein, many of whose predictions have
+311: subsequently been verified, there is no chance that any black holes could be
+312: produced at the LHC, since the conventional gravitational forces between
+313: fundamental particles are too weak.
+314: 
+315: However, there are some theoretical speculations that, when viewed at very small
+316: distances, space may reveal extra dimensions. In some such theories, it is possible
+317: that the gravitational force between pairs of particles might become strong at the
+318: energy of the LHC.
+319: 
+320: As was pointed out 30 years ago by Stephen Hawking [9], it is expected that all
+321: black holes are ultimately unstable. This is because of very basic features of
+322: quantum theory in curved spaces, such as those surrounding any black hole. The
+323: 
+324: 
+325: 
+326:                                           6
+327: 
+328: basic reason is very simple: it is a consequence of quantum mechanics that particle-
+329: antiparticle pairs must be created near the event horizon surrounding any black
+330: hole. Some particles (or antiparticles) disappear into the black hole itself, and the
+331: corresponding antiparticles (or particles) must escape as radiation. There is broad
+332: consensus among physicists on the reality of Hawking radiation, but so far no
+333: experiment has had the sensitivity required to find direct evidence for it.
+334: 
+335: Independently of the reasoning based on Hawking radiation, if microscopic black
+336: holes were to be singly produced by colliding the quarks and gluons inside protons,
+337: they would also be able to decay into the same types of particles that produced
+338: them [10]. The reason being that in this case they could not carry any conserved
+339: quantum number that is not already carried by the original quarks and gluons, and
+340: their decay back to the initial state partons would be allowed. For this reason, a
+341: microscopic black hole cannot be completely black. In standard quantum physics,
+342: the decay rate would be directly related to the production rate, and the expected
+343: lifetime would be very short. The case of pair production of black holes carrying
+344: new and opposite conserved quantum numbers leads to similar conclusions: only
+345: their ground state is guaranteed to be stable, and any further accretion of normal
+346: matter in the form of quarks, gluons or leptons would immediately be radiated
+347: away. Both this and the existence of Hawking radiation are valid in the extra-
+348: dimensional scenarios used to suggest the possible production of microscopic black
+349: holes.
+350: 
+351: One might nevertheless wonder what would happen if a stable microscopic black
+352: hole could be produced at the LHC [2]. However, we reiterate that this would
+353: require a violation of some of the basic principles of quantum mechanics – which is
+354: a cornerstone of the laws of Nature – in order for the black hole decay rate to be
+355: suppressed relative to its production rate, and/or of general relativity – in order to
+356: suppress Hawking radiation.
+357: 
+358: Most black holes produced at the LHC or in cosmic-ray collisions would have an
+359: electric charge, since they would originate from the collisions of charged quarks. A
+360: charged object interacts with matter in an experimentally well-understood way. A
+361: direct consequence of this is that charged and stable black holes produced by the
+362: interactions of cosmic rays with the Earth or the Sun would be slowed down and
+363: ultimately stopped by their electromagnetic interactions inside these bodies, in spite
+364: of their initial high velocities. The complete lack of any macroscopic effect caused
+365: by stable black holes, which would have accumulated in the billions during the
+366: lifetime of the Earth and the Sun if the LHC could produce them, means that either
+367: they are not produced, or they are all neutral and hence none are stopped in the
+368: Earth or the Sun, or have no large-scale effects even if they are stopped.
+369: 
+370: If a black hole were to be produced by a cosmic ray, as it traveled through the Earth
+371: it would absorb preferentially similar numbers of protons and neutrons, because
+372: their masses are larger than that of the electron. It would, therefore, develop and
+373: maintain a positive charge, even if it were produced with no electric charge. The
+374: standard neutralization process due to the quantum creation of particle-antiparticle
+375: pairs near the horizon – the Schwinger mechanism – relies on principles very
+376: similar to those at the basis of Hawking radiation, and would likely not operate if
+377: the latter was suppressed. Thus, combining the hypotheses that black holes are
+378: simultaneously neutral and stable and accrete matter requires some further
+379: deviation from basic physical laws. There is no concrete example of a consistent
+380: scenario for microphysics that would exhibit such behaviour. Furthermore, it is
+381: possible [2] to exclude any macroscopic consequences of black holes even if such
+382: unknown mechanisms were realized, as we now discuss.
+383: 
+384: 
+385: 
+386:                                           7
+387: 
+388: The rate at which any stopped black hole would absorb the surrounding material
+389: and grow in mass is model-dependent. This is discussed in full detail in [2], where
+390: several accretion scenarios, based on well-founded macroscpic physics, have been
+391: used to set conservative, worst-case-scenario limits to the black hole growth rates in
+392: the Earth and in denser bodies like white dwarfs and neutron stars. In the extra-
+393: dimensional scenarios that motivate the existence of microscopic black holes (but
+394: not their stability), the rate at which absorption would take place would be so slow
+395: if there are seven or more dimensions that Earth would survive for billions of years
+396: before any harm befell it. The reason is that in such scenarios the size of the extra
+397: dimensions is very small, so small that the evolution driven by the strong extra-
+398: dimensional gravity forces terminates while the growing black hole is still of
+399: microscopic size. If there are only five or six dimensions of space-time relevant at
+400: the LHC scale, on the other hand, the gravitational interactions of black holes are
+401: strong enough that their impact, should they exist, would be detectable in the
+402: Universe.
+403: 
+404: In fact, ultra-high-energy cosmic rays hitting dense stars such as white dwarfs and
+405: neutron stars would have produced black holes copiously during their lifetimes.
+406: Such black holes, even if neutral, would have been stopped by the material inside
+407: such dense stars. The rapid accretion due to the large density of these bodies, and to
+408: the strong gravitational interactions of these black holes, would have led to the
+409: destruction of white dwarfs and neutron stars on time scales that are much shorter
+410: than their observed lifetimes [2]. The final stages of their destruction would have
+411: released explosively large amounts of energy, that would have been highly visible.
+412: The observation of white dwarfs and neutron stars that would have been destroyed
+413: in this way tells us that cosmic rays do not produce such black holes, and hence
+414: neither will the LHC.
+415: 
+416: To conclude: in addition to the very general reasoning excluding the possibility that
+417: stable black holes exist, and in particular that they could only be neutral, we
+418: therefore have very robust empirical evidence either disproving their existence, or
+419: excluding any consequence of it.
+420: 
+421: 5 - Strangelets
+422: 
+423: The research programme of the CERN Large Hadron Collider also includes the
+424: collisions of ultra-relativistic lead and other nuclei (ions). The main scientific goal of
+425: this heavy-ion programme is to produce matter at the highest temperatures and
+426: densities attainable in the laboratory, and to study its properties. This programme is
+427: expected to produce, in very small quantities, primordial plasma of the type that
+428: filled the Universe when it was about a microsecond old.
+429: 
+430: The normal matter of which we are made, and which constitutes all the known
+431: visible matter in the Universe, is composed of the two lightest types of quarks, the
+432: up and down quarks. Heavier, unstable quarks have been discovered in cosmic-ray
+433: collisions and at accelerators, and the lightest of these is the strange quark. Particles
+434: containing strange quarks have been produced regularly in the laboratory for many
+435: decades, and are known to decay on time scales of the order of a nanosecond, or
+436: faster. Such lifetimes are characteristic of the weak interaction responsible for
+437: radioactivity, which governs their decay. Some unstable particles containing two or
+438: three strange quarks have also been observed. Particles including one strange quark
+439: have been shown to bind to nuclei, the so-called hypernuclei, which are however
+440: unstable and promptly decay, again with nanosecond time scales. Apart from
+441: 
+442: 
+443: 
+444: 
+445:                                             8
+446: 
+447: rapidly decaying nuclei with two particles each containing one strange quark [11],
+448: no nuclei containing multiple strange quarks are known.
+449: 
+450: Strange quark matter is a hypothetical state of matter, which would consist of large,
+451: roughly equal numbers of up, down and strange quarks. Hypothetical small lumps
+452: of strange quark matter, having atomic masses comparable to ordinary nuclei, are
+453: often referred to as strangelets. As discussed in more detail in the Appendix, most
+454: theoretical studies of strangelets conclude that, if they exist, they must be unstable,
+455: decaying with a typical strange-particle lifetime of around a nanosecond. In this
+456: case, any production of strangelets would pose no risk. However, it has been
+457: speculated that strange quark matter might weigh less than conventional nuclear
+458: matter with the same number of up and down quarks, but not for atomic numbers
+459: smaller than 10. In this very hypothetical case, such a strangelet would be stable. It
+460: has been further speculated that, if produced, strangelets could coalesce with
+461: normal matter and catalyze its conversion into strange matter, thereby creating an
+462: ever-growing strangelet. This hypothetical scenario underlies concerns about
+463: strangelet production at accelerators, which were discussed previously in [8] and
+464: [1].
+465: 
+466: It is generally expected that any stable strangelet would have a positive charge, in
+467: which case it would be repelled by ordinary nuclear matter, and hence unable to
+468: convert it into strange matter [8], see [12], however. In some model studies, one
+469: finds that negatively-charged strangelets can also exist, but are unstable since the
+470: positively-charged states have lower energy [13]. However, there is no rigorous
+471: proof that the charge of a stable strangelet must be positive, nor that a negatively-
+472: charged strangelet cannot be metastable, i.e., very long-lived. So, one should also
+473: consider the possibility of a negatively-charged stable or very long-lived strangelet.
+474: 
+475: Prior to the start of the Relativistic Heavy-Ion Collider (RHIC), a study was carried
+476: out [8] to assess hypothetical scenarios for the production of strangelets in heavy-
+477: ion collisions. Additional arguments were given in [14], and a reassessment of such
+478: a possibility was given in the 2003 Report of the LHC CERN Safety Study Group
+479: [1]. We revisit here this topic in light of recent advances in our understanding of the
+480: theory and experiment of heavy-ion collisions. These enable us to update and
+481: strengthen the previous conclusions about hypothetical scenarios based on
+482: strangelet production. More details of our considerations on strangelet production
+483: at the LHC are given in the appendix.
+484: 
+485: The 2003 report summarized the status of direct experimental searches and of
+486: theoretical speculations about hypothetical strangelet production mechanisms [1].
+487: More recently, additional direct upper limits on strangelet production have been
+488: provided by experimental searches at RHIC [15] and among cosmic rays [16], which
+489: have not yielded any evidence for the existence of strangelets. In the near future,
+490: additional experimental information may be expected from strangelet searches in
+491: samples of lunar soil and from particle detectors in outer space [17].
+492: 
+493: On the theoretical side, the 2003 report considered three mechanisms for strangelet
+494: production [1]: i) a thermal mechanism [3], in which particles are produced as if
+495: from a heat bath in thermal equilibrium, ii) a coalescence mechanism, in which
+496: particles produced in a heavy-ion collision might combine at late times to form a
+497: strangelet, and iii) a distillation mechanism [18], which was proposed as a specific
+498: model for strangelet production. According to this last mechanism, a hot quark-
+499: gluon plasma with large net baryon number is produced in heavy-ion collisions,
+500: and is enriched in strangeness as it cools down by emitting predominantly particles
+501: containing strange antiquarks.
+502: 
+503: 
+504: 
+505:                                           9
+506: 
+507: As discussed in the Appendix, no evidence has been found in the detailed study of
+508: heavy-ion collisions at RHIC for an anomalous coalescence mechanism. In
+509: particular, the production rate of light nuclei measured in central Au+Au collisions
+510: at RHIC [14], is consistent with the coalescence rates, used in the 2003 Report of the
+511: LHC CERN Safety Study Group [1] to rule out strangelet production. There is also
+512: considerable experimental evidence against the distillation mechanism. For this
+513: mechanism to be operational, the produced matter should have a long lifetime and
+514: a large net nucleon density. However, experiments at RHIC confirm the general
+515: expectations that the net nucleon density is small and decreases at higher collision
+516: energies. Moreover, the plasma produced in the collision is very short-lived,
+517: expanding rapidly at about half the velocity of light, and falling apart within 10–23
+518: seconds [19]. Furthermore, no characteristic difference has been observed in the
+519: production of particles containing strange quarks and antiquarks. Hence, a
+520: distillation mechanism capable of giving rise to strangelet production is not
+521: operational in heavy-ion collisions at RHIC, and this suggestion for strange-particle
+522: production has been abandoned for the LHC. On the other hand, as reviewed
+523: below, RHIC data strongly support models that describe particle production as
+524: emission from a high-temperature heat bath [3].
+525: 
+526: If they exist, strangelets would be bound states that would be formed initially with
+527: an atomic number comparable to that of normal nuclei. Like normal nuclei,
+528: strangelets would also contain a significant baryon number. We know from the
+529: basic principles of quantum mechanics that, for a strangelet to be formed, its
+530: constituents must be assembled in a configuration that contains less than its
+531: characteristic binding energy. If this were not the case, the forces between the
+532: constituents would not be strong enough to hold them together, and the strangelet
+533: would not form. As a consequence, strangelet formation is less likely if the
+534: constituents have initially more kinetic energy, and specifically if they emerge from
+535: a hotter system. Correspondingly, strangelet production is less likely in a hotter
+536: system.
+537: 
+538: The energy needed to break up a strangelet is similar to that needed to break up a
+539: normal nucleus, which is of the order of one to a few million electron volts. Similar
+540: energies would be reached in a heat bath with a temperature of ten to several tens
+541: of billions of degrees Celsius. However, heavy-ion collisions are known to produce
+542: heat baths that are far hotter, reaching temperatures exceeding 1 trillion degrees
+543: Celsius [3]. Basic thermodynamics would require most strangelets to melt in such a
+544: heat bath, i.e., dissociate into the known strange particles that decay within a
+545: nanosecond. For this reason, the likelihood of strangelet production in relativistic
+546: heavy-ion collisions can be compared to the likelihood of producing an icecube in a
+547: furnace.
+548: 
+549: The analogy of heavy-ion collisions with a particle furnace has been supported by
+550: many detailed measurements in accelerator collisions of the production of different
+551: types of particles, including those containing one, two or three strange quarks. Fig.
+552: 2 shows one such piece of evidence: the relative rates at which particles are
+553: produced in heavy-ion collisions at RHIC is in line with a theoretical calculation
+554: assuming a furnace with a temperature around 1.6 trillion degrees [3]. All particle
+555: ratios are well-described, including rare particles like the Omega baryon, which
+556: contains three strange quarks and which – if compared to the most abundant
+557: particles such as pions - is produced only at the per-mille level (see Fig. 2).
+558: Supplementary information is provided in the Appendix.
+559: 
+560: 
+561: 
+562: 
+563:                                          10
+564: 
+565: Fig. 2: The relative amounts of different particles and antiparticles produced at RHIC in the
+566: collisions of Gold nuclei with energies sNN = 200 GeV per nucleon-nucleon collision. All
+567: the measurements (red points) agree very well with a simple thermal model (blue lines) with
+568: an effective temperature around 1.6 trillion degrees, in line with theoretical calculations,
+569: and a net nucleon (quark) density that is lower than in previous, lower-energy experiments.
+570: The inset shows that the fraction
+571:                              ! of strange quarks has saturated at the same density as up
+572: and down quarks. Figure taken from refs. [3,23].
+573: 
+574: The total number of heavy-ion collisions created at the LHC will be comparable to
+575: the total number of heavy ion collisions created at RHIC. The LHC will be at least as
+576: hot a furnace as RHIC, in the sense that the systems produced in heavy-ion
+577: collisions at the LHC will have an effective temperature that is similar to that
+578: produced at RHIC. This is one factor that makes strangelet production no more
+579: likely at the LHC than at RHIC. Another major factor pointing in the same direction
+580: is that the net density of nucleons, measured by the baryon number, will be lower
+581: at the LHC than at RHIC. This is because the system produced in heavy-ion
+582: collisions at the LHC is spread over a larger rapidity range, and the same total net
+583: baryon number will be spread over a larger volume. As discussed in more detail in
+584: the Appendix, this effect has already been seen at RHIC, where the net density of
+585: nucleons is lower than in lower-energy experiments, and this trend will continue at
+586: the LHC [3]. Since strangelets require baryon number to be formed, this effect
+587: makes strangelet production less likely at the LHC than at RHIC.
+588: 
+589: We conclude on general physical grounds that heavy-ion collisions at the LHC are
+590: less likely to produce strangelets than the lower-energy heavy-ion collisions already
+591: carried out in recent years at RHIC, just as strangelet production at RHIC was less
+592: likely than in previous lower-energy experiments carried out in the 1980s and 1990s
+593: [8].
+594: 
+595: Knowing that strangelet production at the LHC is less likely than at previous lower-
+596: energy machines, we now review the arguments that strangelet production in
+597: previous lower-energy experiments did not pose any conceivable risk.
+598: 
+599: 
+600: 
+601:                                              11
+602: 
+603: It has been shown that the continuing survival of the Moon under cosmic-ray
+604: bombardment ensures that heavy-ion collisions do not pose any conceivable threat
+605: via strangelet production [8]. This is because cosmic rays have a significant
+606: component of heavy ions, as does the surface of the Moon. Since the Moon, unlike
+607: planets such as the Earth, is not protected by an atmosphere, cosmic rays hitting the
+608: Moon have produced heavy-ion collisions over billions of years at energies that are
+609: comparable to or exceed those reached in man-made experiments.
+610: 
+611: The conclusion reached in [8] required two well-motivated assumptions. Since
+612: high-energy cosmic rays include many iron nuclei, which are also prevalent in the
+613: Moon’s surface, it was assumed that the conditions reached in iron-iron collisions
+614: are comparable to those reached in the collisions of gold ions or lead ions that had
+615: been studied previously in the laboratory. Secondly, since RHIC and LHC
+616: experiments take place in the centre-of-mass reference frame, whereas in cosmic-ray
+617: collisions the centre-of-mass frame is moving at high speed, it was necessary to
+618: make some assumption about the velocity distribution of any strangelets produced.
+619: We recall that high-velocity strangelets might well be broken up by lunar matter
+620: before becoming slow enough to coalesce with it.
+621: 
+622: Since the appearance of [8], the RHIC heavy-ion programme has also studied the
+623: collisions of the copper ions, which are closely comparable to iron-iron collisions.
+624: The abundances of particles produced in these collisions are described by the same
+625: thermal model of a particle furnace that accounts successfully for particle
+626: production in gold-gold collisions. Moreover, the velocity distributions of all
+627: particle species observed at RHIC are similar to or broader than the distribution
+628: assumed in [8]. These observations support the assumptions made in [8], and
+629: therefore strengthen their conclusions.
+630: 
+631: An independent safety argument, which does not require any assumption about the
+632: velocity distribution of any hypothetical strangelets, has been given in [20]. The rate
+633: of cosmic-ray heavy-ion collisions in interstellar space is known. If these collisions
+634: produced any strangelets, these would have accreted in stars and any large-scale
+635: coalescence would have resulted in stellar explosions that have not been seen. This
+636: complementary argument does, however, assume that any strangelets produced do
+637: not decay on a time scale much shorter than that of star formation.
+638: 
+639: We close this section by summarizing that the successful description of heavy-ion
+640: collisions as a particle furnace with a net density of baryons that decreases at higher
+641: energies implies that strangelet production at the LHC is less likely than at lower-
+642: energy machines (see appendix). The arguments given previously for the safety of
+643: lower-energy collisions are strengthened by recent observations at RHIC.
+644: Furthermore, we note that the analogy of the LHC with a hot particle furnace will
+645: be monitored from the earliest days of heavy-ion collisions at the LHC. A thousand
+646: heavy-ion collisions would already suffice for a first test of the thermal model
+647: which describes heavy-ion collisions as a particle furnace. This will be among the
+648: first data analyses done in the LHC heavy-ion programme, and will immediately
+649: provide an experimental confirmation of the basic assumptions on which the safety
+650: argument is based.
+651: 
+652: 6 – Conclusions
+653: 
+654: Having reviewed the theoretical and experimental developments since the previous
+655: safety report was published, we confirm its findings. There is no basis for any
+656: concerns about the consequences of new particles or forms of matter that could
+657: possibly be produced by the LHC.
+658: 
+659: 
+660: 
+661:                                           12
+662: 
+663: In the case of phenomena, such as vacuum bubble formation via phase transitions
+664: or the production of magnetic monopoles, which had already been excluded by the
+665: previous report [1], no subsequent development has put into question those firm
+666: conclusions. Stable and neutral black holes, in addition to being excluded by all
+667: known theoretical frameworks, are either excluded by the stability of astronomical
+668: bodies, or would accrete at a rate that is too low to cause any macroscopic effects on
+669: timescales much longer than the natural lifetime of the solar system. The previous
+670: arguments about the impossibility to produce strangelets at the LHC are confirmed
+671: and reinforced by the analysis of the RHIC data.
+672: 
+673: We have considered all the proposed speculative scenarios for new particles and
+674: states of matter that currently raise safety issues. Since our methodology is based on
+675: empirical reasoning based on experimental observations, it would be applicable to
+676: other exotic phenomena that might raise concerns in the future.
+677: 
+678: 
+679: 
+680: 
+681:                                          13
+682: 
+683: Appendix
+684: In Section 5 we state that there is no basis for any conceivable threat from strangelet
+685: production at the LHC. Our arguments follow closely the line of reasoning of
+686: previous reports [8], but they put particular emphasis on two observations. First, on
+687: general grounds, the probability for strangelet production decreases with increasing
+688: center-of-mass energy. As a consequence, strangelet production at LHC is less likely
+689: than at RHIC, just as it was less likely at RHIC than in the heavy-ion programs at
+690: lower center-of-mass energies pursued in the 1980s and 1990s. Secondly, RHIC
+691: data strongly disfavour models of particle production which were advocated as
+692: production mechanisms for strangelets. On the contrary, RHIC data give strong
+693: support to a thermal model of particle production, which puts tight upper bounds
+694: on strangelet production. In this Appendix, we provide background information to
+695: support these statements and the main conclusions drawn from them. In particular,
+696: we recall the main arguments of the safety reports [8], and we discuss how these
+697: arguments can be strengthened in the light of recent data from RHIC.
+698: 
+699: Strangelet properties
+700: 
+701: Strange quark matter is a hypothetical state of matter consisting of roughly equal
+702: numbers of up, down and strange quarks. It has been speculated that strange quark
+703: matter might constitute the true ground state of baryonic matter, being more stable
+704: than ordinary nuclei [21,22]. Hypothetical small lumps of strange quark matter,
+705: having atomic masses comparable to ordinary nuclei, are often referred to as
+706: strangelets. Such strangelets might be either stable or metastable. At present, a first
+707: principle theory of strange quark matter is not within theoretical reach. It would
+708: require major theoretical breakthroughs in the application of QCD to finite density
+709: and to mesoscopic systems. As a consequence, theoretical studies on whether
+710: strangelets can exist for some parameter range depend on model-dependent
+711: assumptions. As reviewed in detail in ref. [8], theoretical speculations about the
+712: existence of strangelets may be summarized as follows:
+713: 
+714:    1. It is unclear whether bulk strange quark matter exists at all.
+715: 
+716:    2. It is unclear whether bulk strange quark matter can be stable. If it does exist,
+717:       strange quark matter may be absolutely stable in bulk at zero external
+718:       pressure, though the expected values for the relevant parameters tend to
+719:       disfavour stability [1].
+720: 
+721:    3. Finite size effects make it very unlikely that small strangelets (A < 10) can be stable
+722:       or long-lived. Even if bulk strange quark matter is stable, finite-size effects
+723:       (surface tension and curvature) significantly destablize strangelets with low
+724:       baryon number. For typical parameters, it has been estimated that finite-size
+725:       effects add, e.g., 50 MeV per baryon for A = 20 and 85 MeV per baryon for
+726:       A=10 [1].
+727: 
+728:    4. Stable strangelets, if they exist, could be present only in states of low entropy (i.e.,
+729:       temperature). Hot strangelets are much less stable than cold ones. The
+730:       characteristic scale to decide what is hot or cold is set by the binding energy
+731:       per baryon of the strangelet. On general thermodynamic grounds, the time-
+732:       scale for evaporation of hot strangelets is expected to be very small, though
+733:       difficult to calculate. Assuming typical nuclear binding energies of O(1)
+734:       MeV, one expects that stable strangelets need to be much colder than the
+735:       matter produced in heavy-ion collisions [1,8].
+736: 
+737: 
+738: 
+739:                                              14
+740: 
+741:    5. If stable strangelets exist, they are most likely positively charged. If strange matter
+742:       contained equal numbers of u, d and s quarks, it would be electrically
+743:       neutral. Since, s quarks are heavier, Fermi gas kinematics alone indicates that
+744:       strange quarks are suppressed, giving strange matter a positive charge per
+745:       unit baryon number. However, the effects of gluon exchange reactions are
+746:       difficult to quantify. Perturbatively, gluon exchange is repulsive and
+747:       increases the mass. But gluon interactions weaken as quark masses are
+748:       increased, so the gluonic repulsion is smaller between s-s, s-u or s-d pairs
+749:       than between u and d quarks. Hence, increasing the strength of gluon
+750:       interactions makes the charge of quark matter negative, but it also unbinds it.
+751:       Unreasonably low values of the bag constant are necessary to compensate for
+752:       a large repulsive gluonic interaction energy, which is why negatively-
+753:       charged strangelets are regarded as extremely unlikely [8].
+754: 
+755: Hypothetical disaster scenarios based on strangelet production in heavy-ion
+756: collisions require that strangelets be stable or very long-lived, and hence that they
+757: are sufficiently cold. It has been argued in detail [8] that each of these conditions is
+758: unlikely. In the following, we discuss in particular how RHIC data allow us to
+759: strengthen the argument that sufficiently cold strangelets cannot be produced in the
+760: hot particle furnace created in a heavy ion collision. Moreover, most hypothetical
+761: disaster scenarios require that the produced strangelet be charged negatively, so
+762: that its fusion with positively charged nuclei could lead to a hypothetically
+763: disastrous chain of events. In contrast, in normal matter, positively-charged
+764: strangelets would capture electrons, which would shield any fusion with other
+765: nuclei. To trigger a run-away reaction in the latter case, one must invoke an
+766: ionizing mechanism, e.g., by transporting the strangelets to the interior of the Sun
+767: [12], and this adds another layer of unlikely assumptions.
+768: 
+769: Strangelet production mechanisms in heavy-ion collisions
+770: 
+771: Strangelets, if they exist at all, are hadronic systems made out of quarks. Any model
+772: for their production should be first tested against the existing data on the
+773: production of nuclei. This line of argument has been explored in ref. [1]. Here, we
+774: sharpen its conclusions in the light of recent data from RHIC. There are three
+775: models of particle production, which have been considered in the context of
+776: strangelet production in heavy-ion collisions.
+777: 
+778: 
+779: 
+780: 
+781:                                             15
+782: 
+783: Fig. 3: Comparison of the experimental data on different particle multiplicity ratios
+784: obtained at RHIC in Gold-Gold collisions at sNN = 130 GeV with thermal model
+785: calculations [23]. The abundances of strange and multiple strange hadron species are well-
+786: described in terms of a chemical freeze-out temperature and baryon chemical potential µB.
+787: We note that the freeze-out temperatures here and in Fig. 2, corresponding to sNN = 200
+788:                                         !
+789: GeV, are very similar, whereas the baryon chemical potential decreases with sNN . Other
+790: data on the dependences of these parameters on the center-of-mass energy are shown in Fig.
+791: 4.
+792:                                                                      !
+793:                                                                     !
+794: 
+795:      1. Thermal models
+796: Hadron production in heavy-ion collisions is remarkably well described in terms of
+797: a statistical model. This model describes hadron yields in terms of the grand
+798: canonical ensemble of a hadron resonance gas at temperature T and baryon
+799: chemical potential µB [3], which characterizes the net baryon density. Figures 2 and
+800: 3 illustrate the success of this model for particle production in heavy-ion collisions
+801: at RHIC. The relative abundance of all particle species with ns strange quarks
+802: (where experimental observations extend up to ns = 3 only), are well described by
+803: the model. The temperature T and baryochemical potential µB of this model show a
+804: characteristic dependence on the center-of-mass energy of the heavy-ion collision,
+805: as seen in Fig. 4. The temperature increases with increasing collision energy,
+806: saturating at T ! 165 MeV, whereas the baryon chemical potential µB decreases. This
+807: is reflected in the reduction as the center-of-mass energy increases in the rate of
+808: production of ! baryons, which contain three strange quarks, as can be seen by
+809: comparing Figs. 2 and 3. The reason for the decrease of µB is that, at higher collision
+810: energies, the same net baryon number is distributed over a wider longitudinal
+811: kinematic range, resulting in a lower net baryon density and hence a lower value of
+812: µB .
+813: 
+814: 
+815:                                            16
+816: 
+817: Fig. 4: Thermal model fits at mid-rapidity of the freeze-out temperature T and the baryon
+818: chemical potential µB as functions of the center-of-mass energy sNN . The data points up to
+819: RHIC energies are taken from ref. [23]. The points at sNN = 5.5 TeV are based
+820: extrapolations of the measured trend [24]. The decrease of baryon chemical potential with
+821: center-of-mass energy makes strangelet production less likely at higher center-of-mass
+822:                                                       !
+823: energies.
+824:                                                      !
+825: The statistical approach can also be applied to the production of complex nuclei.
+826: The penalty factor for the yield YA of a nucleus A compared to A-1 is the ratio of
+827: Boltzmann weights [1]
+828: 
+829:                                    YA        $ ( m " µB ) '
+830:                            PF =         # exp&" N         ),                     (1)
+831:                                   YA "1      %     T      (
+832: 
+833: where mN is the nucleon mass. For the relevant temperature of T = 165 MeV, a small
+834: baryon chemical potential µB << mN as shown in Fig. 4, and A = 10, this gives a
+835:                  !
+836: relative suppression   factor 3 " 10-25 compared to the production of nucleons. We
+837: note that this would be the suppression factor for the production of normal nuclei.
+838: The production of any strangelet of A = 10 may be expected to be suppressed
+839: significantly more than the production of a normal A = 10 nucleus. Moreover, the
+840: grand canonical ensemble, on which the above estimates are based, is expected to
+841: be modified by an additional canonical suppression factor, as soon as the constraint
+842: from the finite total baryon number in the collision becomes relevant at sufficiently
+843: large A. Taking these considerations into account, the suppression factor 3 " 10-25 is
+844: an extremely conservative upper bound. If one repeats the exercise with A = 20, one
+845: is led to a suppression factor 10-49.
+846: 
+847: We note that the production of light nuclei with A << 10 has been measured in
+848: central heavy-ion collisions at AGS, SPS and RHIC. It is well accounted for by the
+849: penalty factor in eq. (1): see, e.g. ref. [25] for a comparison of thermal model
+850: calculations to data. The measured penalty factors for light nuclei range from 1/50
+851: at AGS, to about 1/300 at the SPS, and for antinuclei they range from 1/(2 " 105) at
+852: 
+853: 
+854:                                               17
+855: 
+856: the AGS and 1/3000 at the SPS to 1/1500 at RHIC [1]. As functions of center-of-
+857: mass energy, the penalty factors increase for nuclei but, due to the decrease of the
+858: baryon chemical potential with sNN , they decrease for antinuclei. In a system with
+859: postive net baryon number, the total yield of nuclei is always larger than the yield
+860: of antinuclei. For this reason, the above estimate is based on the thermal production
+861: of nuclei.
+862:                          !
+863: 2. Coalescence models
+864: 
+865: The basic physics idea of coalescence models is that a nucleus A forms when A
+866: nucleons occupy the same interaction volume. In these models, the yield YA of
+867: nuclei A is related to the initial yield YN of nucleons as
+868:                                                A
+869:                                  YA = BA (YN ) ,                           (2)
+870: 
+871: where BA is the so-called coalescence parameter. The penalty factor PF for
+872: coalescing an additional nucleon onto an existing cluster is then [1]
+873:                        !
+874:                                  Y    # B & V
+875:                            PF = A = % A ( 0 YN .                      (3)
+876:                                 YA "1 $ BA "1 ' 0 V
+877: 
+878: Here, V denotes the interaction volume over which coalescence is effective, and the
+879: subscript ‘0’ refers to a reference scale set, e.g., by determining the coalescence
+880: parameter and the!interaction volume at a specific collision energy.
+881: 
+882: It has been emphasized previously in ref. [1] that predictions from the coalescence
+883: models are in qualitative and even reasonable quantitative agreement with thermal
+884: models. For instance, in ref. [1] it was estimated on the basis of coalescence models
+885: that the suppression factor for production of an A = 20 nuclei in a central heavy ion
+886: collision is between 10-53 and 10-46. This compares very well with the suppression
+887: factor of order 10-49 obtained in the above discussion of thermal models.
+888: 
+889: Since coalescence models do not differ qualitatively from thermal models, the same
+890: safety arguments apply. For this reason, we emphasize in the text that in the
+891: detailed study of heavy-ion collisions at RHIC and lower energies, no evidence for
+892: an anomalous coalescence mechanism has been found. The basis of the 2003 report
+893: has been fully vindicated by further RHIC running.
+894: 
+895: 
+896: 3. Distillation mechanism
+897: 
+898: Strangeness distillation has been proposed specifically as a mechanism for
+899: strangelet production. This mechanism assumes that a baryon-rich quark-gluon
+900: plasma is produced in a heavy-ion collision, which cools by evaporation from its
+901: surface. Due to the large baryon chemical potential in this plasma, an s antiquark
+902: would be more likely to pair with a u or d quark, than an s quark with a u or d
+903: antiquark. As a consequence, the cooling of the plasma would lead to an excess of s
+904: quarks in a baryon-rich lump, which may finally become a strangelet.
+905:                                                                 !
+906: We note that this production process would be more likely for              ! baryon
+907:                                                                      ! large
+908: chemical potential, and thus would be less likely for heavy-ion collisions at the
+909: LHC than at lower center-of-mass energies. Moreover, there is by now significant
+910: empirical evidence against a dynamical picture of heavy-ion collisions in which
+911: strangeness distillation could be operational. In particular, empirical evidence from
+912: 
+913: 
+914:                                           18
+915: 
+916: RHIC strongly supports explosive production scenarios, in which, for instance,
+917: collective-flow gradients increase with center-of-mass energy [26]. The short
+918: lifetime of the produced systems (of the order of 10 fm/c) is not expected to allow
+919: for an evaporation process. Moreover, the explosive collective dynamics is expected
+920: to favor bulk emission rather than surface emission [26]. So, there is no evidence for
+921: a distillation mechanism capable of strangelet production at RHIC, and this
+922: suggestion for strange particle production has been abandoned for the LHC.
+923: 
+924: Direct experimental searches for strangelets
+925: 
+926: Strangelets have been searched for in ordinary matter on Earth [27] and in heavy-
+927: ion collisions over a wide range of center-of-mass energies. In particular, searches
+928: for stra
+929: lets have been reported by several experiments at the Brookhaven Alternating
+930: Gradient Synchrotron [28], by the NA52 Collaboration at the SPS [29], and by the
+931: STAR Collaboration at RHIC [15]. All of these searches yielded negative results and
+932: reported complementary upper limits. In particular, STAR reported an upper limit
+933: of less than 10-6 strangelets per central Au-Au collision for strangelets with lifetimes
+934: larger than 0.1 ns and mass larger than 30 GeV. More details about the experimental
+935: situation can be found in the previous reports [1,8].
+936: 
+937: Summary of the safety argument
+938: 
+939: 1. Quantitative considerations
+940: 
+941: The maximal luminosity of lead-lead (Pb+Pb) collisions at the LHC is L = 1027 cm-2 s-
+942: 1
+943:   . With a hadronic Pb+Pb cross section of 8 barn, this implies a rate of up to 8000
+944: Pb+Pb collisions per second. With a foreseen running time of 1 month per year (106
+945: seconds) times a duration of the program of, say, 10 years, we arrive at a
+946: conservative upper bound on the total number of ion-ion collisions at the LHC of
+947: O(1011). However, a large fraction of the hadronic Pb+Pb cross section is diffractive
+948: or very peripheral. Only 10 percent of the entire rate can be considered as being
+949: sufficiently central for creating a collision system characteristic of a heavy-ion
+950: collision with a number of participants Npart > 20. As a consequence, a conservative
+951: bound on the number of heavy ion collisions relevant for production of an A = 10
+952: nucleus is O(1010).
+953: 
+954: Our conservative estimate for the thermal production of a normal A = 10 nucleus at
+955: the LHC was 3 " 10-25 times the rate of nucleon production. Taking the latter rate to
+956: lie in the hundreds, we arrive at a probability of 10-13 that a single normal nucleus
+957: of size A = 10 is produced during the entire LHC program as a result of the
+958: essentially thermal dynamics in a heavy ion collision. So, if LHC would run for the
+959: entire lifetime of the Universe, the probability of producing such a single nucleus
+960: via thermal production would be 1/10001.
+961: 
+962: We note that the above is an estimate for the thermal production of a normal A = 10
+963: nucleus from a hadron gas of temperature T = 165 MeV. The production of normal
+964: nuclear matter provides an extremely conservative upper bound on the production
+965: of strange quark matter. For this reason, we find that the significant empirical
+966: support for thermal particle production in heavy ion collisions, which was
+967: substantiated further by RHIC data in recent years, strengthens the main conclusion
+968: 
+969: 1
+970:   One may add that in semi-peripheral collisions, nuclei with A = 10 may appear amongst the break-
+971: up products of the spectators of the nuclear projectile. However, such fragment production of
+972: nuclear remnants is not a mechanism that could give rise to strangelets. For this reason, we focus
+973: solely on thermal production rates of normal nuclei.
+974: 
+975: 
+976: 
+977:                                                19
+978: 
+979: of the 2003 report [1]. There is no basis for any conceivable threat from strangelet
+980: production at the LHC.
+981: 
+982: 2. Qualitative considerations
+983: 
+984: The above estimate of an upper limit to the probability of A = 10 nuclei can be
+985: further strengthened by the following qualitative argument, which is based on
+986: general principles of thermodynamics alone.
+987: 
+988:       Strangelets are cold, dense systems. Like nuclei, they are bound by O(1-10) of
+989: MeV (if they are bound at all). Heavy-ion collisions produce hot systems. At LHC,
+990: the temperatures reached are in excess of 100 MeV. The second law of
+991: thermodynamics fights against the condensation of a system an order of magnitude
+992: colder than the surrounding medium. The hypothetical production of a cold
+993: strangelet from a hot hadron gas has been compared to producing an ice cube in a
+994: furnace [8].
+995: 
+996:         This paper has aimed at communicating this central qualitative idea. In this
+997: appendix, we have provided the quantitative background, to which the notion of
+998: “particle furnace” corresponds. As seen from Fig. 4, measurements show that
+999: heavy-ion collisions reach temperatures of T = 160 MeV in the last stage of the
+1000: collision. Moreover, the baryon chemical potential, which characterizes the net
+1001: quark density, decreases as the center-of-mass energy increases, further decreasing
+1002: the likelihood of producing any system with large atomic number. The particle
+1003: abundances measured at RHIC and in lower-energy experiments are consistent
+1004: with expectations from the thermal model of statistical hadronization (see Fig. 3).
+1005: This model is also known to apply to the production of light nuclei, as far as they
+1006: have been identified experimentally, and it provides a very large suppression factor
+1007: for the production of A = 10 nuclei. On these grounds, we conclude that the
+1008: experimental evidence from RHIC for the thermal model of particle production
+1009: significantly strengthens the conclusions of the 2003 report of the LHC Safety Study
+1010: Group.
+1011: 
+1012: 
+1013: 
+1014: 
+1015:                                         20
+1016: 
+1017: Bibliography
+1018: 
+1019: [1] J.P. Blaizot et al., Report of the LHC safety study group, CERN-2003-001.
+1020: 
+1021: [2] S.B. Giddings and M.L. Mangano, CERN-PH-TH/2008-025, arXiv:0806.3381, to
+1022: appear in Phys. Rev. D.
+1023: 
+1024: [3] P. Braun-Munzinger, K. Redlich and J. Stachel, in Quark-Gluon Plasma, eds. R.C.
+1025: Hwa and X.-N. Wang, (World Scientific Publishing, Singapore, 2003), also available
+1026: as arXiv:nucl-th/0304013.
+1027: 
+1028: [4] In comparing the LHC with cosmic rays, here and elsewhere we assume the
+1029: validity of special relativity. It has been tested accurately in the laboratory for
+1030: particles with velocities similar to those of any new exotic particles that could be
+1031: produced at the LHC, and there is no suggestion that special relativity is
+1032: inapplicable to cosmic rays with energies comparable to that of the LHC.
+1033: 
+1034: [5] Pierre Auger Collaboration (J. Abraham et al.), Science 318, 938 (2007); Pierre
+1035: Auger Collaboration (A.A. Watson et al.), Nucl. Instrum. Meth. A588, 221 (2008);
+1036: HiRes Collaboration (R. Abbasi et al.), Phys. Rev. Lett. 100, 101101 (2008); R.U.
+1037: Abbasi et al. arXiv:0804.0382 [astro-ph]; D.R. Bergman and J.W. Belz, J.Phys., G34,
+1038: R359 (2007).
+1039: 
+1040: [6] This estimate would be reduced by a factor approximately equal to A if all the
+1041: ultra-high-energy cosmic rays were nuclei with an atomic number A, since the
+1042: cosmic-ray spectrum falls like 1/E3 at high energies, as seen in Fig. 1.
+1043: 
+1044: [7] I.Yu. Kobzarev, L.B. Okun, M.B. Voloshin, Yad. Fiz. 20, 1229 (1974) [Sov. J. Nucl.
+1045: Phys. 20, 644 (1975)]; P. Frampton, Phys. Rev. Lett. 37, 1378 (1976); P. Hut and M.J.
+1046: Rees, Print 83-0042 (IAS, Princeton) (1983); P. Hut, Nucl. Phys. A418, 301C (1984).
+1047: 
+1048: [8] W. Busza et al., Rev. Mod. Phys. 72, 1125 (2000).
+1049: 
+1050: [9] S.W. Hawking, Commun. Math. Phys. 43, 199 (1975).
+1051: 
+1052: [10] G. ‘t Hooft, Int. J. Mod. Phys. A 11, 4623 (1996).
+1053: 
+1054: [11] H. Takahashi et al., Phys. Rev. Lett. 87, 212502 (2001) and Nucl. Phys. A721, 951
+1055: (2003).
+1056: 
+1057: [12] It has been speculated that if an unknown mechanism exists that could
+1058: transport strangelets produced by an accelerator to the interior of the Sun, then
+1059: positively-charged strangelets might also grow inside the Sun: A. Kent, hep-
+1060: ph/0009130v2.
+1061: 
+1062: [13] X.J. Wen, Int. J. Mod. Phys. A22, 1649 (2007).
+1063: 
+1064: [14] H. Liu, Int. J. Mod. Phys. E16, 3280 (2008).
+1065: 
+1066: [15] B.I. Abelev et al. [STAR Collaboration], Phys. Rev. C76, 011901 (2007).
+1067: 
+1068: [16] SLIM Collaboration, S. Cecchini et al., arXiv:0805.1797.
+1069: 
+1070: [17] J. Madsen, astro-ph/0612740.
+1071: 
+1072: 
+1073: 
+1074: 
+1075:                                            21
+1076: 
+1077: [18] C. Greiner, P. Koch and H. Stoecker, Phys. Rev. Lett. 58, 1825 (1987).
+1078: 
+1079: [19] The RHIC White Papers, Nucl. Phys. A757, 1 (2005).
+1080: 
+1081: [20] A. Dar, A. De Rujula, U. Heinz, Phys. Lett. B470, 142 (1999).
+1082: 
+1083: [21] A.R. Bodmer, Phys. Rev. D4, 1601 (1971).
+1084: 
+1085: [22] E. Witten, Phys. Rev. D30, 272 (1984).
+1086: 
+1087: [23] A. Andronic, P. Braun-Munzinger and J. Stachel, Nucl. Phys. A772, 167 (2006).
+1088: 
+1089: [24] N. Borghini and U.A. Wiedemann, arXiv:0707.0564 [hep-ph].
+1090: 
+1091: [25] V.I. Kolesnikov [NA49 Collaboration], arXiv:0710.5118 [nucl-ex].
+1092: 
+1093: [26] M.A. Lisa, S. Pratt, R. Soltz and U. Wiedemann, Ann. Rev. Nucl. Part. Sci. 55,
+1094: 357 (2005).
+1095: 
+1096: [27] R. Klingenberg, J. Phys. G27, 475 (2001); P. Mueller, L.B. Wang, R.J. Holt, Z.T.
+1097: Lu, T.P. O'Connor and J.P. Schiffer, Phys. Rev. Lett. 92, 022501 (2004); Z.T. Lu, R.J.
+1098: Holt, P. Mueller, T.P. O'Connor, J. P. Schiffer and L.B. Wang, Nucl. Phys. A754, 361
+1099: (2005).
+1100: 
+1101: [28] T.A. Armstrong et al. [E864 Collaboration], Phys. Rev. C63}, 054903 (2001); A.
+1102: Rusek et al. [E886 Collaboration], Phys. Rev. C54, 15 (1996); D. Beavis et al. [E878
+1103: Collaboration], Phys. Rev. Lett. 75, 3078 (1995); H. Caines et al. [E896
+1104: Collaboration], J. Phys. G27, 311 (2001).
+1105: 
+1106: [29] G. Appelquist et al. [NA52 (NEWMASS) Collaboration], Phys. Rev. Lett. 76,
+1107: 3907 (1996); R. Arsenescu et al. [NA52 Collaboration], New J. Phys. 4, 96 (2002).
+1108: 
+1109: 
+1110: 
+1111: 
+1112:                                           22
+1113:

@@ -1,0 +1,17 @@
+{
+  "crux_candidates": [],
+  "edge_basis": "source_explicit",
+  "failure_condition": "The edge would be invalidated if the cohort in eggs_c010 was found to have significantly different risk profiles than the general population mentioned in eggs_c009.",
+  "pair_id": "pair_006",
+  "rationale": "Claim eggs_c010 provides specific observational evidence (a hazard ratio of 0.93) that aligns with and supports the broader finding in eggs_c009 that dietary cholesterol is not generally associated with cardiovascular risk.",
+  "relation_confidence": "high",
+  "relation_type": "supports",
+  "similar_but_not_identical": [
+    "eggs_c010 is a specific study finding (one egg per day) that supports the broader guideline in eggs_c009."
+  ],
+  "source_anchor_a": "not associated with incident cardiovascular disease risk",
+  "source_anchor_b": "not generally supported an association",
+  "source_claim": "eggs_c010",
+  "target_claim": "eggs_c009",
+  "why_decision_relevant": "The edge reinforces the conclusion that eggs (and by extension, dietary cholesterol) do not pose a significant cardiovascular risk for healthy adults."
+}

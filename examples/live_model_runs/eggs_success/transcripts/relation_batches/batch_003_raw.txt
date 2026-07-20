@@ -1,0 +1,66 @@
+```json
+{
+  "relations": [
+    {
+      "pair_id": "pair_009",
+      "source_claim": "eggs_c027",
+      "target_claim": "eggs_c006",
+      "relation_type": "refines",
+      "rationale": "eggs_c027 identifies a specific subgroup (hyperresponders) for whom the impact of egg intake on LDL cholesterol is more pronounced, refining the broader dietary guidance in eggs_c006 which suggests focusing on healthy patterns rather than individual targets.",
+      "relation_confidence": "high",
+      "edge_basis": "source_inferred",
+      "source_anchor_a": "more pronounced among those who are so called hyperresponders",
+      "source_anchor_b": "focus on healthy dietary patterns",
+      "why_decision_relevant": "The edge identifies a specific population where the standard guidance might need more careful monitoring.",
+      "failure_condition": "If the hyperresponder status is not considered relevant to the general population's cardiovascular risk profile.",
+      "crux_candidates": [],
+      "similar_but_not_identical": []
+    },
+    {
+      "pair_id": "pair_010",
+      "source_claim": "eggs_c026",
+      "target_claim": "eggs_c024",
+      "relation_type": "refines",
+      "rationale": "eggs_c026 specifies the geographic population (European populations) for which the finding in eggs_c024 regarding CVD risk is reported.",
+      "relation_confidence": "high",
+      "edge_basis": "source_inferred",
+      "source_anchor_a": "in European populations",
+      "source_anchor_b": "not associated with increased risk of CVD",
+      "why_decision_relevant": "The edge clarifies the geographic scope of the safety finding.",
+      "failure_condition": "If the findings in eggs_c024 were already explicitly limited to European populations (which they are, but the refinement confirms the boundary).",
+      "crux_candidates": [],
+      "similar_but_not_identical": []
+    },
+    {
+      "pair_id": "pair_011",
+      "source_claim": "eggs_c013",
+      "target_claim": "eggs_c007",
+      "relation_type": "contextualizes",
+      "rationale": "eggs_c013 provides comparative context by showing that replacing eggs with processed red meat or full-fat milk is associated with higher CVD risk, which helps interpret the safety of the inclusion levels suggested in eggs_c007.",
+      "relation_confidence": "high",
+      "edge_basis": "source_inferred",
+      "source_anchor_a": "higher risk of cardiovascular disease when eggs were replaced with processed red meat",
+      "source_anchor_b": "healthy people can include up to a whole egg",
+      "why_decision_relevant": "The edge frames the recommendation as a relatively healthier choice compared to common substitutes.",
+      "failure_condition": "If the replacement analysis is not considered relevant to the daily consumption limits of eggs.",
+      "crux_candidates": [],
+      "similar_but_not_identical": []
+    },
+    {
+      "pair_id": "pair_012",
+      "source_claim": "eggs_c021",
+      "target_claim": "eggs_c015",
+      "relation_type": "supports",
+      "rationale": "eggs_c021 provides mechanistic/biomarker evidence (increased LDL-c) that supports the outcome finding in eggs_c015 regarding increased CVD risk associated with higher egg consumption.",
+      "relation_confidence": "high",
+      "edge_basis": "source_inferred",
+      "source_anchor_a": "significantly higher concentration of LDL-c",
+      "source_anchor_b": "higher risk of incident CVD",
+      "why_decision_relevant": "The edge provides a plausible biological mechanism (LDL elevation) for the observed clinical outcome.",
+      "failure_condition": "If the increase in LDL-c is not considered a causal driver of the CVD risk reported in eggs_c015.",
+      "crux_candidates": [],
+      "similar_but_not_identical": []
+    }
+  ]
+}
+```

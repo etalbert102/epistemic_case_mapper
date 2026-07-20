@@ -1,0 +1,17 @@
+{
+  "crux_candidates": [
+    "Whether the recommendation for high-risk individuals (eggs_c008) overrides the general appropriateness of omega-3 sources (eggs_c001) is a crux for the decision."
+  ],
+  "edge_basis": "source_inferred",
+  "failure_condition": "The edge weakens if the omega-3 content in eggs is considered negligible compared to the cholesterol impact, making the claims non-conflicting.",
+  "pair_id": "pair_001",
+  "rationale": "The claims present a tension between general dietary guidance and specific clinical risk management. eggs_c001 suggests that eggs containing omega-3 fatty acids are an 'appropriate' source for those avoiding seafood, while eggs_c008 advises individuals with high LDL or obesity to reduce sources of dietary cholesterol (which includes eggs). The tension lies in whether the benefit of the omega-3 content justifies the inclusion of a high-cholesterol food for a high-risk population.",
+  "relation_confidence": "medium",
+  "relation_type": "in_tension_with",
+  "similar_but_not_identical": [],
+  "source_anchor_a": "reducing sources of both saturated fat and dietary cholesterol",
+  "source_anchor_b": "regular intake of... eggs that contain omega-3 fatty acids, is appropriate",
+  "source_claim": "eggs_c008",
+  "target_claim": "eggs_c001",
+  "why_decision_relevant": "This tension highlights that the recommendation for egg consumption may be conditional or restricted based on an individual's specific cardiovascular risk profile (e.g., high LDL)."
+}

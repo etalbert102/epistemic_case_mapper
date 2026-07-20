@@ -1,0 +1,15 @@
+{
+  "crux_candidates": [],
+  "edge_basis": "uncertain",
+  "failure_condition": "The edge is not warranted because the claims represent different levels of evidence (epidemiological association vs. clinical guidance) and do not share a conditional or mechanistic link.",
+  "pair_id": "pair_003",
+  "rationale": "The claims are not directly related in a way that supports, conditions, or tensions with each other regarding the decision. eggs_c019 provides evidence on the association between dietary cholesterol and mortality (an outcome), while eggs_c006 is a high-level clinical guideline recommending a shift toward overall dietary patterns rather than specific nutrient targets. While both relate to heart health, one does not provide a mechanism or condition for the other.",
+  "relation_confidence": "high",
+  "relation_type": "none",
+  "similar_but_not_identical": [],
+  "source_anchor_a": "",
+  "source_anchor_b": "",
+  "source_claim": "eggs_c019",
+  "target_claim": "eggs_c006",
+  "why_decision_relevant": ""
+}

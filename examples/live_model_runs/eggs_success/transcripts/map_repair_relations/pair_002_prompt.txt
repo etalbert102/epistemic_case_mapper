@@ -1,0 +1,286 @@
+# Task
+
+You are classifying one possible relation between two already-validated claim cards.
+
+# Metadata
+
+Prompt version: staged_relation_prompt_v4_contextual_relation_json
+Region ID: eggs_observational_vs_rct
+Pair ID: pair_002
+Decision question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+Case question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+Allowed relation types:
+challenges, contextualizes, crux_for, depends_on, in_tension_with, refines, similar_to, supports
+
+# Relation Type Semantics
+
+- challenges: One claim undercuts or contradicts another. Use when: Use for contrary evidence, validity objections, or failed assumptions. Sharpness markers: contradicts, undercuts, casts doubt.
+- contextualizes: One claim supplies interpretation context for another without directly supporting, challenging, or narrowing it. Use when: Use for comparator, background, mechanism, or source-context edges that help a reader interpret a claim as context rather than load-bearing support. Sharpness markers: context, compared with, interpretation, helps explain.
+- crux_for: One claim is a decision crux for another or for the question. Use when: Use when changing belief in one claim would materially change the decision read. Sharpness markers: crux, decisive, would change, key uncertainty.
+- depends_on: The force of one claim depends on a condition, implementation detail, or prerequisite. Use when: Use for conditional recommendations, feasibility dependencies, and assumptions. Sharpness markers: depends, requires, only if, unless, condition.
+- in_tension_with: Claims can both be partly true but pull the decision in different directions. Use when: Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions. Sharpness markers: however, tradeoff, tension, limited, unclear.
+- refines: One claim narrows the population, endpoint, mechanism, condition, or interpretation of another. Use when: Use when the boundary being refined is explicit. Sharpness markers: only for, specifically, boundary, population, endpoint.
+- similar_to: Claims are close enough that a reviewer may consider merging them. Use when: Use only for near-duplicate or strongly overlapping claims. Sharpness markers: same as, duplicates, substantially overlaps.
+- supports: One claim increases support for another without being the decisive dependency. Use when: Use for direct evidence or argument support. Sharpness markers: supports, consistent with, evidence for.
+
+# Rules
+
+- Omit relation_id. Deterministic code assigns IDs later.
+- Use only the claim IDs shown in the pair.
+- Use only allowed relation types, or use relation_type "none".
+- Treat each pair's relation_intent and suggested_relation_types as the default decision menu.
+- Choose from suggested_relation_types unless another allowed relation type is clearly better supported by the exact quotes.
+- When overriding suggested_relation_types, explain the override in the rationale.
+- Prefer no relation over a plausible but weak topical association.
+- Use only the two claim cards, exact evidence quotes, relation intent, and pair contract shown for each pair.
+- Prefer decision-relevant relations over generic links.
+- Use crux_for only when the rationale says what answer would change if one claim were false.
+- Use depends_on only when the rationale names a condition that must hold.
+- Use in_tension_with only when the rationale names the propositions that are hard to jointly accept.
+- Use challenges only when the rationale names what proposition is weakened or contradicted.
+- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or condition being narrowed.
+- Use supports only when the rationale names same-proposition support, a mechanism that explains the target claim, or quantitative/statistical evidence that strengthens the target claim.
+- Use contextualizes when a claim helps interpret another claim but does not directly support, challenge, narrow, or condition it.
+- Use supports when the rationale names same-proposition support, mechanism support, or quantitative/statistical strengthening.
+- Use refines for same-source or explicitly transferable boundaries, populations, endpoints, mechanisms, or conditions.
+- Fill the relation evidence contract for every non-none relation.
+- Ground anchors in visible evidence-quote phrases rather than introducing new facts.
+- Profile guidance: Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.
+- Profile guidance: Use similar_to only when the claims are redundant enough to merge.
+- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
+- Use refines only when the rationale names the boundary, population, endpoint, mechanism, or condition being refined.
+- If no defensible relation exists, set source_claim and target_claim to null and relation_type "none".
+
+# Output Schema
+
+Return only JSON matching this schema:
+{
+  "pair_id": "one of: pair_002",
+  "source_claim": "claim_id or null",
+  "target_claim": "claim_id or null",
+  "relation_type": "one of: challenges, contextualizes, crux_for, depends_on, in_tension_with, refines, similar_to, supports; or none",
+  "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
+  "relation_confidence": "low|medium|high",
+  "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
+  "source_anchor_a": "short phrase from first evidence quote that supports the edge",
+  "source_anchor_b": "short phrase from second evidence quote that supports the edge",
+  "why_decision_relevant": "what this edge changes for the decision question",
+  "failure_condition": "what would make this edge invalid or much weaker",
+  "crux_candidates": [
+    "crux text naming claim IDs"
+  ],
+  "similar_but_not_identical": [
+    "distinction text naming claim IDs"
+  ]
+}
+
+# Examples
+
+<example_1>
+{
+  "input_hint": "One claim states a condition required for another claim to hold.",
+  "output": {
+    "pair_id": "pair_001",
+    "source_claim": "case_c002",
+    "target_claim": "case_c001",
+    "relation_type": "depends_on",
+    "rationale": "case_c001 only holds if the condition in case_c002 is satisfied.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "condition named in the source",
+    "source_anchor_b": "recommendation depends on that condition",
+    "why_decision_relevant": "The edge turns a broad recommendation into a scoped one.",
+    "failure_condition": "The condition is not required in the target setting.",
+    "crux_candidates": [
+      "case_c002 is a crux for case_c001."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_1>
+
+<example_2>
+{
+  "input_hint": "The pair has no defensible decision-relevant edge.",
+  "output": {
+    "pair_id": "pair_002",
+    "source_claim": null,
+    "target_claim": null,
+    "relation_type": "none",
+    "rationale": "The claims concern different parts of the source packet.",
+    "relation_confidence": "low",
+    "edge_basis": "uncertain",
+    "source_anchor_a": "",
+    "source_anchor_b": "",
+    "why_decision_relevant": "",
+    "failure_condition": "",
+    "crux_candidates": [],
+    "similar_but_not_identical": []
+  }
+}
+</example_2>
+
+<example_3>
+{
+  "input_hint": "Two outcome findings point in different directions on the same decision-relevant proposition.",
+  "output": {
+    "pair_id": "pair_003",
+    "source_claim": "case_c004",
+    "target_claim": "case_c005",
+    "relation_type": "in_tension_with",
+    "rationale": "case_c004 reports no meaningful difference on the target outcome, while case_c005 reports higher risk on the same outcome.",
+    "relation_confidence": "high",
+    "edge_basis": "source_explicit",
+    "source_anchor_a": "no meaningful difference",
+    "source_anchor_b": "higher risk",
+    "why_decision_relevant": "The edge preserves the main evidential conflict instead of averaging it away.",
+    "failure_condition": "The edge weakens if the outcomes, populations, or exposure definitions are not comparable.",
+    "crux_candidates": [
+      "Whether case_c004 and case_c005 are comparable is a crux for the decision read."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_3>
+
+<example_4>
+{
+  "input_hint": "A validity or method claim weakens confidence in a headline finding.",
+  "output": {
+    "pair_id": "pair_004",
+    "source_claim": "case_c007",
+    "target_claim": "case_c006",
+    "relation_type": "challenges",
+    "rationale": "case_c007 names a confounding or measurement problem that weakens the headline inference in case_c006.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "unmeasured confounding",
+    "source_anchor_b": "headline association",
+    "why_decision_relevant": "The edge lowers how much the headline finding should drive the decision.",
+    "failure_condition": "The edge weakens if the limitation was already handled by the target source's design or adjustment strategy.",
+    "crux_candidates": [
+      "Whether the limitation in case_c007 is serious enough would change how much to rely on case_c006."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_4>
+
+<example_5>
+{
+  "input_hint": "A scope claim names the population or condition where a finding applies.",
+  "output": {
+    "pair_id": "pair_005",
+    "source_claim": "case_c009",
+    "target_claim": "case_c008",
+    "relation_type": "refines",
+    "rationale": "case_c009 narrows case_c008 by naming the subgroup or condition where the finding is most applicable.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "specific subgroup",
+    "source_anchor_b": "broader finding",
+    "why_decision_relevant": "The edge prevents applying the broad finding outside the population or condition where it is supported.",
+    "failure_condition": "The edge weakens if the subgroup or condition is not relevant to the decision question.",
+    "crux_candidates": [],
+    "similar_but_not_identical": [
+      "case_c009 is a boundary on case_c008, not a duplicate of it."
+    ]
+  }
+}
+</example_5>
+
+<example_6>
+{
+  "input_hint": "A subgroup or scope claim points in a materially different direction from a broad outcome finding.",
+  "output": {
+    "pair_id": "pair_006",
+    "source_claim": "case_c012",
+    "target_claim": "case_c013",
+    "relation_type": "in_tension_with",
+    "rationale": "case_c012 reports a subgroup exception that pulls against the broad neutral or favorable finding in case_c013.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "subgroup exception",
+    "source_anchor_b": "broad neutral finding",
+    "why_decision_relevant": "The edge keeps the decision from treating the broad finding as equally applicable to the subgroup.",
+    "failure_condition": "The edge weakens if the subgroup is not relevant to the decision or the direction does not actually differ.",
+    "crux_candidates": [
+      "Whether the subgroup exception applies would change the decision read."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_6>
+
+<example_7>
+{
+  "input_hint": "A mechanism or biomarker claim explains why an outcome finding might hold, but is not itself decisive.",
+  "output": {
+    "pair_id": "pair_007",
+    "source_claim": "case_c010",
+    "target_claim": "case_c011",
+    "relation_type": "supports",
+    "rationale": "case_c010 provides a plausible mechanism for the outcome pattern in case_c011, while the clinical outcome evidence remains the stronger anchor.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "mechanism or biomarker change",
+    "source_anchor_b": "outcome pattern",
+    "why_decision_relevant": "The edge explains why the outcome finding might generalize, while keeping mechanism evidence separate from outcome evidence.",
+    "failure_condition": "The edge weakens if the biomarker is not causally related to the outcome or moves in the wrong direction.",
+    "crux_candidates": [],
+    "similar_but_not_identical": []
+  }
+}
+</example_7>
+
+<example_8>
+{
+  "input_hint": "A comparator or background claim helps interpret another claim but does not support, challenge, or narrow it.",
+  "output": {
+    "pair_id": "pair_008",
+    "source_claim": "case_c014",
+    "target_claim": "case_c015",
+    "relation_type": "contextualizes",
+    "rationale": "case_c014 gives comparator context that helps interpret case_c015, but it does not directly strengthen, weaken, or narrow the target claim.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "comparator context",
+    "source_anchor_b": "target finding",
+    "why_decision_relevant": "The edge tells the reader how to interpret the claim without treating the context as load-bearing evidence.",
+    "failure_condition": "The edge weakens if the comparator is irrelevant to the decision question or changes the target claim's direction.",
+    "crux_candidates": [],
+    "similar_but_not_identical": []
+  }
+}
+</example_8>
+
+# Context
+
+Claim A:
+- claim_id: eggs_c006
+- claim: The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.
+- source_id: aha_2019_dietary_cholesterol_pubmed
+- role: source_claim
+- routing_context: {"decision_edge_role": "guidance_or_recommendation", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Provides specific guidance on focusing on dietary patterns over individual cholesterol targets."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["healthy dietary patterns", "Mediterranean-style", "DASH-style", "specific dietary cholesterol target"], "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Science Advisory/Guidance", "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)", "outcome_or_endpoint": "Cardiovascular health / diet quality", "population": "General population", "stated_limitations": "['Specific dietary cholesterol targets are challenging to implement']", "stated_scope": "['clinicians', 'consumers']"}}
+- source_span: lines 125-125
+- exact_evidence_quote_A: Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.
+
+Claim B:
+- claim_id: eggs_c016
+- claim: The association between egg consumption and incident CVD was no longer significant after adjusting for dietary cholesterol consumption.
+- source_id: jama_2019_dietary_cholesterol_eggs
+- role: source_claim
+- routing_context: {"decision_edge_role": "method_or_validity_limit", "decision_edge_role_confidence": "medium", "decision_edge_role_reasons": ["Describes the adjustment for dietary cholesterol to determine if the association remains significant."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["egg consumption", "dietary cholesterol", "adjusted HR, 0.99", "not significant"], "natural_bottom_line": "The CVD risk from eggs is fully accounted for by the cholesterol they contain.", "question_relevance": "indirect", "source_local_context": {"evidence_design": "Pooled cohort study", "exposure_or_option": "Egg consumption", "outcome_or_endpoint": "Incident CVD", "population": "US adults (n=29,615)", "stated_scope": "['US adults']"}}
+- source_span: lines 50-50
+- exact_evidence_quote_B: The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, −0.47% [95% CI, −1.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, −0.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.
+
+Pair contract:
+- allowed_claim_ids_for_non_none_relation: eggs_c006, eggs_c016
+- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type "none".
+- relation_intent: mechanism_to_outcome
+- suggested_relation_types: supports, depends_on, in_tension_with, none
+- routing_metadata_only: candidate reason, score, and routing_context explain why this pair was shown; exact evidence quotes carry the evidence for an edge.
+- decision_rule: Use supports, depends_on, or in_tension_with only when the mechanism changes the interpretation of the outcome claim.
+- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type "none" when none fit.
+- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.
+- no_edge_rule: Use relation_type "none" unless the exact evidence quotes support a clear relation.

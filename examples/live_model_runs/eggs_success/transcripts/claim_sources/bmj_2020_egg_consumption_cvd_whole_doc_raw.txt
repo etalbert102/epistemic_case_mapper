@@ -1,0 +1,311 @@
+```json
+{
+  "source_id": "bmj_2020_egg_consumption_cvd",
+  "source_bottom_line": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk in the general population, though a potential association with higher risk may exist for individuals with type 2 diabetes.",
+  "canonical_claims": [
+    {
+      "claim": "Moderate egg consumption (up to one egg per day) is not associated with incident cardiovascular disease risk in large US cohorts after adjusting for lifestyle and dietary factors.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "population:US",
+        "outcome:cardiovascular_disease"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "This is the primary finding of the three large prospective US cohort studies and addresses the core question of whether eggs are harmful to cardiovascular health.",
+      "natural_bottom_line": "Eating up to one egg per day does not appear to increase cardiovascular disease risk in US populations.",
+      "must_preserve_terms": [
+        "one egg per day",
+        "hazard ratio 0.93 (0.82 to 1.05)",
+        "adjusted for lifestyle and dietary factors"
+      ],
+      "claim_context": {
+        "population": "US health professionals (NHS, NHS II, HPFS)",
+        "exposure_or_option": "at least one egg per day",
+        "outcome_or_endpoint": "incident cardiovascular disease",
+        "evidence_design": "Prospective cohort study (pooled analysis of three cohorts)",
+        "stated_dose_or_threshold": "one egg per day vs less than one egg per month",
+        "stated_scope": [
+          "US population"
+        ],
+        "stated_limitations": [
+          "health professionals only"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05).",
+          "line_hint": "41"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "0.93",
+          "quantity_role": "effect_estimate",
+          "measures": "hazard ratio",
+          "local_interpretation": "Hazard ratio for at least one egg per day vs less than one egg per month",
+          "source_quote": "hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05",
+          "line_hint": "41",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "0.82 to 1.05",
+          "quantity_role": "uncertainty_interval",
+          "measures": "95% confidence interval",
+          "local_interpretation": "Confidence interval for the hazard ratio of one egg per day",
+          "source_quote": "hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05",
+          "line_hint": "41",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "adjusted for lifestyle and dietary factors"
+      ]
+    },
+    {
+      "claim": "An updated meta-analysis of 33 prospective cohort studies shows that an increase of one egg per day is not associated with cardiovascular disease risk.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "outcome:cardiovascular_disease",
+        "evidence_type:meta-analysis"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "Provides a broader evidence base beyond the three specific US cohorts to confirm the lack of association.",
+      "natural_bottom_line": "A meta-analysis of 33 studies confirms that one extra egg per day does not increase cardiovascular disease risk.",
+      "must_preserve_terms": [
+        "pooled relative risk 0.98",
+        "95% confidence interval 0.93 to 1.03",
+        "33 risk estimates"
+      ],
+      "claim_context": {
+        "population": "General population (global)",
+        "exposure_or_option": "one egg per day increase",
+        "outcome_or_endpoint": "cardiovascular disease",
+        "evidence_design": "Systematic review and meta-analysis of prospective cohort studies",
+        "stated_dose_or_threshold": "one egg per day",
+        "stated_scope": [
+          "Global"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "In the updated meta-analysis of prospective cohort studies (33 risk estimates, 1,720,108 participants, 139,195 cardiovascular disease events), an increase of one egg per day was not associated with cardiovascular disease risk (pooled relative risk 0.98, 95% confidence interval 0.93 to 1.03, I2=62.3%).",
+          "line_hint": "41"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "0.98",
+          "quantity_role": "effect_estimate",
+          "measures": "pooled relative risk",
+          "local_interpretation": "Relative risk for one egg per day increase",
+          "source_quote": "pooled relative risk 0.98, 95% confidence interval 0.93 to 1.03",
+          "line_hint": "41",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "0.93 to 1.03",
+          "quantity_role": "uncertainty_interval",
+          "measures": "95% confidence interval",
+          "local_interpretation": "Confidence interval for the pooled relative risk",
+          "source_quote": "pooled relative risk 0.98, 95% confidence interval 0.93 to 1.03",
+          "line_hint": "41",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "meta-analysis of prospective cohort studies"
+      ]
+    },
+    {
+      "claim": "In Asian cohorts, an increase of one egg per day was associated with a lower risk of cardiovascular disease.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "population:Asia",
+        "outcome:cardiovascular_disease"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Identifies a significant geographical heterogeneity in the results, specifically an inverse association in Asian populations.",
+      "natural_bottom_line": "In some studies of Asian populations, higher egg consumption was associated with lower cardiovascular disease risk.",
+      "must_preserve_terms": [
+        "inverse association",
+        "relative risk 0.92 (0.85 to 0.99)",
+        "Asian cohorts"
+      ],
+      "claim_context": {
+        "population": "Asian populations",
+        "exposure_or_option": "one egg per day increase",
+        "outcome_or_endpoint": "cardiovascular disease",
+        "evidence_design": "Subgroup analysis of meta-analysis",
+        "stated_dose_or_threshold": "one egg per day",
+        "stated_scope": [
+          "Asia"
+        ],
+        "stated_limitations": [
+          "Potential residual confounding related to consumption patterns and socioeconomic status"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "an inverse association was seen in Asian cohorts (0.92, 0.85 to 0.99, I2=44.8%).",
+          "line_hint": "41"
+        },
+        {
+          "quote": "the inverse association could reflect a social gradient... data from the China Kadoorie Biobank study are probably affected by residual confounding related to egg consumption patterns and socioeconomic status.",
+          "line_hint": "530"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "0.92",
+          "quantity_role": "effect_estimate",
+          "measures": "relative risk",
+          "local_interpretation": "Relative risk for one egg per day increase in Asian cohorts",
+          "source_quote": "0.92, 0.85 to 0.99",
+          "line_hint": "41",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "0.85 to 0.99",
+          "quantity_role": "uncertainty_interval",
+          "measures": "95% confidence interval",
+          "local_interpretation": "Confidence interval for the relative risk in Asian cohorts",
+          "source_quote": "0.92, 0.85 to 0.99",
+          "line_hint": "41",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Asian cohorts"
+      ]
+    },
+    {
+      "claim": "Higher egg consumption may be associated with a higher risk of cardiovascular disease in people with type 2 diabetes.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "population:type_2_diabetes",
+        "outcome:cardiovascular_disease"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "Identifies a specific high-risk population (those with type 2 diabetes) where the association might be positive.",
+      "natural_bottom_line": "People with type 2 diabetes may face a higher cardiovascular risk with high egg consumption due to potential issues with cholesterol homeostasis.",
+      "must_preserve_terms": [
+        "type 2 diabetes",
+        "higher risk of cardiovascular disease",
+        "pooled relative risk for each egg per day increase was 1.25 (0.99 to 1.59)"
+      ],
+      "claim_context": {
+        "population": "People with type 2 diabetes",
+        "exposure_or_option": "high egg consumption",
+        "outcome_or_endpoint": "cardiovascular disease",
+        "evidence_design": "Meta-analysis of studies including people with type 2 diabetes",
+        "stated_dose_or_threshold": "High vs low intake",
+        "stated_scope": [
+          "Type 2 diabetes population"
+        ],
+        "stated_limitations": [
+          "Considerable heterogeneity between studies was observed concomitantly"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "When we restricted the meta-analysis of egg consumption and cardiovascular disease risk to people with type 2 diabetes only (table 2), the pooled relative risk for each egg per day increase was 1.25 (95% confidence interval 0.99 to 1.59) and the pooled relative risk for high versus low intake was 1.40 (1.00 to 1.97).",
+          "line_hint": "521"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.25",
+          "quantity_role": "effect_estimate",
+          "measures": "pooled relative risk",
+          "local_interpretation": "Relative risk for each egg per day increase in people with type 2 diabetes",
+          "source_quote": "1.25 (0.99 to 1.59)",
+          "line_hint": "521",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "1.40",
+          "quantity_role": "effect_estimate",
+          "measures": "pooled relative risk",
+          "local_interpretation": "Relative risk for high vs low intake in people with type 2 diabetes",
+          "source_quote": "1.40 (1.00 to 1.97)",
+          "line_hint": "521",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "people with type 2 diabetes"
+      ]
+    },
+    {
+      "claim": "Replacing one whole egg per day with a serving of processed red meat or full-fat milk is associated with a higher risk of cardiovascular disease.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "outcome:cardiovascular_disease",
+        "comparison:processed_red_meat"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Provides a comparative context for egg consumption relative to other common dietary items.",
+      "natural_bottom_line": "Replacing eggs with processed red meat or full-fat milk may increase cardiovascular disease risk compared to eating eggs.",
+      "must_preserve_terms": [
+        "processed red meat",
+        "full fat milk",
+        "higher risk of cardiovascular disease",
+        "hazard ratio 1.15 (1.05 to 1.27)"
+      ],
+      "claim_context": {
+        "population": "General population",
+        "exposure_or_option": "Replacing one whole egg per day with processed red meat or full fat milk",
+        "outcome_or_endpoint": "cardiovascular disease",
+        "evidence_design": "Statistical modeling of replacement",
+        "stated_dose_or_threshold": "one whole egg per day",
+        "stated_scope": [
+          "Replacement analysis"
+        ],
+        "stated_limitations": [
+          "Results from replacement analysis should be interpreted with caution in the context of statistical modeling."
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "We found a higher risk of cardiovascular disease when eggs were replaced with processed red meat (hazard ratio 1.15, 95% confidence interval 1.05 to 1.27), unprocessed red meat (1.10, 1.02 to 1.18), or full fat milk (1.11, 1.03 to 1.20).",
+          "line_hint": "241"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.15",
+          "quantity_role": "effect_estimate",
+          "measures": "hazard ratio",
+          "local_interpretation": "Hazard ratio for replacing eggs with processed red meat",
+          "source_quote": "processed red meat (hazard ratio 1.15, 95% confidence interval 1.05 to 1.27)",
+          "line_hint": "241",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "1.11",
+          "quantity_role": "effect_estimate",
+          "measures": "hazard ratio",
+          "local_interpretation": "Hazard ratio for replacing eggs with full fat milk",
+          "source_quote": "full fat milk (1.11, 1.03 to 1.20)",
+          "line_hint": "241",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "replacement analysis"
+      ]
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "Study design details (e.g., specific software versions, institutional review board approvals)",
+    "Author affiliations and funding sources",
+    "Detailed descriptions of the data collection instruments (e.g., number of items in questionnaires)"
+  ]
+}
+```

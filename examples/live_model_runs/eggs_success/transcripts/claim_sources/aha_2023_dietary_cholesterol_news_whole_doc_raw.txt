@@ -1,0 +1,146 @@
+```json
+{
+  "source_id": "aha_2023_dietary_cholesterol_news",
+  "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+  "canonical_claims": [
+    {
+      "claim": "Healthy people can include up to one whole egg daily in their diets, while older people with healthy cholesterol levels may have two.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "healthy_adults",
+        "low_risk_population"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "Provides specific guidance on egg consumption for the general healthy population.",
+      "natural_bottom_line": "Healthy adults can eat up to one egg a day, and older adults with healthy levels may have two.",
+      "must_preserve_terms": [
+        "healthy people",
+        "one whole egg",
+        "daily",
+        "older people",
+        "healthy cholesterol levels",
+        "two"
+      ],
+      "claim_context": {
+        "population": "Healthy people; older people with healthy cholesterol levels",
+        "exposure_or_option": "Whole eggs",
+        "outcome_or_endpoint": "Dietary inclusion/tolerance",
+        "evidence_design": "2019 AHA science advisory",
+        "stated_dose_or_threshold": "one whole egg (daily); two (for older people)",
+        "stated_scope": [
+          "healthy cholesterol levels"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+          "line_hint": "64"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1",
+          "quantity_role": "threshold_or_guideline",
+          "measures": "eggs per day",
+          "local_interpretation": "Maximum daily allowance for healthy people",
+          "source_quote": "up to a whole egg... each day",
+          "line_hint": "64",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "2",
+          "quantity_role": "threshold_or_guideline",
+          "measures": "eggs",
+          "local_interpretation": "Maximum for older people with healthy levels",
+          "source_quote": "older people with healthy cholesterol levels can have two",
+          "line_hint": "64",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "healthy cholesterol levels"
+      ]
+    },
+    {
+      "claim": "Individuals with high LDL cholesterol or other risk factors (overweight, obesity) should reduce sources of both saturated fat and dietary cholesterol.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "high_risk_population",
+        "LDL_elevated"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "Identifies the specific population where egg/cholesterol restriction is necessary.",
+      "natural_bottom_line": "People with high LDL or obesity should limit both saturated fat and dietary cholesterol.",
+      "must_preserve_terms": [
+        "high LDL cholesterol",
+        "saturated fat",
+        "dietary cholesterol",
+        "overweight",
+        "obesity"
+      ],
+      "claim_context": {
+        "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors",
+        "exposure_or_option": "Saturated fat and dietary cholesterol",
+        "outcome_or_endpoint": "Arterial plaque reduction",
+        "evidence_design": "Expert consensus/clinical guidance",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "high LDL level"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+          "line_hint": "66"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "high LDL",
+        "overweight/obesity"
+      ]
+    },
+    {
+      "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "epidemiological_evidence"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+      "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+      "must_preserve_terms": [
+        "dietary cholesterol",
+        "cardiovascular risk",
+        "not generally supported"
+      ],
+      "claim_context": {
+        "population": "General population",
+        "exposure_or_option": "Dietary cholesterol",
+        "outcome_or_endpoint": "Cardiovascular risk",
+        "evidence_design": "2019 AHA science advisory / scientific studies",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "line_hint": "52"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": []
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "The history of how research has shifted from isolated nutrients to eating patterns (Lines 71-72)",
+    "Information about the microbiome and precision health studies (Lines 77-78)"
+  ]
+}
+```

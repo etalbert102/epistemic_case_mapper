@@ -1,0 +1,438 @@
+# Task
+
+Extract a compact source-level claim card from one whole source document.
+
+# Metadata
+
+Prompt version: whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json
+Source ID: aha_2023_dietary_cholesterol_news
+Source title: Here's the latest on dietary cholesterol and how it fits in with a healthy diet
+Decision question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+
+# Rules
+
+- Read the whole document before choosing claims.
+- Return 3 to 3 canonical claims for this source, not one claim per paragraph or table row.
+- A canonical claim should be something a decision analyst would want in the main evidence map.
+- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.
+- Prefer one canonical claim per distinct result cluster until the claim budget is reached.
+- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.
+- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.
+- Keep related statistics together only when they answer the same population-endpoint-dose proposition.
+- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.
+- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.
+- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.
+- Preserve key quantities inside the relevant canonical claim rather than as separate claims.
+- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.
+- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.
+- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.
+- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.
+- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.
+- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.
+- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.
+- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.
+- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.
+- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.
+- Output JSON only.
+
+# Preferred Output Schema
+
+Return only JSON matching this schema:
+{
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string"
+    },
+    "source_bottom_line": {
+      "type": "string"
+    },
+    "canonical_claims": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "question_relevance": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect",
+              "scope_limit",
+              "background",
+              "irrelevant"
+            ]
+          },
+          "scope_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_importance": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "why_it_matters": {
+            "type": "string"
+          },
+          "natural_bottom_line": {
+            "type": "string"
+          },
+          "must_preserve_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_context": {
+            "type": "object",
+            "properties": {
+              "population": {
+                "type": "string"
+              },
+              "exposure_or_option": {
+                "type": "string"
+              },
+              "outcome_or_endpoint": {
+                "type": "string"
+              },
+              "evidence_design": {
+                "type": "string"
+              },
+              "stated_dose_or_threshold": {
+                "type": "string"
+              },
+              "stated_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stated_limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "applicability_limits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "population",
+              "exposure_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "stated_dose_or_threshold",
+              "stated_scope",
+              "stated_limitations",
+              "applicability_limits"
+            ]
+          },
+          "supporting_quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "quote": {
+                  "type": "string"
+                },
+                "line_hint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quote",
+                "line_hint"
+              ]
+            }
+          },
+          "quantities": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "quantity_role": {
+                      "type": "string",
+                      "enum": [
+                        "baseline_or_absolute_risk",
+                        "context",
+                        "cost_or_resource",
+                        "effect_estimate",
+                        "exposure_or_intervention_level",
+                        "population_descriptor",
+                        "source_reported_quantity",
+                        "study_descriptor",
+                        "threshold_or_guideline",
+                        "time_horizon",
+                        "uncertainty_interval"
+                      ]
+                    },
+                    "measures": {
+                      "type": "string"
+                    },
+                    "local_interpretation": {
+                      "type": "string"
+                    },
+                    "source_quote": {
+                      "type": "string"
+                    },
+                    "line_hint": {
+                      "type": "string"
+                    },
+                    "retention_hint": {
+                      "type": "string",
+                      "enum": [
+                        "audit_only",
+                        "must_retain",
+                        "use_if_space"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "quantity_role",
+                    "measures",
+                    "local_interpretation",
+                    "source_quote",
+                    "line_hint",
+                    "retention_hint"
+                  ]
+                }
+              ]
+            }
+          },
+          "scope_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "claim",
+          "question_relevance",
+          "scope_flags",
+          "decision_importance",
+          "why_it_matters",
+          "natural_bottom_line",
+          "must_preserve_terms",
+          "claim_context",
+          "supporting_quotes",
+          "quantities",
+          "scope_conditions"
+        ]
+      }
+    },
+    "excluded_as_not_decision_relevant": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "source_id",
+    "source_bottom_line",
+    "canonical_claims",
+    "excluded_as_not_decision_relevant"
+  ]
+}
+
+# Source Document With Line Numbers
+
+1: Skip to main content
+2: 	•	Heart Attack and Stroke Symptoms
+3: 	•	Volunteer
+4: 	•	Learn CPR
+5: 	•	ShopHeart
+6: 
+7: 
+8: 	•	
+9: 
+10: 	•	Donate Once
+11: 	•	Donate Monthly
+12: 	•	Donate
+13: 	•	 Search Close Menu 
+14: 
+15: Trending Search
+16: 	•	
+17: 	•	
+18: 
+19: 	•	Healthy Living
+20: 	•	Health Topics
+21: 	•	Professionals
+22: 	•	Get Involved
+23: 	•	Ways to Give
+24: 	•	About Us
+25: 	•	Learn CPR
+26: 	•	In Your Community
+27: 
+28: 
+29: 	1	Home
+30: 	2	News
+31: 	3	Here's the latest on dietary cholesterol and how it fits in with a healthy diet
+32: Published: August 25, 2023
+33: 
+34: 
+35: Here's the latest on dietary cholesterol and how it fits in with a healthy diet
+36: By Michael Merschel, American Heart Association News
+37: Please note: This article was published more than two years ago, so some information may be outdated. If you have questions about your health, always contact a health care professional.
+38: 
+39:     
+40: 
+41: (MangoStar_Studio/iStock via Getty Images)
+42: Lea en español
+43: For more than half a century, scientists have debated the role of dietary cholesterol in a healthy diet. Because it was often associated with saturated fat, limiting dietary cholesterol – especially by restricting egg consumption – seemed to benefit heart-health efforts.
+44: More recently, accumulating data has caused researchers to broaden their thinking about how dietary cholesterol – and eggs – fit into a healthy eating pattern. "We've advanced considerably," said professor Linda Van Horn, chief of the nutrition division in the department of preventive medicine at Northwestern University's Feinberg School of Medicine in Chicago. "And we proceed on these issues as we learn more."
+45: Change can be confusing. So here are answers to a few common questions.
+46: Are dietary cholesterol and blood cholesterol the same thing?
+47: No. Dietary cholesterol is found in food. Blood cholesterol – which includes HDL ("good") and LDL ("bad") – is one of eight essential measures of heart health identified by the American Heart Association. A diet high in saturated fat can lead to high LDL cholesterol levels and further lead to plaque buildup in the walls of your arteries. This restricts blood flow and can lead to a heart attack or stroke.
+48: Your doctor can check your blood cholesterol levels with a blood test.
+49: What is dietary cholesterol, then?
+50: Dietary cholesterol comes from animal-based foods. According to a 2019 AHA science advisory on dietary cholesterol and cardiovascular risk – which Van Horn helped write – high-fat meat, eggs, butter and full-fat dairy products are major sources. It's especially abundant in processed meats – "sausages, burgers, hot dogs or similar foods," Van Horn said.
+51: Dietary cholesterol also can be found in baked goods made with eggs, butter or cream.
+52: Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.
+53: How much dietary cholesterol can I eat?
+54: Although previous federal dietary guidelines recommended limiting consumption of dietary cholesterol to 300 milligrams per day, the current guidelines instead suggest keeping dietary cholesterol consumption "as low as possible without compromising the nutritional adequacy of the diet." The good news is, that leaves room for flexibility. But it is not a free pass to eat all the dietary cholesterol you want.
+55: But focusing on a number, or the lack of evidence linking dietary cholesterol to health risks, could be a misstep, Van Horn said. That's because foods high in dietary cholesterol also tend to be high in saturated fat. The exceptions are eggs and shellfish, such as shrimp and lobster. Despite being high in dietary cholesterol, shellfish is relatively healthy when not fried.
+56: Overall, Van Horn said, "research has shown that you really cannot isolate dietary cholesterol from that total fat intake." And eating too much saturated fat – along with too much sugar and sodium, and too little fiber – raises the risk of heart disease.
+57: Instead of thinking about how much dietary cholesterol you can get away with, try thinking about eating an all-around healthy diet, with lots of fruits and vegetables, whole grains, healthy sources of protein and low-fat or fat-free dairy products, Van Horn said.
+58: Put another way: If you're eating a healthy diet, Van Horn said, a little butter now and then (and its 31 mg of dietary cholesterol per tablespoon) on your toast should not pose a major risk.
+59: While cholesterol-rich foods are not recommended, she said, "they are better tolerated as a food source when they are the exception and not the rule."
+60: Does that mean I can eat eggs?
+61: First, go back and read the part about the importance of an all-around healthy diet.
+62: One large, whole egg contains around 200 mg of dietary cholesterol. Because of that, Van Horn said it once was considered wise to eat no more than two or three yolks per week. Egg whites are not high in dietary cholesterol.
+63: But research regarding the effects of eggs was complicated by the fact that eggs often are eaten with high-fat foods such as bacon, sausage and butter. These days, Van Horn said, if your LDL cholesterol level is low, a few eggs per week are considered tolerable, depending on the overall content of the diet.
+64: The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.
+65: What if I have high blood cholesterol?
+66: Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.
+67: Some people are genetically predisposed to high blood cholesterol levels. Health care professionals often advise such patients to pay extra attention to what they eat, control their weight and increase their level of physical activity, Van Horn said.
+68: People with healthy blood cholesterol levels should recognize that as they age, their risk increases and tolerance for less-healthy foods can change, she said.
+69: So, it's best to keep the emphasis on "more plant-based eating, including whole grains, fresh fruits and vegetables, along with more fish combined calorie-conscious eating and regular physical activity," Van Horn said.
+70: Why has dietary cholesterol advice changed over the years?
+71: Scientists learn stuff.
+72: Decades ago, nutrition research was focused on an isolated nutrient or a specific food, Van Horn said. "Nutrition research has shifted that focus to the broader totality of eating patterns and food frequency," she said. "Since nobody eats a nutrient or a food in isolation, the overall dietary intake over the day, the week or the year influences biological factors. These include blood cholesterol, blood pressure, blood glucose – all the risk factors that are examined, evaluated and studied to prevent heart disease."
+73: While dietary cholesterol remains important to researchers, it's of less concern now, Van Horn said. That's because the average American's blood cholesterol level has gone down in recent decades, and some of that is thanks to statin medications and a better understanding of diet, she said.
+74: "Now, the resounding benefit of a diet higher in plant-based foods continues," she said. "Typically, those are not high sources of dietary cholesterol."
+75: Put another way, the foods once shunned due to their high dietary cholesterol content only come from animal products, and they should still not be the focus of your diet.
+76: But it's settled now, right?
+77: Diet and dietary cholesterol remain important topics of nutrition research. Van Horn pointed out that the National Institutes of Health is currently funding the Nutrition for Precision Health study. It promises to unlock relationships between what we eat, the microbiome inside our bodies and biomarkers for assessing health status that have "never before been studied as comprehensively and systematically as they are now," Van Horn said.
+78: The study's overarching goal is to identify preventive ways to tailor nutrition recommendations to each person's genetic, lifestyle and environmental needs to achieve better health over the life span.
+79: "So stay tuned," she said.
+80: Editor's note: This story was updated on Sept. 5 and Aug. 31, 2023, to clarify the reference to dietary cholesterol limits, and to include eggs alongside shellfish as a food high in dietary cholesterol but not in saturated fat.
+81: 
+82: 
+83: 
+84: American Heart Association News Stories
+85: American Heart Association News covers heart disease, stroke and related health issues. Not all views expressed in American Heart Association News stories reflect the official position of the American Heart Association. Statements, conclusions, accuracy and reliability of studies published in American Heart Association scientific journals or presented at American Heart Association scientific meetings are solely those of the study authors and do not necessarily reflect the American Heart Association’s official guidance, policies or positions.
+86: Copyright is owned or held by the American Heart Association, Inc., and all rights are reserved. Permission is granted, at no cost and without need for further request, for individuals, media outlets, and non-commercial education and awareness efforts to link to, quote, excerpt from or reprint these stories in any medium as long as no text is altered and proper attribution is made to American Heart Association News.
+87: Other uses, including educational products or services sold for profit, must comply with the American Heart Association’s Copyright Permission Guidelines. See full terms of use. These stories may not be used to promote or endorse a commercial product or service.
+88: HEALTH CARE DISCLAIMER: This site and its services do not constitute the practice of medical advice, diagnosis or treatment. Always talk to your health care provider for diagnosis and treatment, including your specific medical needs. If you have or suspect that you have a medical problem or condition, please contact a qualified health care professional immediately. If you are in the United States and experiencing a medical emergency, call 911 or call for emergency medical help immediately.
+89: Related Articles
+90: 
+91: Are eggs good for you or not?
+92: 
+93: Eating too many sulfur amino acids may boost cardiovascular disease and death risk
+94: 
+95: Southwestern Quinoa and Egg Breakfast Bowl
+96: Donate today to help end heart disease and stroke for everyone.
+97: Donate Now
+98: 
+99: *All health/medical information on this website has been reviewed and approved by the American Heart Association, based on scientific research and American Heart Association guidelines. Find more information on our content editorial process.
+100: 
+101: Contact Us
+102: National Center
+103: 7272 Greenville Ave.
+104: Dallas, TX 75231
+105: Customer Service
+106: 1-800-242-8721
+107: Contact Us
+108: 
+109: Hours
+110: Monday - Friday: 7 a.m. – 7 p.m. CT 
+111: Saturday: 9 a.m. - 5 p.m. CT
+112: Closed on Sundays
+113: Tax Identification Number
+114: 13-5613797
+115: About Us
+116: About Us
+117: 	•	About the American Heart Association
+118: 	•	Our Impact
+119: 	•	Annual Report
+120: 	•	Financial Information
+121: 	•	International Programs
+122: 	•	Latest Heart and Stroke News
+123: 	•	Media Newsroom
+124: 	•	Careers
+125: Get Involved
+126: Get Involved
+127: 	•	Donate Now
+128: 	•	Make a Memorial Gift
+129: 	•	Ways to Give
+130: 	•	Advocate
+131: 	•	Volunteer
+132: 	•	Go Red for Women
+133: 	•	ShopHeart
+134: 	•	ShopCPR
+135: Our Sites
+136: Our Sites
+137: 	•	American Heart Association
+138: 	•	American Stroke Association
+139: 	•	CPR & ECC
+140: 	•	Professional Heart Daily
+141: 	•	More Sites
+142: 	•	
+143: 	•	
+144: 	•	
+145: 	•	
+146: 	•	
+147: 	•	
+148: 	•	
+149: 	•	
+150: 	•	
+151: 	•	
+152: 	•	
+153: 	•	Careers
+154: 	•	Privacy Policy
+155: 	•	Medical Advice Disclaimer
+156: 	•	Accessibility Statement
+157: 	•	Copyright Policy
+158: 	•	Ethics Policy
+159: 	•	Conflict of Interest Policy
+160: 	•	Linking Policy
+161: 	•	Whistleblower Policy
+162: 	•	Content Editorial Guidelines
+163: 	•	Suppliers & Providers
+164: 	•	State Fundraising Notices
+165: Cookie Settings
+166: 
+167: ©2026 American Heart Association, Inc. All rights reserved. Unauthorized use prohibited.
+168: The American Heart Association is a qualified 501(c)(3) tax-exempt organization. Tax ID Number: 13-5613797
+169: *Red Dress™ DHHS | Go Red for Women® & National Wear Red Day® are trademarks of American Heart Association, Inc.
+170: ×
+171: 
+172: This link is provided for convenience only and is not an endorsement of either the linked-to entity or any product or service.
+173: 
+174: Proceed
+175:

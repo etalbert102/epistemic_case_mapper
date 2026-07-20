@@ -1,0 +1,163 @@
+```json
+{
+  "source_id": "dga_2020_2025_pmc_summary",
+  "source_bottom_line": "The 2020-2025 Dietary Guidelines recommend a healthy dietary pattern including various protein sources, specifically noting that for individuals who do not consume seafood, regular intake of eggs containing omega-3 fatty acids is appropriate.",
+  "canonical_claims": [
+    {
+      "claim": "For individuals 2 years and older who do not consume seafood, the regular intake of other foods high in omega-3 fatty acids, such as eggs that contain omega-3 fatty acids, is appropriate.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "cardiovascular_risk",
+        "omega-3_fatty_acids"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This provides a specific recommendation for eggs as a source of omega-3 fatty acids for those avoiding seafood, which is relevant to cardiovascular health.",
+      "natural_bottom_line": "Eggs containing omega-3 fatty acids are an appropriate substitute for those who do not eat seafood.",
+      "must_preserve_terms": [
+        "individuals 2 years and older",
+        "do not consume seafood",
+        "eggs that contain omega-3 fatty acids",
+        "appropriate"
+      ],
+      "claim_context": {
+        "population": "Individuals 2 years and older who do not consume seafood",
+        "exposure_or_option": "Regular intake of eggs containing omega-3 fatty acids",
+        "outcome_or_endpoint": "Appropriate dietary pattern for those avoiding seafood",
+        "evidence_design": "Committee review of evidence on types of dietary fats and cardiovascular disease risk",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Cardiovascular disease risk",
+          "Omega-3 fatty acids"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.",
+          "line_hint": "75"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "2 years and older",
+          "quantity_role": "population_descriptor",
+          "measures": "age",
+          "local_interpretation": "Minimum age for the recommendation",
+          "source_quote": "individuals 2 years and older",
+          "line_hint": "75",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "non-seafood consumers"
+      ]
+    },
+    {
+      "claim": "The Dietary Guidelines recommend including eggs as part of a variety of animal-source foods (meat, poultry, seafood, eggs, and dairy) for infants and toddlers beginning at 6 to 12 months old.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "pediatric",
+        "food_allergy"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Establishes the baseline recommendation for egg consumption in early life stages.",
+      "natural_bottom_line": "Eggs should be introduced to infants and toddlers starting at 6 months of age as part of a varied diet.",
+      "must_preserve_terms": [
+        "infants and toddlers",
+        "6 to 12 months old",
+        "animal-source foods",
+        "eggs"
+      ],
+      "claim_context": {
+        "population": "Infants and toddlers",
+        "exposure_or_option": "Variety of animal-source foods (meat, poultry, seafood, eggs, and dairy)",
+        "outcome_or_endpoint": "Nutritional adequacy and allergy risk reduction",
+        "evidence_design": "Food pattern modeling and evidence review",
+        "stated_dose_or_threshold": "6 to 12 months old",
+        "stated_scope": [
+          "Infancy",
+          "Toddlerhood"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The Committee recommended providing infants and toddlers with a variety of animal-source foods (meat, poultry, seafood, eggs, and dairy), fruits and vegetables, nuts and seeds, and whole-grain products, beginning at 6 to 12 months old and continuing thereafter.",
+          "line_hint": "72"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "6 to 12 months",
+          "quantity_role": "exposure_or_intervention_level",
+          "measures": "age range",
+          "local_interpretation": "Recommended starting age for complementary foods",
+          "source_quote": "beginning at 6 to 12 months old",
+          "line_hint": "72",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "infants and toddlers"
+      ]
+    },
+    {
+      "claim": "Adding peanut and egg in developmentally appropriate forms in the first year of life (6-12 months old) may reduce the risk of food allergy to these foods.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "pediatric",
+        "food_allergy"
+      ],
+      "decision_importance": "low",
+      "why_it_matters": "Provides a safety/allergy context for early egg introduction.",
+      "natural_bottom_line": "Introducing eggs in the first year of life may help reduce the risk of food allergies.",
+      "must_preserve_terms": [
+        "first year of life",
+        "6-12 months old",
+        "reduce the risk of food allergy",
+        "peanut and egg"
+      ],
+      "claim_context": {
+        "population": "Infants",
+        "exposure_or_option": "Peanut and egg in developmentally appropriate forms",
+        "outcome_or_endpoint": "Risk of food allergy",
+        "evidence_design": "Committee conclusion based on evidence review",
+        "stated_dose_or_threshold": "6-12 months old",
+        "stated_scope": [
+          "Infancy"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The Committee concluded that, once CFB are introduced, adding peanut and egg in developmentally appropriate forms in the first year of life (6-12 months old) may reduce the risk of food allergy to these foods.",
+          "line_hint": "70"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "6-12 months",
+          "quantity_role": "time_horizon",
+          "measures": "age range",
+          "local_interpretation": "Window for allergy risk reduction",
+          "source_quote": "in the first year of life (6-12 months old)",
+          "line_hint": "70",
+          "retention_hint": "use_if_space"
+        }
+      ],
+      "scope_conditions": [
+        "infants"
+      ]
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "Alcohol consumption limits",
+    "Added sugars limits",
+    "Sodium limits",
+    "Vitamin D and Calcium requirements for pregnant women"
+  ]
+}
+```

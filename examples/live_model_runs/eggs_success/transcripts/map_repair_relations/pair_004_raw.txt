@@ -1,0 +1,17 @@
+```json
+{
+  "pair_id": "pair_004",
+  "source_claim": "eggs_c005",
+  "target_claim": "eggs_c007",
+  "relation_type": "contextualizes",
+  "rationale": "Claim eggs_c005 provides the physiological context (the association between high cholesterol intake and elevated LDL) that helps explain why the specific dietary limits in eggs_c007 are established for healthy individuals, but it does not directly support or limit the recommendation itself.",
+  "relation_confidence": "medium",
+  "edge_basis": "source_inferred",
+  "source_anchor_a": "associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations",
+  "source_anchor_b": "healthy people can include up to a whole egg",
+  "why_decision_relevant": "The edge helps the reader understand the underlying biological rationale (LDL response) for why the specific quantity of eggs is recommended, without being the primary evidence for the recommendation itself.",
+  "failure_condition": "The edge weakens if the LDL response is considered a separate, unrelated physiological process from the dietary guidelines provided in the target claim.",
+  "crux_candidates": [],
+  "similar_but_not_identical": []
+}
+```

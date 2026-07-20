@@ -1,0 +1,450 @@
+# Task
+
+Extract a compact source-level claim card from one whole source document.
+
+# Metadata
+
+Prompt version: whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json
+Source ID: spc_2008_lsag_review
+Source title: SPC Report on LSAG Documents
+Decision question: Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?
+
+# Rules
+
+- Read the whole document before choosing claims.
+- Return 3 to 3 canonical claims for this source, not one claim per paragraph or table row.
+- A canonical claim should be something a decision analyst would want in the main evidence map.
+- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.
+- Prefer one canonical claim per distinct result cluster until the claim budget is reached.
+- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.
+- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.
+- Keep related statistics together only when they answer the same population-endpoint-dose proposition.
+- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.
+- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.
+- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.
+- Preserve key quantities inside the relevant canonical claim rather than as separate claims.
+- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.
+- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.
+- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.
+- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.
+- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.
+- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.
+- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.
+- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.
+- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.
+- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.
+- Output JSON only.
+
+# Preferred Output Schema
+
+Return only JSON matching this schema:
+{
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string"
+    },
+    "source_bottom_line": {
+      "type": "string"
+    },
+    "canonical_claims": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "question_relevance": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect",
+              "scope_limit",
+              "background",
+              "irrelevant"
+            ]
+          },
+          "scope_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_importance": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "why_it_matters": {
+            "type": "string"
+          },
+          "natural_bottom_line": {
+            "type": "string"
+          },
+          "must_preserve_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_context": {
+            "type": "object",
+            "properties": {
+              "population": {
+                "type": "string"
+              },
+              "exposure_or_option": {
+                "type": "string"
+              },
+              "outcome_or_endpoint": {
+                "type": "string"
+              },
+              "evidence_design": {
+                "type": "string"
+              },
+              "stated_dose_or_threshold": {
+                "type": "string"
+              },
+              "stated_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stated_limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "applicability_limits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "population",
+              "exposure_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "stated_dose_or_threshold",
+              "stated_scope",
+              "stated_limitations",
+              "applicability_limits"
+            ]
+          },
+          "supporting_quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "quote": {
+                  "type": "string"
+                },
+                "line_hint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quote",
+                "line_hint"
+              ]
+            }
+          },
+          "quantities": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "quantity_role": {
+                      "type": "string",
+                      "enum": [
+                        "baseline_or_absolute_risk",
+                        "context",
+                        "cost_or_resource",
+                        "effect_estimate",
+                        "exposure_or_intervention_level",
+                        "population_descriptor",
+                        "source_reported_quantity",
+                        "study_descriptor",
+                        "threshold_or_guideline",
+                        "time_horizon",
+                        "uncertainty_interval"
+                      ]
+                    },
+                    "measures": {
+                      "type": "string"
+                    },
+                    "local_interpretation": {
+                      "type": "string"
+                    },
+                    "source_quote": {
+                      "type": "string"
+                    },
+                    "line_hint": {
+                      "type": "string"
+                    },
+                    "retention_hint": {
+                      "type": "string",
+                      "enum": [
+                        "audit_only",
+                        "must_retain",
+                        "use_if_space"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "quantity_role",
+                    "measures",
+                    "local_interpretation",
+                    "source_quote",
+                    "line_hint",
+                    "retention_hint"
+                  ]
+                }
+              ]
+            }
+          },
+          "scope_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "claim",
+          "question_relevance",
+          "scope_flags",
+          "decision_importance",
+          "why_it_matters",
+          "natural_bottom_line",
+          "must_preserve_terms",
+          "claim_context",
+          "supporting_quotes",
+          "quantities",
+          "scope_conditions"
+        ]
+      }
+    },
+    "excluded_as_not_decision_relevant": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "source_id",
+    "source_bottom_line",
+    "canonical_claims",
+    "excluded_as_not_decision_relevant"
+  ]
+}
+
+# Source Document With Line Numbers
+
+1:                                                                                            1
+2: 
+3: 
+4: SPC REPORT ON LSAG DOCUMENTS
+5: 
+6: The CERN Scientific Policy Committee (SPC) was asked by the President of the CERN Council to
+7: examine the documents produced by the LHC Safety Assessment Group (LSAG) and to provide
+8: Council with an independent opinion on the conclusions stated in those documents. A dedicated
+9: SPC panel was set up, composed of Peter Braun-Munzinger, Matteo Cavalli-Sforza, Gerard ‘t
+10: Hooft, Bryan Webber and Fabio Zwirner. The documents made available to the panel were:
+11: "Review of the Safety of LHC Collisions", by the LHC Safety Assessment Group (LSAG report);
+12: "Astronomical Implications of Hypothetical Stable TeV-Scale Black Holes", by S.B.Giddings and
+13: M.L.Mangano (GM paper). After thorough review, discussion and ensuing endorsement by the
+14: full SPC, the requested opinion is summarized in the present document.
+15: 
+16: Introduction
+17: 
+18: When new accelerators such as the LHC are built, exploring higher energies than their
+19: predecessors, it is legitimate to ask whether there is any danger related to the production
+20: of new particles or states of matter not previously created artificially. Such a question
+21: was already addressed in the past: by an ad hoc Committee for the Relativistic Heavy Ion
+22: Collider at the Brookhaven National Laboratory (RHIC) in 1999, and by the LHC Safety
+23: Study Group at CERN (LSSG) in 2003. Both reports concluded that there was no danger.
+24: The following objects of concern were considered, with emphasis on the last two,
+25: discussed in both reports: magnetic monopoles, vacuum bubbles, strangelets, black holes.
+26: 
+27: Concerns have recently been expressed on the possibility that microscopic, stable, neutral
+28: black holes may be produced at the LHC and then accrete matter sufficiently fast to pose
+29: a risk to Earth. This highly hypothetical possibility had already been excluded on the
+30: basis of very strong arguments, and most experts of the field consider this scenario as
+31: impossible. However, the LSAG report now provides, on the basis of the GM paper, a
+32: much stronger safety proof, relying only on solid experimental facts and firmly
+33: established theory, which should remove any residual concern. More generally, the
+34: LSAG report reviews the previous safety studies in the light of additional experimental
+35: results and theoretical understanding, and is able to confirm, update and extend the LSSG
+36: conclusions as described below.
+37: 
+38: No other exotic particles whose existence has been discussed in the scientific literature
+39: would pose any potential danger at the LHC. The methodology used by LSAG would be
+40: applicable to the evaluation of possible risks associated with other exotic particles or new
+41: states of matter that might be suggested in the future.
+42: 
+43: The LHC compared with cosmic-ray collisions
+44: 
+45: Section 2 of the LSAG report shows quantitatively that collisions of cosmic rays of the
+46: highest energies with the Earth, the Sun and other astronomical bodies occur naturally at
+47: energies equivalent to or larger than those of LHC collisions, and in numbers that exceed
+48: them by extremely large factors. The results and the considerations given in this section
+49: are the basis for the safety proofs given later in the paper.
+50: 
+51:                                                                                            2
+52: 
+53: 
+54: 
+55: The starting point of the proof is the observed and well-known flux (per square cm per
+56: second) of cosmic rays at center-of-mass energies that exceed those at the LHC by one to
+57: a few factors of 10. Considering the surfaces of the target planets and stars and their
+58: observed age, it is easily shown that such energetic LHC-like cosmic rays have already
+59: hit the Earth (or the Sun) in numbers equivalent to one hundred thousand (or one billion)
+60: times the total number of collisions expected over the duration of LHC experiments.
+61: Analogously, in the whole Universe, the equivalent of 3·1013 complete LHC experiments
+62: are performed every second. As shown in the LSAG report, and reviewed below, the
+63: hypothesis that the LHC operation would threaten the existence of the Earth is
+64: irreconcilable with the fact that the Earth, the Sun and other objects in the Cosmos have
+65: persisted for billions of years in spite of their continuous exposure to energetic cosmic
+66: rays.
+67: 
+68: The comparison between cosmic ray collisions with target planets or stars and LHC
+69: collisions makes use of special relativity. Special relativity has been tested accurately in
+70: the laboratory for particles with velocities similar to and higher than the relative velocity
+71: of the two relevant reference frames; moreover, the experimental data on cosmic rays at
+72: energies up to more than an order of magnitude above the equivalent LHC energy are in
+73: agreement with special relativity.
+74: 
+75: Vacuum bubbles and magnetic monopoles
+76: 
+77: We fully endorse the conclusions of the LSAG report concerning the possible production
+78: of bubbles of new vacuum or magnetic monopoles, discussed in Section 3. The
+79: continuous bombardment of the Earth and other astronomical bodies by cosmic rays at
+80: centre-of-mass energies at and above that of the LHC means that such processes, if they
+81: exist, have occurred and are still occurring at a high rate throughout the Universe.
+82: 
+83: In the case of vacuum bubbles, the velocity of the object, once formed, is not relevant as
+84: it would have expanded and caused visible large-scale effects, whatever its state of
+85: motion and wherever it appeared, even in distant galaxies. Therefore no such objects are
+86: ever created within the energy range of cosmic ray collisions.
+87: 
+88: It is worth remarking in this context that head-on collisions between cosmic rays, at
+89: centre-of-mass energies enormously greater than those that will ever be accessible in
+90: Earth-based experiments, occur sufficiently frequently on cosmic scales that we can be
+91: completely confident that catastrophic disruption of the vacuum will never be a
+92: possibility at the LHC or any future accelerator.
+93: 
+94: In the case of magnetic monopoles, such objects could have been produced in cosmic ray
+95: collisions, but they are by definition highly ionizing and would therefore have been
+96: stopped inside the Earth or any other target body. The continuing existence of
+97: astronomical bodies shows that, if produced, magnetic monopoles must be harmless.
+98: 
+99:                                                                                           3
+100: 
+101: 
+102: 
+103: Microscopic black holes
+104: 
+105: Section 4 of the LSAG report addresses potential dangers associated with the production
+106: of microscopic black holes at the LHC. For the cases that were already considered in
+107: previous reports, it confirms their conclusions that there is absolutely no danger. In
+108: addition, Section 4 reviews the highly hypothetical production of neutral stable black
+109: holes, and the possibility that these black holes could be trapped inside the Earth. While
+110: such a possibility is dismissed by most of the experts, it is conceivable, and it could have
+111: potentially dangerous consequences if these highly hypothetical, neutral, stable
+112: microscopic black holes could accrete matter on Earth on time scales shorter than the
+113: natural lifetime of the solar system. For this to occur, a number of increasingly unlikely
+114: conditions should be satisfied: 1) the fundamental scale of gravity should be within the
+115: LHC energy range, possible only if extra spatial dimensions with very peculiar
+116: properties do exist; 2) Hawking radiation, and more general arguments for the decay of
+117: any black holes produced at the LHC, should fail; 3) the Schwinger mechanism, by which
+118: a charged black hole becomes electrically neutral via particle-antiparticle creation near
+119: the horizon, should still work, even though it is based on physical principles very close to
+120: those underlying Hawking radiation.
+121: 
+122: Going beyond the RHIC and LSSG reports, the above-mentioned possibility is now
+123: directly addressed by the LSAG report, on the basis of the GM paper, which is the most
+124: detailed and specialized presentation of all the scientific evidence we have on this issue.
+125: The GM paper admits from the start the possibility that compelling but not
+126: experimentally tested mechanisms, such as Hawking radiation, could be suppressed or
+127: absent. It chooses instead a conservative or "worst-case" scenario at every instance where
+128: an experimental or theoretical uncertainty is encountered. It then uses observational data
+129: on cosmic rays and on astronomical objects such as the Sun or compact stars to exclude
+130: any danger at the LHC.
+131: 
+132: In particular, at the LHC energy, any danger for the Earth on time scales lower than or
+133: comparable to the natural lifetime of the solar system can be ruled out on the basis of its
+134: contradiction with the observation of white dwarf stars of known mass, age and other
+135: properties. This conclusion, while entirely valid for the LHC, would need further work to
+136: be extended to conceivable future colliders of much higher energies. A powerful
+137: argument applicable also to higher energies is formulated making reference to observed
+138: neutron stars, but this argument relies on properties of cosmic rays and neutrinos that,
+139: while highly plausible, do require confirmation, as can be expected in the coming years.
+140: 
+141: On the basis of all these findings, we can conclude that there is no danger of whatever
+142: kind from the hypothetical production of black holes at the LHC.
+143: 
+144: Strangelets
+145: 
+146: Section 5 of the LSAG report deals with the possibility that particles containing strange
+147: quark matter, so-called 'strangelets', could be created in Pb-Pb collisions at the LHC and,
+148: 
+149:                                                                                         4
+150: 
+151: if stable and negatively charged, could coalesce with normal matter to possibly catalyze
+152: conversion of the world into strange matter. This case was already discussed in detail in
+153: the RHIC and LSSG reports. There it was argued, as recalled in the LSAG report, that: a)
+154: strangelet production at RHIC energies would be less likely than strangelet production in
+155: nucleus-nucleus collisions at lower energies such as at the Brookhaven AGS and CERN
+156: SPS accelerators; indeed, no trace of strangelet production was found in nearly a decade
+157: of Pb-Pb or Au-Au collision experiments performed at high luminosity; b) high energy
+158: cosmic rays bombarding the Moon for billions of years have yielded no evidence for
+159: events connected with strangelet production.
+160: 
+161: The results from seven years of running the RHIC program have in fact provided
+162: evidence that strangelet production is even less likely at the higher energy of the LHC.
+163: They have yielded strong experimental support for the hypothesis that particles are
+164: produced from a heat bath at a limiting temperature. The LSAG report shows that, on that
+165: basis, strangelet production at the LHC energy, since it involves particles with baryon
+166: number, will be less likely than at the lower RHIC energy. Hence, the data from the
+167: RHIC program strongly reinforce the arguments collected at the start of the RHIC
+168: program: there is no conceivable danger from strangelet production at LHC energy.
+169: 
+170: Conclusions
+171: 
+172: The LSAG report considered four specific objects of concern: magnetic monopoles,
+173: vacuum bubbles, strangelets, black holes. For vacuum instability and magnetic
+174: monopoles, the conclusions of previous reports are confirmed and, in the latter case,
+175: reinforced. For strangelets, the conclusions of previous reports are confirmed and
+176: reinforced by the analysis of RHIC data. For black holes, the LSAG report goes much
+177: beyond previous reports, on the basis of the GM paper. Replacing some highly plausible
+178: theoretical concepts of the previous reports with irrefutable observational data on cosmic
+179: rays and on astronomical bodies such as the Sun or compact stars, interpreted using
+180: firmly established theory, further layers of safety are added to the previously existing
+181: ones, excluding any possibility that the highly hypothetical production of black holes at
+182: the LHC could create a danger of whatever kind.
+183: 
+184: To summarize, we fully endorse the conclusions of the LSAG report: there is no basis for
+185: any concerns about the consequences of new particles or forms of matter that could
+186: possibly be produced at the LHC.
+187:

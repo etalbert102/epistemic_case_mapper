@@ -1,0 +1,391 @@
+# Task
+
+You are classifying possible relations between already-validated claim cards.
+
+# Metadata
+
+Prompt version: staged_relation_batch_prompt_v4_contextual_relation_json
+Region ID: eggs_observational_vs_rct
+Batch ID: batch_004
+Decision question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+Case question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+Allowed relation types:
+challenges, contextualizes, crux_for, depends_on, in_tension_with, refines, similar_to, supports
+
+# Relation Type Semantics
+
+- challenges: One claim undercuts or contradicts another. Use when: Use for contrary evidence, validity objections, or failed assumptions. Sharpness markers: contradicts, undercuts, casts doubt.
+- contextualizes: One claim supplies interpretation context for another without directly supporting, challenging, or narrowing it. Use when: Use for comparator, background, mechanism, or source-context edges that help a reader interpret a claim as context rather than load-bearing support. Sharpness markers: context, compared with, interpretation, helps explain.
+- crux_for: One claim is a decision crux for another or for the question. Use when: Use when changing belief in one claim would materially change the decision read. Sharpness markers: crux, decisive, would change, key uncertainty.
+- depends_on: The force of one claim depends on a condition, implementation detail, or prerequisite. Use when: Use for conditional recommendations, feasibility dependencies, and assumptions. Sharpness markers: depends, requires, only if, unless, condition.
+- in_tension_with: Claims can both be partly true but pull the decision in different directions. Use when: Use for tradeoffs, external-validity limits, and evidence-vs-implementation tensions. Sharpness markers: however, tradeoff, tension, limited, unclear.
+- refines: One claim narrows the population, endpoint, mechanism, condition, or interpretation of another. Use when: Use when the boundary being refined is explicit. Sharpness markers: only for, specifically, boundary, population, endpoint.
+- similar_to: Claims are close enough that a reviewer may consider merging them. Use when: Use only for near-duplicate or strongly overlapping claims. Sharpness markers: same as, duplicates, substantially overlaps.
+- supports: One claim increases support for another without being the decisive dependency. Use when: Use for direct evidence or argument support. Sharpness markers: supports, consistent with, evidence for.
+
+# Rules
+
+- Return exactly one object for each pair ID in this batch.
+- Omit relation_id. Deterministic code assigns IDs later.
+- Use only the claim IDs shown in the pair.
+- Use only allowed relation types, or use relation_type "none".
+- Treat each pair's relation_intent and suggested_relation_types as the default decision menu.
+- Choose from suggested_relation_types unless another allowed relation type is clearly better supported by the exact quotes.
+- When overriding suggested_relation_types, explain the override in the rationale.
+- Prefer no relation over a plausible but weak topical association.
+- Use only the two claim cards, exact evidence quotes, relation intent, and pair contract shown for each pair.
+- Prefer decision-relevant relations over generic links.
+- Use crux_for only when the rationale says what answer would change if one claim were false.
+- Use depends_on only when the rationale names a condition that must hold.
+- Use in_tension_with only when the rationale names the propositions that are hard to jointly accept.
+- Use challenges only when the rationale names what proposition is weakened or contradicted.
+- Use refines only when the rationale names the exact boundary, population, endpoint, mechanism, or condition being narrowed.
+- Use supports only when the rationale names same-proposition support, a mechanism that explains the target claim, or quantitative/statistical evidence that strengthens the target claim.
+- Use contextualizes when a claim helps interpret another claim but does not directly support, challenge, narrow, or condition it.
+- Use supports when the rationale names same-proposition support, mechanism support, or quantitative/statistical strengthening.
+- Use refines for same-source or explicitly transferable boundaries, populations, endpoints, mechanisms, or conditions.
+- Fill the relation evidence contract for every non-none relation.
+- Ground anchors in visible evidence-quote phrases rather than introducing new facts.
+- Profile guidance: Prefer crux_for, depends_on, in_tension_with, or challenges when those sharper relations fit.
+- Profile guidance: Use similar_to only when the claims are redundant enough to merge.
+- Use similar_to only when the claims are redundant enough that a reviewer could merge them.
+- Use refines only when the rationale names the boundary, population, endpoint, mechanism, or condition being refined.
+- If no defensible relation exists, set source_claim and target_claim to null and relation_type "none".
+
+# Output Schema
+
+Return only JSON matching this schema:
+{
+  "relations": [
+    {
+      "pair_id": "one of: pair_013, pair_014, pair_015, pair_016",
+      "source_claim": "claim_id or null",
+      "target_claim": "claim_id or null",
+      "relation_type": "one of: challenges, contextualizes, crux_for, depends_on, in_tension_with, refines, similar_to, supports; or none",
+      "rationale": "why this edge improves reasoning without overstating support, or why no edge is warranted",
+      "relation_confidence": "low|medium|high",
+      "edge_basis": "source_explicit|source_inferred|role_template|uncertain",
+      "source_anchor_a": "short phrase from first evidence quote that supports the edge",
+      "source_anchor_b": "short phrase from second evidence quote that supports the edge",
+      "why_decision_relevant": "what this edge changes for the decision question",
+      "failure_condition": "what would make this edge invalid or much weaker",
+      "crux_candidates": [
+        "crux text naming claim IDs"
+      ],
+      "similar_but_not_identical": [
+        "distinction text naming claim IDs"
+      ]
+    }
+  ]
+}
+
+# Examples
+
+<example_1>
+{
+  "input_hint": "One claim states a condition required for another claim to hold.",
+  "output": {
+    "pair_id": "pair_001",
+    "source_claim": "case_c002",
+    "target_claim": "case_c001",
+    "relation_type": "depends_on",
+    "rationale": "case_c001 only holds if the condition in case_c002 is satisfied.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "condition named in the source",
+    "source_anchor_b": "recommendation depends on that condition",
+    "why_decision_relevant": "The edge turns a broad recommendation into a scoped one.",
+    "failure_condition": "The condition is not required in the target setting.",
+    "crux_candidates": [
+      "case_c002 is a crux for case_c001."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_1>
+
+<example_2>
+{
+  "input_hint": "The pair has no defensible decision-relevant edge.",
+  "output": {
+    "pair_id": "pair_002",
+    "source_claim": null,
+    "target_claim": null,
+    "relation_type": "none",
+    "rationale": "The claims concern different parts of the source packet.",
+    "relation_confidence": "low",
+    "edge_basis": "uncertain",
+    "source_anchor_a": "",
+    "source_anchor_b": "",
+    "why_decision_relevant": "",
+    "failure_condition": "",
+    "crux_candidates": [],
+    "similar_but_not_identical": []
+  }
+}
+</example_2>
+
+<example_3>
+{
+  "input_hint": "Two outcome findings point in different directions on the same decision-relevant proposition.",
+  "output": {
+    "pair_id": "pair_003",
+    "source_claim": "case_c004",
+    "target_claim": "case_c005",
+    "relation_type": "in_tension_with",
+    "rationale": "case_c004 reports no meaningful difference on the target outcome, while case_c005 reports higher risk on the same outcome.",
+    "relation_confidence": "high",
+    "edge_basis": "source_explicit",
+    "source_anchor_a": "no meaningful difference",
+    "source_anchor_b": "higher risk",
+    "why_decision_relevant": "The edge preserves the main evidential conflict instead of averaging it away.",
+    "failure_condition": "The edge weakens if the outcomes, populations, or exposure definitions are not comparable.",
+    "crux_candidates": [
+      "Whether case_c004 and case_c005 are comparable is a crux for the decision read."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_3>
+
+<example_4>
+{
+  "input_hint": "A validity or method claim weakens confidence in a headline finding.",
+  "output": {
+    "pair_id": "pair_004",
+    "source_claim": "case_c007",
+    "target_claim": "case_c006",
+    "relation_type": "challenges",
+    "rationale": "case_c007 names a confounding or measurement problem that weakens the headline inference in case_c006.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "unmeasured confounding",
+    "source_anchor_b": "headline association",
+    "why_decision_relevant": "The edge lowers how much the headline finding should drive the decision.",
+    "failure_condition": "The edge weakens if the limitation was already handled by the target source's design or adjustment strategy.",
+    "crux_candidates": [
+      "Whether the limitation in case_c007 is serious enough would change how much to rely on case_c006."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_4>
+
+<example_5>
+{
+  "input_hint": "A scope claim names the population or condition where a finding applies.",
+  "output": {
+    "pair_id": "pair_005",
+    "source_claim": "case_c009",
+    "target_claim": "case_c008",
+    "relation_type": "refines",
+    "rationale": "case_c009 narrows case_c008 by naming the subgroup or condition where the finding is most applicable.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "specific subgroup",
+    "source_anchor_b": "broader finding",
+    "why_decision_relevant": "The edge prevents applying the broad finding outside the population or condition where it is supported.",
+    "failure_condition": "The edge weakens if the subgroup or condition is not relevant to the decision question.",
+    "crux_candidates": [],
+    "similar_but_not_identical": [
+      "case_c009 is a boundary on case_c008, not a duplicate of it."
+    ]
+  }
+}
+</example_5>
+
+<example_6>
+{
+  "input_hint": "A subgroup or scope claim points in a materially different direction from a broad outcome finding.",
+  "output": {
+    "pair_id": "pair_006",
+    "source_claim": "case_c012",
+    "target_claim": "case_c013",
+    "relation_type": "in_tension_with",
+    "rationale": "case_c012 reports a subgroup exception that pulls against the broad neutral or favorable finding in case_c013.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "subgroup exception",
+    "source_anchor_b": "broad neutral finding",
+    "why_decision_relevant": "The edge keeps the decision from treating the broad finding as equally applicable to the subgroup.",
+    "failure_condition": "The edge weakens if the subgroup is not relevant to the decision or the direction does not actually differ.",
+    "crux_candidates": [
+      "Whether the subgroup exception applies would change the decision read."
+    ],
+    "similar_but_not_identical": []
+  }
+}
+</example_6>
+
+<example_7>
+{
+  "input_hint": "A mechanism or biomarker claim explains why an outcome finding might hold, but is not itself decisive.",
+  "output": {
+    "pair_id": "pair_007",
+    "source_claim": "case_c010",
+    "target_claim": "case_c011",
+    "relation_type": "supports",
+    "rationale": "case_c010 provides a plausible mechanism for the outcome pattern in case_c011, while the clinical outcome evidence remains the stronger anchor.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "mechanism or biomarker change",
+    "source_anchor_b": "outcome pattern",
+    "why_decision_relevant": "The edge explains why the outcome finding might generalize, while keeping mechanism evidence separate from outcome evidence.",
+    "failure_condition": "The edge weakens if the biomarker is not causally related to the outcome or moves in the wrong direction.",
+    "crux_candidates": [],
+    "similar_but_not_identical": []
+  }
+}
+</example_7>
+
+<example_8>
+{
+  "input_hint": "A comparator or background claim helps interpret another claim but does not support, challenge, or narrow it.",
+  "output": {
+    "pair_id": "pair_008",
+    "source_claim": "case_c014",
+    "target_claim": "case_c015",
+    "relation_type": "contextualizes",
+    "rationale": "case_c014 gives comparator context that helps interpret case_c015, but it does not directly strengthen, weaken, or narrow the target claim.",
+    "relation_confidence": "medium",
+    "edge_basis": "source_inferred",
+    "source_anchor_a": "comparator context",
+    "source_anchor_b": "target finding",
+    "why_decision_relevant": "The edge tells the reader how to interpret the claim without treating the context as load-bearing evidence.",
+    "failure_condition": "The edge weakens if the comparator is irrelevant to the decision question or changes the target claim's direction.",
+    "crux_candidates": [],
+    "similar_but_not_identical": []
+  }
+}
+</example_8>
+
+# Context
+
+Pairs to classify:
+Pair ID: pair_013
+Claim A:
+- claim_id: eggs_c008
+- claim: Individuals with high LDL cholesterol or other risk factors (overweight, obesity) should reduce sources of both saturated fat and dietary cholesterol.
+- source_id: aha_2023_dietary_cholesterol_news
+- role: scope_or_subgroup_boundary
+- routing_context: {"decision_edge_role": "scope_or_subgroup_boundary", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Identifies a specific subgroup (individuals with high LDL or obesity) for whom the advice changes."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["high LDL cholesterol", "saturated fat", "dietary cholesterol", "overweight", "obesity"], "natural_bottom_line": "People with high LDL or obesity should limit both saturated fat and dietary cholesterol.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Expert consensus/clinical guidance", "exposure_or_option": "Saturated fat and dietary cholesterol", "outcome_or_endpoint": "Arterial plaque reduction", "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors", "stated_scope": "['high LDL level']"}}
+- source_span: lines 66-66
+- exact_evidence_quote_A: Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.
+
+Claim B:
+- claim_id: eggs_c010
+- claim: Moderate egg consumption (up to one egg per day) is not associated with incident cardiovascular disease risk in large US cohorts after adjusting for lifestyle and dietary factors.
+- source_id: bmj_2020_egg_consumption_cvd
+- role: outcome_finding
+- routing_context: {"decision_edge_role": "outcome_finding", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Direct finding about the impact of moderate egg consumption on incident CVD risk."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["one egg per day", "hazard ratio 0.93 (0.82 to 1.05)", "adjusted for lifestyle and dietary factors"], "natural_bottom_line": "Eating up to one egg per day does not appear to increase cardiovascular disease risk in US populations.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Prospective cohort study (pooled analysis of three cohorts)", "exposure_or_option": "at least one egg per day", "outcome_or_endpoint": "incident cardiovascular disease", "population": "US health professionals (NHS, NHS II, HPFS)", "stated_dose_or_threshold": "one egg per day vs less than one egg per month", "stated_limitations": "['health professionals only']", "stated_scope": "['US population']"}}
+- source_span: lines 41-41
+- exact_evidence_quote_B: In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05).
+
+Candidate-pair reason: scope_bounds_outcome+cross_source+right_high_importance+shared_decision_terms
+Candidate-pair score: 13.5
+Pair contract:
+- allowed_claim_ids_for_non_none_relation: eggs_c008, eggs_c010
+- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type "none".
+- relation_intent: scope_bounds_outcome
+- suggested_relation_types: refines, depends_on, in_tension_with, none
+- routing_metadata_only: candidate reason, score, and routing_context explain why this pair was shown; exact evidence quotes carry the evidence for an edge.
+- decision_rule: Use refines or depends_on when the scope claim names where an outcome finding applies. Use in_tension_with when the subgroup or boundary points in a materially different direction from the broad finding.
+- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type "none" when none fit.
+- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.
+- no_edge_rule: Use relation_type "none" unless the exact evidence quotes support a clear relation.
+
+Pair ID: pair_014
+Claim A:
+- claim_id: eggs_c010
+- claim: Moderate egg consumption (up to one egg per day) is not associated with incident cardiovascular disease risk in large US cohorts after adjusting for lifestyle and dietary factors.
+- source_id: bmj_2020_egg_consumption_cvd
+- role: outcome_finding
+- routing_context: {"decision_edge_role": "outcome_finding", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Direct finding about the impact of moderate egg consumption on incident CVD risk."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["one egg per day", "hazard ratio 0.93 (0.82 to 1.05)", "adjusted for lifestyle and dietary factors"], "natural_bottom_line": "Eating up to one egg per day does not appear to increase cardiovascular disease risk in US populations.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Prospective cohort study (pooled analysis of three cohorts)", "exposure_or_option": "at least one egg per day", "outcome_or_endpoint": "incident cardiovascular disease", "population": "US health professionals (NHS, NHS II, HPFS)", "stated_dose_or_threshold": "one egg per day vs less than one egg per month", "stated_limitations": "['health professionals only']", "stated_scope": "['US population']"}}
+- source_span: lines 41-41
+- exact_evidence_quote_A: In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05).
+
+Claim B:
+- claim_id: eggs_c022
+- claim: The impact of egg consumption on LDL-c and the LDL-c/HDL-c ratio is more pronounced in interventions lasting longer than 2 months.
+- source_id: li_2020_egg_cholesterol_rct_meta
+- role: method_or_validity_limit
+- routing_context: {"decision_edge_role": "method_or_validity_limit", "decision_edge_role_confidence": "medium", "decision_edge_role_reasons": ["Relates to the duration of intervention as a study parameter."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "supporting_map", "must_preserve_terms": ["> 2 months", "MD = 8.48 mg/dL (LDL-c)", "MD = 0.17 (LDL-c/HDL-c ratio)"], "natural_bottom_line": "Longer intervention periods (> 2 months) lead to higher LDL-c and a higher LDL-c/HDL-c ratio.", "question_relevance": "indirect", "source_local_context": {"evidence_design": "Subgroup analysis of intervention duration", "exposure_or_option": "More egg consumption (MEC)", "outcome_or_endpoint": "LDL-c and LDL-c/HDL-c ratio", "population": "Healthy subjects", "stated_dose_or_threshold": "> 2 months", "stated_limitations": "['Variations in egg consumption amounts within MEC groups']", "stated_scope": "['Healthy population']"}}
+- source_span: lines 30-30
+- exact_evidence_quote_B: the MEC group seemed to have a larger effect size than the subset of intervention within two months.
+
+Candidate-pair reason: method_limits_headline+cross_source+left_high_importance+right_high_importance+tfidf_similarity
+Candidate-pair score: 13.441
+Pair contract:
+- allowed_claim_ids_for_non_none_relation: eggs_c010, eggs_c022
+- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type "none".
+- relation_intent: method_limits_headline
+- suggested_relation_types: challenges, refines, depends_on, none
+- routing_metadata_only: candidate reason, score, and routing_context explain why this pair was shown; exact evidence quotes carry the evidence for an edge.
+- decision_rule: Use challenges or refines when the method claim changes how strongly the headline finding should be used.
+- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type "none" when none fit.
+- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.
+- no_edge_rule: Use relation_type "none" unless the exact evidence quotes support a clear relation.
+
+Pair ID: pair_015
+Claim A:
+- claim_id: eggs_c001
+- claim: For individuals 2 years and older who do not consume seafood, the regular intake of other foods high in omega-3 fatty acids, such as eggs that contain omega-3 fatty acids, is appropriate.
+- source_id: dga_2020_2025_pmc_summary
+- role: guidance_or_recommendation
+- routing_context: {"decision_edge_role": "guidance_or_recommendation", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Provides specific dietary advice regarding the appropriateness of egg intake as a source of omega-3 fatty acids."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["individuals 2 years and older", "do not consume seafood", "eggs that contain omega-3 fatty acids", "appropriate"], "natural_bottom_line": "Eggs containing omega-3 fatty acids are an appropriate substitute for those who do not eat seafood.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Committee review of evidence on types of dietary fats and cardiovascular disease risk", "exposure_or_option": "Regular intake of eggs containing omega-3 fatty acids", "outcome_or_endpoint": "Appropriate dietary pattern for those avoiding seafood", "population": "Individuals 2 years and older who do not consume seafood", "stated_scope": "['Cardiovascular disease risk', 'Omega-3 fatty acids']"}}
+- source_span: lines 75-75
+- exact_evidence_quote_A: For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.
+
+Claim B:
+- claim_id: eggs_c025
+- claim: High egg intake (>1 egg/day) is associated with a higher risk of cardiovascular disease and heart failure, primarily in US-based studies.
+- source_id: nnr_2023_eggs_scoping_review
+- role: scope_or_subgroup_boundary
+- routing_context: {"decision_edge_role": "scope_or_subgroup_boundary", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Identifies a geographic subgroup (US-based studies) for the finding."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": [">1 egg/day", "US studies", "heart failure", "CVD"], "natural_bottom_line": "Higher egg intake (>1/day) may be associated with higher CVD and heart failure risk, but these findings are mostly from US studies.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Meta-analysis of observational studies", "exposure_or_option": "High egg intake (>1 egg/day)", "outcome_or_endpoint": "Cardiovascular disease (CVD), heart failure", "population": "USA populations", "stated_dose_or_threshold": ">1 egg/day", "stated_limitations": "['Residual confounding', 'Limited generalizability']", "stated_scope": "['US studies']"}}
+- source_span: lines 157-157
+- exact_evidence_quote_B: In the US studies, RR = 1.08 (95% CI 1.02–1.14); in the European studies, RR = 1.05 (95% CI 0.98–1.14); and in the Asian studies, RR = 0.96 (95% CI 0.87–1.06).
+
+Candidate-pair reason: scope_bounds_guidance+cross_source+left_high_importance+right_high_importance+shared_decision_terms
+Candidate-pair score: 13.0
+Pair contract:
+- allowed_claim_ids_for_non_none_relation: eggs_c001, eggs_c025
+- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type "none".
+- relation_intent: scope_bounds_guidance
+- suggested_relation_types: depends_on, refines, none
+- routing_metadata_only: candidate reason, score, and routing_context explain why this pair was shown; exact evidence quotes carry the evidence for an edge.
+- decision_rule: Use depends_on or refines when the scope claim names the population or condition where the guidance holds.
+- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type "none" when none fit.
+- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.
+- no_edge_rule: Use relation_type "none" unless the exact evidence quotes support a clear relation.
+
+Pair ID: pair_016
+Claim A:
+- claim_id: eggs_c020
+- claim: Increased egg consumption (MEC) significantly elevates the LDL-c/HDL-c ratio in healthy subjects compared to control groups.
+- source_id: li_2020_egg_cholesterol_rct_meta
+- role: mechanism_or_biomarker
+- routing_context: {"decision_edge_role": "mechanism_or_biomarker", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Relates to the biomarker of LDL-c/HDL-c ratio."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["LDL-c/HDL-c ratio", "MD = 0.14", "95% CI: 0.05 to 0.22", "healthy subjects"], "natural_bottom_line": "More egg consumption leads to a significantly higher LDL-c/HDL-c ratio.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Systematic review and meta-analysis of 17 Randomized Controlled Trials (RCTs)", "exposure_or_option": "More egg consumption (MEC)", "outcome_or_endpoint": "LDL-c/HDL-c ratio", "population": "Healthy subjects (excluding those with hypertension, diabetes, or hypercholesterolemia)", "stated_limitations": "['Intervention duration < 1 year', 'Variations in egg consumption amounts within MEC groups']", "stated_scope": "['Healthy population']"}}
+- source_span: lines 30-30
+- exact_evidence_quote_A: Overall, 17 RCTs met the eligibility criteria and pooled results showed MEC group had a higher LDL-c/HDL-c ratio than the control group (MD = 0.14, p = 0.001, I2 = 25%).
+
+Claim B:
+- claim_id: eggs_c024
+- claim: Moderate egg consumption (up to one egg/day) is not associated with increased risk of cardiovascular disease (CVD), including coronary heart disease (CHD) and stroke, in European populations.
+- source_id: nnr_2023_eggs_scoping_review
+- role: outcome_finding
+- routing_context: {"decision_edge_role": "outcome_finding", "decision_edge_role_confidence": "high", "decision_edge_role_reasons": ["Direct finding regarding CVD risk in European populations."], "decision_edge_role_source": "model", "decision_function": "answer_bearing", "decision_importance_level": "high", "default_use": "main_map", "must_preserve_terms": ["one egg/day", "European populations", "CVD", "not associated with increased risk"], "natural_bottom_line": "Eating up to one egg a day does not appear to increase CVD risk in Europeans.", "question_relevance": "direct", "source_local_context": {"evidence_design": "Systematic reviews and meta-analyses of observational studies", "exposure_or_option": "Moderate egg consumption (up to one egg/day)", "outcome_or_endpoint": "Cardiovascular disease (CVD), CHD, stroke", "population": "European populations", "stated_dose_or_threshold": "Up to 1 egg/day", "stated_limitations": "['Limited evidence', 'Potential for residual confounding in observational studies']", "stated_scope": "['European studies']"}}
+- source_span: lines 500-500
+- exact_evidence_quote_B: In summary, the strength of evidence is regarded as Limited – suggestive that when compared to low or no egg intake, egg intake up to one egg/day is not associated with increased risk of CVD.
+
+Candidate-pair reason: mechanism_to_outcome+cross_source+left_high_importance+right_high_importance+shared_decision_terms
+Candidate-pair score: 13.0
+Pair contract:
+- allowed_claim_ids_for_non_none_relation: eggs_c020, eggs_c024
+- endpoint_rule: source_claim and target_claim must be these exact claim IDs for a non-none relation; use null/null for relation_type "none".
+- relation_intent: mechanism_to_outcome
+- suggested_relation_types: supports, depends_on, in_tension_with, challenges, none
+- routing_metadata_only: candidate reason, score, and routing_context explain why this pair was shown; exact evidence quotes carry the evidence for an edge.
+- decision_rule: Use supports, depends_on, or in_tension_with only when the mechanism changes the interpretation of the outcome claim.
+- selection_rule: First try to choose the strongest relation from suggested_relation_types. Use relation_type "none" when none fit.
+- override_rule: If the exact evidence quotes clearly support a non-suggested allowed relation type, use it and explain why.
+- no_edge_rule: Use relation_type "none" unless the exact evidence quotes support a clear relation.

@@ -35,6 +35,8 @@ prose, autonomous truth discovery, or domain correctness without review.
   adjudication.
 - Eight scripted blinded local-model baselines across Gemma, Qwen, Phi, and
   Granite, with an audit that narrows or rejects unsupported loss claims.
+- A paired live Gemma MLX map run: one valid eggs candidate with review risks
+  and one rejected LHC candidate with retained timeout and validation evidence.
 - Stable IDs, Markdown/JSON parity, source manifests, review packets, and
   generic package validation.
 - Frozen-snapshot restoration and a prewritten source update that demonstrate
@@ -50,7 +52,9 @@ not baseline performance evidence.
 documents -> map -> briefing -> publication gate
 ```
 
-The implementation under
+The paired [live-model packet](examples/live_model_runs/README.md) shows this
+machinery producing both a reviewable candidate and an explicit failure. The
+implementation under
 [`src/epistemic_case_mapper/pipeline/`](src/epistemic_case_mapper/pipeline/)
 includes model-assisted extraction, map construction, briefing synthesis, and
 fail-closed publication checks. This production machinery is implementation

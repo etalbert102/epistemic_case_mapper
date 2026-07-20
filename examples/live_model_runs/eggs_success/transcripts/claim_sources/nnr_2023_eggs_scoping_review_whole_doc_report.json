@@ -1,0 +1,32 @@
+{
+  "claim_count": 7,
+  "effective_max_claims": 9,
+  "num_predict": 10752,
+  "repair_reason": "not_needed",
+  "repair_used": false,
+  "requested_max_claims": 3,
+  "rich_claim_context_field_counts": {
+    "evidence_design": 7,
+    "exposure_or_option": 7,
+    "outcome_or_endpoint": 7,
+    "population": 7,
+    "stated_dose_or_threshold": 3
+  },
+  "rich_claim_context_schema_id": "rich_claim_context_report_v1",
+  "rich_claim_must_preserve_terms_count": 7,
+  "rich_claim_natural_bottom_line_count": 7,
+  "rich_claim_stated_limitations_count": 6,
+  "schema_id": "whole_doc_claim_extraction_report_v1",
+  "schema_rejected_claim_count": 0,
+  "source_card_acronym_expansion_count": 9,
+  "source_card_exact_quote_count": 7,
+  "source_card_quote_count": 7,
+  "source_card_short_quote_count": 0,
+  "source_evidence_unit_count": 7,
+  "source_evidence_unit_warning_counts": {
+    "weak_quote_claim_overlap": 1
+  },
+  "source_id": "nnr_2023_eggs_scoping_review",
+  "source_quantity_tuple_count": 6,
+  "status": "ok"
+}

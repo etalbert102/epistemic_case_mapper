@@ -26,6 +26,7 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | Draft public-risk worked region | LHC black holes | `examples/lhc_black_holes/worked_region_public_risk_framing_map.md` | draft extension, not canonical counts |
 | New-to-map source update demo | LHC black holes | `docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md` | demo from already acquired source |
 | Investigator challenge demonstration | Cross-case | `examples/investigator_challenge/README.md` | answer-key addressability and change-locality replay |
+| Paired live Gemma MLX map runs | Eggs success and LHC failure | `examples/live_model_runs/README.md` | machine-generated candidates with retained transcripts and human review required |
 | Decision-space framework integration | Submission | `docs/methodology/DECISION_SPACE_FRAMEWORK.md` | judge-facing framing |
 | Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | reported single-run response, invocation not independently auditable |
 | Evidence and limitations | Submission | `docs/submission/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |

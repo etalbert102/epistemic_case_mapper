@@ -1,0 +1,170 @@
+{
+  "claims": [
+    {
+      "claim": "The author proposes three measures to mitigate risk during the LHC start-up phase: proceeding in small energy steps, analyzing a larger fraction of events, and implementing safety-influenced triggers.",
+      "claim_id": "lhc_c001",
+      "claim_quantities": [],
+      "decision_function": "answer_bearing",
+      "decision_importance": {
+        "calibrated_level": "high",
+        "calibration_reasons": [
+          "direct_question_relevance",
+          "decision_function:answer_bearing",
+          "evidence_signal",
+          "quantity_signal"
+        ],
+        "decision_function": "answer_bearing",
+        "default_use": "supporting_map",
+        "model_level": "medium",
+        "rationale": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+        "schema_id": "claim_decision_importance_v1"
+      },
+      "decision_importance_level": "high",
+      "default_use": "supporting_map",
+      "deterministic_relevance_validation": {
+        "blocking": false,
+        "method": "deterministic_question_fit_check_v1",
+        "reason": "question_outcome_mismatch",
+        "status": "warning"
+      },
+      "entailed_by_excerpt": "yes",
+      "excerpt": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+      "extraction_method": "whole_doc_source_card",
+      "importance_rationale": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+      "included_in_final_map": true,
+      "label_audit": {
+        "core_decision_priority": 40,
+        "deterministic_relevance_reason": "question_outcome_mismatch",
+        "method": "deterministic_label_routing_v1",
+        "model_labels": {
+          "decision_function": "answer_bearing",
+          "decision_importance_level": "high",
+          "default_use": "supporting_map",
+          "question_relevance": "direct",
+          "role": "source_claim"
+        },
+        "routing_default_use": "appendix",
+        "routing_importance_level": "medium",
+        "routing_role": "background",
+        "schema_id": "claim_label_audit_v1",
+        "synthesis_bucket": "appendix",
+        "warnings": [
+          "deterministic_relevance:question_outcome_mismatch",
+          "model_direct_with_deterministic_warning",
+          "model_high_importance_with_deterministic_warning"
+        ]
+      },
+      "map_relation_role": "not_relation_eligible",
+      "quantity_values": [],
+      "question_fit": {
+        "schema_id": "claim_question_fit_from_extraction_v1",
+        "scope_mismatch_flags": [],
+        "source": "model_question_relevance_with_deterministic_scope_flags",
+        "status": "match"
+      },
+      "question_relevance": "direct",
+      "relation_building_eligible": true,
+      "relation_triage_bucket": "core",
+      "relation_triage_reasons": [
+        "question_mismatch:question_outcome_mismatch",
+        "direct_relevance",
+        "high_importance",
+        "supporting_label",
+        "appendix_label"
+      ],
+      "relevance_rationale": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_alignment": {
+        "coverage": 1.0,
+        "density": 1.0,
+        "matched_text": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+        "method": "exact_match",
+        "proposed_span_id": "plaga_2008_metastable_black_holes_s0537",
+        "resolved_span_id": "plaga_2008_metastable_black_holes_s0537",
+        "source_quote": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+        "status": "exact_match"
+      },
+      "source_id": "plaga_2008_metastable_black_holes",
+      "source_quote": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+      "source_span": "lines 537-537",
+      "validation_warnings": [
+        "question_outcome_mismatch",
+        "deterministic_relevance:question_outcome_mismatch",
+        "model_direct_with_deterministic_warning",
+        "model_high_importance_with_deterministic_warning"
+      ],
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Policy/Operational proposal",
+          "exposure_or_option": "Risk mitigation measures",
+          "outcome_or_endpoint": "Reduced risk probability",
+          "population": "LHC operations",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Would not exclude but reduce any remaining risk"
+          ],
+          "stated_scope": [
+            "LHC start-up phase",
+            "Mitigation measures"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "Small steps",
+          "Fraction of events",
+          "Trigger/Operational procedures",
+          "LHC start-up phase"
+        ],
+        "natural_bottom_line": "Proposed mitigations include small energy increments, higher event analysis rates, and safety-focused triggers.",
+        "quantities": [],
+        "scope_conditions": [
+          "LHC start-up",
+          "Mitigation measures"
+        ],
+        "source_bottom_line": "The author argues that a third scenario (Scenario 3) for microscopic black holes (mBHs) allows for metastable, long-lived objects that could accrete matter at the Eddington limit and emit intense Hawking radiation, posing a potential catastrophic risk from collider production that is not ruled out by current astrophysical arguments.",
+        "supporting_quotes": [
+          {
+            "line_hint": "537-539",
+            "quote": "2. No operation in which no or only a very tiny fraction of events are analysed."
+          },
+          {
+            "line_hint": "541-542",
+            "quote": "3. Safety considerations influence the trigger and operational procedures."
+          }
+        ]
+      }
+    }
+  ],
+  "crux_candidates": [],
+  "decision_question": "Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?",
+  "epistemic_config": {
+    "profile_id": "general_decision_support",
+    "source": "default_profile"
+  },
+  "evidence_check": [
+    [
+      "Does lhc_c001 quote exact source text?",
+      "Survives",
+      "plaga_2008_metastable_black_holes lines 537-537: 2. No operation in which no or only a very tiny fraction of events are analysed."
+    ]
+  ],
+  "evidence_mode": "source_grounded",
+  "pipeline": "staged_chunked_mapper_v1",
+  "prompt_procedure": "source_mapping_prompt_v2_json",
+  "relations": [],
+  "similar_but_not_identical": [],
+  "sources": [
+    "lsag_2008_safety_review",
+    "spc_2008_lsag_review",
+    "giddings_mangano_2008_stable_black_holes",
+    "plaga_2008_metastable_black_holes",
+    "giddings_mangano_2008_comments_plaga"
+  ],
+  "status": "human-review-needed",
+  "title": "LHC Black Hole Risk Staged Map"
+}

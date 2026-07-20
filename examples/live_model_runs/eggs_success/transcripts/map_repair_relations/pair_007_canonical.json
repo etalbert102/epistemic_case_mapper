@@ -1,0 +1,17 @@
+{
+  "crux_candidates": [
+    "Whether the adjustment for dietary cholesterol in eggs_c016 is validly performed determines the strength of the support for eggs_c009."
+  ],
+  "edge_basis": "source_inferred",
+  "failure_condition": "The edge would be invalid if the study in eggs_c016 was found to have significant confounding that prevented a clean adjustment for cholesterol.",
+  "pair_id": "pair_007",
+  "rationale": "eggs_c016 provides a specific mechanism (adjustment for dietary cholesterol) that explains why the broader finding in eggs_c009 holds: it suggests that any observed association between egg consumption and cardiovascular risk is actually driven by the cholesterol content of the eggs rather than some other unique property of the egg itself.",
+  "relation_confidence": "high",
+  "relation_type": "supports",
+  "similar_but_not_identical": [],
+  "source_anchor_a": "no longer significant after adjusting for dietary cholesterol consumption",
+  "source_anchor_b": "not generally supported an association between dietary cholesterol and cardiovascular risk",
+  "source_claim": "eggs_c016",
+  "target_claim": "eggs_c009",
+  "why_decision_relevant": "This edge clarifies that the 'neutral' status of eggs is consistent with the broader lack of evidence linking dietary cholesterol to heart disease, identifying cholesterol as the mediating variable."
+}

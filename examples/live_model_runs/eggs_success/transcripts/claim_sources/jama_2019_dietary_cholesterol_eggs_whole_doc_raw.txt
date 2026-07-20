@@ -1,0 +1,373 @@
+```json
+{
+  "source_id": "jama_2019_dietary_cholesterol_eggs",
+  "source_bottom_line": "Among US adults, higher consumption of dietary cholesterol or eggs is significantly associated with a higher risk of incident cardiovascular disease (CVD) and all-cause mortality in a dose-response manner, independent of fat quality and overall diet quality.",
+  "canonical_claims": [
+    {
+      "claim": "Each additional 300 mg of dietary cholesterol consumed per day is significantly associated with higher risk of incident CVD and all-cause mortality among US adults.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "cardiovascular_risk",
+        "mortality"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "This provides a direct association between dietary cholesterol intake and primary cardiovascular outcomes.",
+      "natural_bottom_line": "Higher daily dietary cholesterol is associated with increased risk of CVD and death.",
+      "must_preserve_terms": [
+        "300 mg",
+        "dietary cholesterol",
+        "incident CVD",
+        "all-cause mortality",
+        "adjusted HR, 1.17",
+        "adjusted ARD, 3.24%"
+      ],
+      "claim_context": {
+        "population": "US adults (n=29,615)",
+        "exposure_or_option": "Dietary cholesterol (mg/day)",
+        "outcome_or_endpoint": "Incident CVD and all-cause mortality",
+        "evidence_design": "Pooled cohort study (6 prospective US cohorts)",
+        "stated_dose_or_threshold": "300 mg per day increment",
+        "stated_scope": [
+          "US adults"
+        ],
+        "stated_limitations": [
+          "Self-reported diet data",
+          "Observational study (cannot establish causality)",
+          "Residual confounding"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]).",
+          "line_hint": "50-51"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.17",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Risk of incident CVD for each additional 300 mg of dietary cholesterol.",
+          "source_quote": "adjusted HR, 1.17 [95% CI, 1.09-1.26]",
+          "line_hint": "50",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "3.24%",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Absolute Risk Difference (ARD)",
+          "local_interpretation": "Absolute risk difference for incident CVD.",
+          "source_quote": "adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]",
+          "line_hint": "50",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "US adults"
+      ]
+    },
+    {
+      "claim": "Each additional half an egg consumed per day is significantly associated with higher risk of incident CVD and all-cause mortality.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "cardiovascular_risk",
+        "mortality"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "This addresses the specific impact of egg consumption as a primary source of dietary cholesterol.",
+      "natural_bottom_line": "Higher daily egg consumption is associated with increased CVD risk and mortality.",
+      "must_preserve_terms": [
+        "half an egg per day",
+        "incident CVD",
+        "all-cause mortality",
+        "adjusted HR, 1.06",
+        "adjusted ARD, 1.11%"
+      ],
+      "claim_context": {
+        "population": "US adults (n=29,615)",
+        "exposure_or_option": "Egg consumption (number/day)",
+        "outcome_or_endpoint": "Incident CVD and all-cause mortality",
+        "evidence_design": "Pooled cohort study (6 prospective US cohorts)",
+        "stated_dose_or_threshold": "0.5 egg per day increment",
+        "stated_scope": [
+          "US adults"
+        ],
+        "stated_limitations": [
+          "Self-reported diet data",
+          "Observational study (cannot establish causality)"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06 [95% CI, 1.03-1.10]; adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]) and all-cause mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; adjusted ARD, 1.93% [95% CI, 1.10%-2.76%]).",
+          "line_hint": "50-51"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.06",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Risk of incident CVD for each additional half egg.",
+          "source_quote": "adjusted HR, 1.06 [95% CI, 1.03-1.10]",
+          "line_hint": "50",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": "1.11%",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Absolute Risk Difference (ARD)",
+          "local_interpretation": "Absolute risk difference for incident CVD.",
+          "source_quote": "adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]",
+          "line_hint": "50",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "US adults"
+      ]
+    },
+    {
+      "claim": "The association between egg consumption and incident CVD was no longer significant after adjusting for dietary cholesterol consumption.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "confounding_factors"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+      "natural_bottom_line": "The CVD risk from eggs is fully accounted for by the cholesterol they contain.",
+      "must_preserve_terms": [
+        "egg consumption",
+        "dietary cholesterol",
+        "adjusted HR, 0.99",
+        "not significant"
+      ],
+      "claim_context": {
+        "population": "US adults (n=29,615)",
+        "exposure_or_option": "Egg consumption",
+        "outcome_or_endpoint": "Incident CVD",
+        "evidence_design": "Pooled cohort study",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "US adults"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, −0.47% [95% CI, −1.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, −0.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+          "line_hint": "50"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "0.99",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Non-significant association for CVD after adjusting for cholesterol.",
+          "source_quote": "adjusted HR, 0.99 [95% CI, 0.93-1.05]",
+          "line_hint": "50",
+          "retention_hint": "use_if_space"
+        }
+      ],
+      "scope_conditions": [
+        "Adjusted for dietary cholesterol"
+      ]
+    },
+    {
+      "claim": "The association between dietary cholesterol consumption and incident CVD was stronger in participants with a lower BMI (<25) than in overweight or obese participants.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "subgroup_analysis",
+        "BMI"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Identifies a specific population (lower BMI) where the association with cholesterol is more pronounced.",
+      "natural_bottom_line": "The link between dietary cholesterol and CVD is stronger in individuals with a lower BMI.",
+      "must_preserve_terms": [
+        "BMI <25",
+        "adjusted HR, 1.25",
+        "P value for interaction, .03"
+      ],
+      "claim_context": {
+        "population": "US adults with BMI <25",
+        "exposure_or_option": "Dietary cholesterol (per 300 mg/day)",
+        "outcome_or_endpoint": "Incident CVD",
+        "evidence_design": "Subgroup analysis of pooled cohort study",
+        "stated_dose_or_threshold": "300 mg per day",
+        "stated_scope": [
+          "BMI <25"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The association between dietary cholesterol consumption (per 300 mg/day) and incident CVD was stronger in participants with BMI lower than 25 (adjusted HR, 1.25 [95% CI, 1.12-1.39]) than in overweight participants (BMI ≥25 to <30; adjusted HR, 1.05 [95% CI, 0.95-1.16]) or obese participants (BMI ≥30; adjusted HR, 1.14 [95% CI, 1.03-1.26]) (P value for interaction, .03)",
+          "line_hint": "402-403"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.25",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Risk of CVD for BMI <25.",
+          "source_quote": "adjusted HR, 1.25 [95% CI, 1.12-1.39]",
+          "line_hint": "402",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": ".03",
+          "quantity_role": "uncertainty_interval",
+          "measures": "P-value for interaction",
+          "local_interpretation": "Statistical significance of the difference between BMI subgroups.",
+          "source_quote": "P value for interaction, .03",
+          "line_hint": "403",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "BMI <25"
+      ]
+    },
+    {
+      "claim": "The association between dietary cholesterol consumption and all-cause mortality was stronger in women than in men.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "subgroup_analysis",
+        "sex"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Identifies a sex-based difference in the association between cholesterol and mortality.",
+      "natural_bottom_line": "The link between dietary cholesterol and all-cause mortality is stronger in women than in men.",
+      "must_preserve_terms": [
+        "women",
+        "adjusted HR, 1.28",
+        "P value for interaction, .02"
+      ],
+      "claim_context": {
+        "population": "Women",
+        "exposure_or_option": "Dietary cholesterol (per 300 mg/day)",
+        "outcome_or_endpoint": "All-cause mortality",
+        "evidence_design": "Subgroup analysis of pooled cohort study",
+        "stated_dose_or_threshold": "300 mg per day",
+        "stated_scope": [
+          "Women"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The association between dietary cholesterol consumption and all-cause mortality was stronger in women (adjusted HR, 1.28 [95% CI, 1.17-1.41]) than in men (adjusted HR, 1.14 [95% CI, 1.06-1.22]) (P value for interaction, .02)",
+          "line_hint": "419-422"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.28",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Risk of mortality for women.",
+          "source_quote": "adjusted HR, 1.28 [95% CI, 1.17-1.41]",
+          "line_hint": "420",
+          "retention_hint": "must_retain"
+        },
+        {
+          "value": ".02",
+          "quantity_role": "uncertainty_interval",
+          "measures": "P-value for interaction",
+          "local_interpretation": "Statistical significance of the difference between sexes.",
+          "source_quote": "P value for interaction, .02",
+          "line_hint": "422",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Women"
+      ]
+    },
+    {
+      "claim": "The association between dietary cholesterol consumption and all-cause mortality was independent of fat quality (saturated vs. unsaturated) and overall diet quality.",
+      "question_relevance": "indirect",
+      "scope_flags": [
+        "confounding_factors",
+        "dietary_patterns"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "Confirms that the association is not merely a byproduct of high saturated fat intake or poor overall eating habits.",
+      "natural_bottom_line": "The link between dietary cholesterol and mortality remains even when accounting for fat quality and diet quality.",
+      "must_preserve_terms": [
+        "independent of fat amount and quality",
+        "higher-quality diet",
+        "adjusted HR, 1.24",
+        "adjusted HR, 1.12"
+      ],
+      "claim_context": {
+        "population": "US adults",
+        "exposure_or_option": "Dietary cholesterol (per 300 mg/day)",
+        "outcome_or_endpoint": "All-cause mortality",
+        "evidence_design": "Pooled cohort study",
+        "stated_dose_or_threshold": "300 mg per day",
+        "stated_scope": [
+          "US adults"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet.",
+          "line_hint": "479"
+        },
+        {
+          "quote": "the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were similar between participants who consumed a higher-quality diet and those who did not",
+          "line_hint": "480"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "1.24",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Risk of mortality for high-saturated fat diet.",
+          "source_quote": "adjusted HR, 1.24 [95% CI, 1.13-1.36]",
+          "line_hint": "402",
+          "retention_hint": "use_if_space"
+        },
+        {
+          "value": "1.12",
+          "quantity_role": "effect_estimate",
+          "measures": "Adjusted Hazard Ratio (HR)",
+          "local_interpretation": "Risk of mortality for low-saturated fat diet.",
+          "source_quote": "adjusted HR, 1.12 [95% CI, 1.04-1.21]",
+          "line_hint": "402",
+          "retention_hint": "use_if_space"
+        }
+      ],
+      "scope_conditions": [
+        "Independent of fat quality",
+        "Independent of diet quality"
+      ]
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "Study sample size (n=29,615)",
+    "Mean age at baseline (51.6 years)",
+    "Race/ethnicity breakdown",
+    "Education level distribution",
+    "Smoking status distribution",
+    "BMI mean values",
+    "Blood pressure and lipid profile means",
+    "Total energy median intake",
+    "Alcohol consumption levels",
+    "Specific cohort names (ARIC, CARDIA, etc.)",
+    "Description of data harmonization methodology",
+    "Reference to specific R packages used for analysis"
+  ]
+}
+```

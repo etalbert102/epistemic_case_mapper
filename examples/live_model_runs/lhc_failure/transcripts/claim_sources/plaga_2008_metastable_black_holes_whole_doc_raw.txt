@@ -1,0 +1,310 @@
+```json
+{
+  "source_id": "plaga_2008_metastable_black_holes",
+  "source_bottom_line": "The author argues that a third scenario (Scenario 3) for microscopic black holes (mBHs) allows for metastable, long-lived objects that could accrete matter at the Eddington limit and emit intense Hawking radiation, posing a potential catastrophic risk from collider production that is not ruled out by current astrophysical arguments.",
+  "canonical_claims": [
+    {
+      "claim": "In Scenario 3, microscopic black holes (mBHs) can be 'quasistable' with lifetimes exceeding O(ms) without requiring implausible ad hoc assumptions.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "mechanism",
+        "theoretical_model"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This establishes the physical basis for why these black holes could persist long enough to pose a risk, contrary to some previous assumptions of rapid decay.",
+      "natural_bottom_line": "Under certain plausible theoretical models (Scenario 3), mBHs can survive much longer than previously assumed.",
+      "must_preserve_terms": [
+        "Scenario 3",
+        "quasistable",
+        "O(ms)",
+        "microcanonical treatment"
+      ],
+      "claim_context": {
+        "population": "Microscopic black holes (mBHs)",
+        "exposure_or_option": "Theoretical model Scenario 3",
+        "outcome_or_endpoint": "Stability/Lifetime",
+        "evidence_design": "Theoretical modeling",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Quantum black holes",
+          "Microcanonical treatment"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "Summarising, mBHs can be “quasistable” in scenario 3 (in the sense of lifetimes exceeding O(msecs)), without introducing highly implausible “ad hoc” assumptions.",
+          "line_hint": "284-286"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "O(msecs)",
+          "quantity_role": "time_horizon",
+          "measures": "lifetime",
+          "local_interpretation": "Minimum stable lifetime in Scenario 3",
+          "source_quote": "lifetimes exceeding O(msecs)",
+          "line_hint": "284",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Scenario 3",
+        "Microcanonical treatment"
+      ]
+    },
+    {
+      "claim": "Quasistable mBHs in Scenario 3 can accrete matter at the Eddington limit, potentially leading to catastrophic global heating and seismic activity.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "harm",
+        "mechanism"
+      ],
+      "decision_importance": "critical",
+      "why_it_matters": "This identifies the specific mechanism of harm (Eddington-limited accretion) and the resulting catastrophic consequences.",
+      "natural_bottom_line": "If mBHs accrete at the Eddington limit, they could cause global heating and massive earthquakes.",
+      "must_preserve_terms": [
+        "Eddington limit",
+        "global heating",
+        "seismic power",
+        "accretion"
+      ],
+      "claim_context": {
+        "population": "Quasistable mBHs",
+        "exposure_or_option": "Accretion at Eddington limit",
+        "outcome_or_endpoint": "Global heating/seismic activity",
+        "evidence_design": "Theoretical modeling",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Scenario 3",
+          "Accretion mechanism"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the mBHs accretes at the 5-dimensional Eddington limit. All accreted mass is then reradiated, and the mBH’s mass remains constant on average.",
+          "line_hint": "365-367"
+        },
+        {
+          "quote": "eventually catastrophic consequences due to global heating on an unprecedented scale and global-scale earth-quakes would seem certain.",
+          "line_hint": "380-381"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "5.2 x 10^16 W",
+          "quantity_role": "effect_estimate",
+          "measures": "Power (Watts)",
+          "local_interpretation": "Radiated power of the mBH",
+          "source_quote": "The power of 5.2 x 10^16 W is 1300 times larger than the total geothermal power emitted by Earth",
+          "line_hint": "373",
+          "retention_hint": "must_retain"
+        }
+      ],
+      "scope_conditions": [
+        "Scenario 3",
+        "Eddington limit"
+      ]
+    },
+    {
+      "claim": "The astrophysical argument that mBHs would have consumed white dwarfs or neutron stars is invalid for Scenario 3 because their growth is eventually stopped by Hawking radiation.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "mechanism",
+        "safety_argument"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This directly addresses why the standard safety argument (astrophysical exclusion) fails to rule out the risk.",
+      "natural_bottom_line": "The existence of old white dwarfs does not rule out dangerous mBHs because radiation limits their growth.",
+      "must_preserve_terms": [
+        "Astrophysical argument",
+        "Hawking radiation",
+        "stopped at intermediate sizes",
+        "white dwarfs"
+      ],
+      "claim_context": {
+        "population": "mBHs in Scenario 3",
+        "exposure_or_option": "Accretion vs. Hawking radiation",
+        "outcome_or_endpoint": "Astrophysical exclusion validity",
+        "evidence_design": "Comparative analysis of safety arguments",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Scenario 3",
+          "Astrophysical constraints"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "the astrophysical argument of G & M fails to exclude the existence of mBHs in scenario 3 that are dangerous not because they accrete the whole Earth but because of their intense Hawking radiation.",
+          "line_hint": "406-408"
+        },
+        {
+          "quote": "their growth by accretion is eventually stopped at intermediate sizes via their emission of Hawking radiation.",
+          "line_hint": "889-891"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "Scenario 3",
+        "Astrophysical argument"
+      ]
+    },
+    {
+      "claim": "A collider-produced mBH with small thermal velocities could appear as a major nuclear explosion in the immediate vicinity of the collider.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "harm",
+        "operational_effects"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "This describes a specific, localized catastrophic scenario resulting from the interaction of mBHs with Earth's surface.",
+      "natural_bottom_line": "A captured mBH could cause a local nuclear-scale explosion near the collider.",
+      "must_preserve_terms": [
+        "Local accident",
+        "nuclear explosion",
+        "thermal velocities",
+        "collider-produced"
+      ],
+      "claim_context": {
+        "population": "Collider-produced mBHs",
+        "exposure_or_option": "Low thermal velocity capture",
+        "outcome_or_endpoint": "Local nuclear explosion",
+        "evidence_design": "Scenario modeling",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Local accident",
+          "Colliders"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "a mBH created with very small (thermal or subthermal) velocities in a collider would appear like a major nuclear explosion in the immediate vicinity of the collider.",
+          "line_hint": "420-423"
+        }
+      ],
+      "quantities": [
+        {
+          "value": "12 Mt TNT equivalent/sec",
+          "quantity_role": "effect_estimate",
+          "measures": "Energy release (TNT)",
+          "local_interpretation": "Power of radiation from an mBH at the Eddington limit",
+          "source_quote": "corresponds to 12 Mt TNT equivalent/sec",
+          "line_hint": "414-415",
+          "retention_hint": "use_if_space"
+        }
+      ],
+      "scope_conditions": [
+        "Local accident",
+        "Colliders"
+      ]
+    },
+    {
+      "claim": "The exclusion of 'dangerous' mBHs by Giddings & Mangano is not definite because it relies on a semiclassical approximation that may be invalid in the quantum gravity regime.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "scope_limit",
+        "methodological_critique"
+      ],
+      "decision_importance": "high",
+      "why_it_matters": "This identifies a fundamental flaw in the current safety analysis: it assumes a regime of physics (semiclassical) that may not apply to the smallest, most dangerous black holes.",
+      "natural_bottom_line": "Current safety arguments are based on an assumption (semiclassical validity) that might be wrong for very small black holes.",
+      "must_preserve_terms": [
+        "Semiclassical approximation",
+        "Quantum gravity regime",
+        "Mmin",
+        "scattering cross section"
+      ],
+      "claim_context": {
+        "population": "mBHs in the quantum gravity regime",
+        "exposure_or_option": "Semiclassical vs. Quantum Gravity models",
+        "outcome_or_endpoint": "Validity of safety exclusion",
+        "evidence_design": "Theoretical critique",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "Quantum gravity",
+          "Semiclassical approximation"
+        ],
+        "stated_limitations": [],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "mBHs deep in the “quantum gravity” regime (violating eq.(7)) might have smaller scattering cross section than expected in the semiclassically and escape white dwarfs",
+          "line_hint": "473-476"
+        },
+        {
+          "quote": "This exclusion depends on their careful and detailed demonstration in their section 5 that “dangerous” mBHs are stopped in white dwarfs after their production in collisions of cosmic rays. However, this demonstration is based on an assumed validity of the semiclassical approximation.",
+          "line_hint": "472-476"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "Quantum gravity",
+        "Semiclassical limits"
+      ]
+    },
+    {
+      "claim": "The author proposes three measures to mitigate risk during the LHC start-up phase: proceeding in small energy steps, analyzing a larger fraction of events, and implementing safety-influenced triggers.",
+      "question_relevance": "direct",
+      "scope_flags": [
+        "policy_consequences",
+        "mitigation_measures"
+      ],
+      "decision_importance": "medium",
+      "why_it_matters": "Provides actionable operational changes to reduce the risk of producing and missing a dangerous mBH.",
+      "natural_bottom_line": "Proposed mitigations include small energy increments, higher event analysis rates, and safety-focused triggers.",
+      "must_preserve_terms": [
+        "Small steps",
+        "Fraction of events",
+        "Trigger/Operational procedures",
+        "LHC start-up phase"
+      ],
+      "claim_context": {
+        "population": "LHC operations",
+        "exposure_or_option": "Risk mitigation measures",
+        "outcome_or_endpoint": "Reduced risk probability",
+        "evidence_design": "Policy/Operational proposal",
+        "stated_dose_or_threshold": "",
+        "stated_scope": [
+          "LHC start-up phase",
+          "Mitigation measures"
+        ],
+        "stated_limitations": [
+          "Would not exclude but reduce any remaining risk"
+        ],
+        "applicability_limits": []
+      },
+      "supporting_quotes": [
+        {
+          "quote": "1. Increase of collision energy by reasonably small factors (say, 2) in one step and proceed to higher energies only after excluding any indication for potentially dangerous processes.",
+          "line_hint": "530-533"
+        },
+        {
+          "quote": "2. No operation in which no or only a very tiny fraction of events are analysed.",
+          "line_hint": "537-539"
+        },
+        {
+          "quote": "3. Safety considerations influence the trigger and operational procedures.",
+          "line_hint": "541-542"
+        }
+      ],
+      "quantities": [],
+      "scope_conditions": [
+        "LHC start-up",
+        "Mitigation measures"
+      ]
+    }
+  ],
+  "excluded_as_not_decision_relevant": [
+    "References to specific other papers (e.g., Casadio et al.) without the context of the author's critique.",
+    "Technical details of the RS2 model and 5-dimensional gravity formulas."
+  ]
+}
+```

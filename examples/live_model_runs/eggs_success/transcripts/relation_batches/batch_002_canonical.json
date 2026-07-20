@@ -1,0 +1,70 @@
+{
+  "relations": [
+    {
+      "crux_candidates": [
+        "Whether the finding in eggs_c017 for lower BMI individuals is a reliable exception to the general finding in eggs_c009."
+      ],
+      "edge_basis": "source_explicit",
+      "failure_condition": "The edge weakens if the study in eggs_c017 is considered fundamentally flawed or not comparable to the population in eggs_c009.",
+      "pair_id": "pair_005",
+      "rationale": "eggs_c017 reports a significant association between dietary cholesterol and incident CVD in individuals with a lower BMI (<25), which pulls in the opposite direction of the broad finding in eggs_c009 that studies have not generally supported such an association.",
+      "relation_confidence": "high",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "stronger in participants with a lower BMI (<25)",
+      "source_anchor_b": "not generally supported an association",
+      "source_claim": "eggs_c017",
+      "target_claim": "eggs_c009",
+      "why_decision_relevant": "The edge highlights that the risk may be specific to certain populations (lower BMI), creating a tension between the general guideline and subgroup findings."
+    },
+    {
+      "crux_candidates": [
+        "Whether the risk for people with type 2 diabetes (eggs_c012) overrides the general finding for European populations (eggs_c024)."
+      ],
+      "edge_basis": "source_explicit",
+      "failure_condition": "The edge weakens if the population in eggs_c012 is not relevant to the decision-making context.",
+      "pair_id": "pair_006",
+      "rationale": "eggs_c012 identifies a specific subgroup (people with type 2 diabetes) where higher egg consumption may be associated with higher cardiovascular disease risk, which contrasts with the broader finding in eggs_c024 that moderate egg consumption is not associated with increased risk.",
+      "relation_confidence": "high",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "higher risk of cardiovascular disease in people with type 2 diabetes",
+      "source_anchor_b": "not associated with increased risk of CVD",
+      "source_claim": "eggs_c012",
+      "target_claim": "eggs_c024",
+      "why_decision_relevant": "The edge highlights that the safety of egg consumption may be compromised for individuals with certain underlying conditions like type 2 diabetes."
+    },
+    {
+      "crux_candidates": [],
+      "edge_basis": "uncertain",
+      "failure_condition": "",
+      "pair_id": "pair_007",
+      "rationale": "While eggs_c019 provides methodological context regarding the independence of dietary cholesterol from fat quality, it does not directly refine, challenge, or support the specific outcome finding in eggs_c009 regarding cardiovascular risk.",
+      "relation_confidence": "medium",
+      "relation_type": "none",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "",
+      "source_anchor_b": "",
+      "source_claim": "eggs_c019",
+      "target_claim": "eggs_c009",
+      "why_decision_relevant": ""
+    },
+    {
+      "crux_candidates": [
+        "Whether the stronger association in women (eggs_c018) is significant enough to change the interpretation of the general findings (eggs_c009)."
+      ],
+      "edge_basis": "source_explicit",
+      "failure_condition": "The edge weakens if all-cause mortality is considered a fundamentally different endpoint than cardiovascular risk.",
+      "pair_id": "pair_008",
+      "rationale": "eggs_c018 reports a stronger association between dietary cholesterol and all-cause mortality in women, which creates tension with the general finding in eggs_c009 that studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+      "relation_confidence": "high",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "stronger in women",
+      "source_anchor_b": "not generally supported an association",
+      "source_claim": "eggs_c018",
+      "target_claim": "eggs_c009",
+      "why_decision_relevant": "The edge highlights a potential sex-based difference in risk that contradicts the general finding."
+    }
+  ]
+}

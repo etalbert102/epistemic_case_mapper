@@ -1,0 +1,1204 @@
+# Task
+
+Extract a compact source-level claim card from one whole source document.
+
+# Metadata
+
+Prompt version: whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json
+Source ID: plaga_2008_metastable_black_holes
+Source title: On the potential catastrophic risk from metastable quantum-black holes produced at particle colliders
+Decision question: Why did investigators conclude that LHC operation would not create a catastrophic black hole risk?
+
+# Rules
+
+- Read the whole document before choosing claims.
+- Return 3 to 7 canonical claims for this source, not one claim per paragraph or table row.
+- A canonical claim should be something a decision analyst would want in the main evidence map.
+- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.
+- Prefer one canonical claim per distinct result cluster until the claim budget is reached.
+- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.
+- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.
+- Keep related statistics together only when they answer the same population-endpoint-dose proposition.
+- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.
+- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.
+- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.
+- Preserve key quantities inside the relevant canonical claim rather than as separate claims.
+- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.
+- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.
+- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.
+- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.
+- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.
+- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.
+- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.
+- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.
+- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.
+- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.
+- Output JSON only.
+
+# Preferred Output Schema
+
+Return only JSON matching this schema:
+{
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string"
+    },
+    "source_bottom_line": {
+      "type": "string"
+    },
+    "canonical_claims": {
+      "type": "array",
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "question_relevance": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect",
+              "scope_limit",
+              "background",
+              "irrelevant"
+            ]
+          },
+          "scope_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_importance": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "why_it_matters": {
+            "type": "string"
+          },
+          "natural_bottom_line": {
+            "type": "string"
+          },
+          "must_preserve_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_context": {
+            "type": "object",
+            "properties": {
+              "population": {
+                "type": "string"
+              },
+              "exposure_or_option": {
+                "type": "string"
+              },
+              "outcome_or_endpoint": {
+                "type": "string"
+              },
+              "evidence_design": {
+                "type": "string"
+              },
+              "stated_dose_or_threshold": {
+                "type": "string"
+              },
+              "stated_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stated_limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "applicability_limits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "population",
+              "exposure_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "stated_dose_or_threshold",
+              "stated_scope",
+              "stated_limitations",
+              "applicability_limits"
+            ]
+          },
+          "supporting_quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "quote": {
+                  "type": "string"
+                },
+                "line_hint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quote",
+                "line_hint"
+              ]
+            }
+          },
+          "quantities": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "quantity_role": {
+                      "type": "string",
+                      "enum": [
+                        "baseline_or_absolute_risk",
+                        "context",
+                        "cost_or_resource",
+                        "effect_estimate",
+                        "exposure_or_intervention_level",
+                        "population_descriptor",
+                        "source_reported_quantity",
+                        "study_descriptor",
+                        "threshold_or_guideline",
+                        "time_horizon",
+                        "uncertainty_interval"
+                      ]
+                    },
+                    "measures": {
+                      "type": "string"
+                    },
+                    "local_interpretation": {
+                      "type": "string"
+                    },
+                    "source_quote": {
+                      "type": "string"
+                    },
+                    "line_hint": {
+                      "type": "string"
+                    },
+                    "retention_hint": {
+                      "type": "string",
+                      "enum": [
+                        "audit_only",
+                        "must_retain",
+                        "use_if_space"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "quantity_role",
+                    "measures",
+                    "local_interpretation",
+                    "source_quote",
+                    "line_hint",
+                    "retention_hint"
+                  ]
+                }
+              ]
+            }
+          },
+          "scope_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "claim",
+          "question_relevance",
+          "scope_flags",
+          "decision_importance",
+          "why_it_matters",
+          "natural_bottom_line",
+          "must_preserve_terms",
+          "claim_context",
+          "supporting_quotes",
+          "quantities",
+          "scope_conditions"
+        ]
+      }
+    },
+    "excluded_as_not_decision_relevant": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "source_id",
+    "source_bottom_line",
+    "canonical_claims",
+    "excluded_as_not_decision_relevant"
+  ]
+}
+
+# Source Document With Line Numbers
+
+1:                                                    On the potential catastrophic risk from
+2:                                                  metastable quantum-black holes produced at
+3:                                                               particle colliders
+4: 
+5: 
+6: 
+7: 
+8: arXiv:0808.1415v3 [physics.gen-ph] 9 Aug 2009
+9:                                                                                    R. Plaga a
+10: 
+11:                                                                      a Franzstr. 40, D-53111 Bonn, Germany
+12: 
+13: 
+14: 
+15: 
+16:                                                 Abstract
+17: 
+18:                                                 The question of whether collider produced of subnuclear black holes might constitute
+19:                                                 a catastrophic risk is explored in a model of Casadio & Harms (2002) that treats
+20:                                                 them as quantum-mechanical objects. A plausible scenario in which these black
+21:                                                 holes accrete ambient matter at the Eddington limit shortly after their production,
+22:                                                 thereby emitting Hawking radiation that would be harmful to Earth and/or CERN
+23:                                                 and its surroundings, is described. Such black holes are shown to remain unde-
+24:                                                 tectable in existing astrophysical observations and thus evade a recent exclusion of
+25:                                                 risks from subnuclear black holes by Giddings & Mangano (2008) and and a similar
+26:                                                 one by Koch et al. (2009). I further question that these risk analyses are complete
+27:                                                 for the reason that they exclude plausible black-hole parameter ranges from safety
+28:                                                 consideration without giving any reason. Some feasible operational measures at col-
+29:                                                 liders are proposed that would allow the lowering of any remaining risk probability.
+30:                                                    Giddings & Mangano drew different general conclusions only because they made
+31:                                                 different initial assumptions about the properties of microscopic black holes, not
+32:                                                 because any of their technical conclusions are incorrect. A critical comment by Gid-
+33:                                                 dings & Mangano (2008) on the present paper and a preprint by Casadio et al.(2009)
+34:                                                 - that presents a treatment of the present issue with methods and assumptions sim-
+35:                                                 ilar to mine - are addressed in appendices.
+36: 
+37: 
+38: 
+39: 
+40:                                                   Email address: rainer.plaga@gmx.de (R. Plaga).
+41: 
+42: 
+43:                                                 Preprint submitted to Elsevier                                        28 May 2018
+44: 
+45: 1   Introduction
+46: 
+47: 
+48: 1.1 General outline of the problem
+49: 
+50: 
+51: Theories with “extra spatial dimensions”[33], are one of the most popular
+52: extensions of the standard model of particle physics and a central plank
+53: of string theory[17]. If space had more than three dimensions the “Planck
+54: energy scale” - usually thought to lie at extremely high energies - could
+55: be reached already at energies projected for new particle accelerators[2,37].
+56: Gravity becomes strong near the Planck energy. As a consequence subnu-
+57: clear “micro” black holes (mBHs) could be copiously produced at future high-
+58: energy particle colliders[14,33], such as the “Large Hadron Collider” (LHC)
+59: at CERN. At a predicted rate of up to about one BH per second at the nom-
+60: inal LHC luminosity[14], the LHC would be a “black-hole factory”[18,3]. The
+61: phenomenology of mBHs at colliders has been studied in great detail, see e.g.
+62: Cavaglia et al.[6].
+63: The possibility that a collider-produced black hole (BH) - or another exotic ob-
+64: ject - might catastrophically grow by gravitationally pulling in ambient matter
+65: and thus eventually injure or kill humans deserves careful attention[43,30,9,38].
+66: A recent scientific comparative study of global risks[34] has put a risk very
+67: similar to the one considered here (from collider-produced “strangelets”) at
+68: the top “response priority” of all current “untreated risks” (such as, for ex-
+69: ample, super-volcano eruptions and asteroid impacts). Clearly this potential
+70: risk exists only if speculative theories are correct. But these theories were con-
+71: structed to explore real possibilities. The probability that they are correct is
+72: not negligible.
+73: 
+74: 
+75: 1.2 Definition of risk scenarios
+76: 
+77: 
+78: 1.2.1 The scenarios discussed by Giddings & Mangano
+79: 
+80: Recently this risk has been studied in great detail in important papers by
+81: Giddings & Mangano (G & M)[22] 1 and Koch et al.[31]. G & M consider
+82: two frameworks for the description of mBHs. In a “first scenario” (case “D0”
+83: in Koch et al.[31]) collider-produced mBHs are treated in a popular, stan-
+84: dard manner with a semiclassical thermodynamical description (i.e. assuming
+85: a canonical ensemble). The mBH is described as a heat bath and any back
+86: reaction of the emitted particles on the mBH is neglected. mBHs are then ex-
+87: pected to decay, via the emission of “Hawking radiation”, on extremely small
+88: 1  The conclusions of a report[16] by the “lsag group” at CERN on the safety of
+89: microscopic black holes are entirely based on results from this paper.
+90: 
+91: 
+92:                                        2
+93: 
+94: timescales after their production, thus they cannot grow and pose no danger.
+95: In a second scenario (case “D1-B” in Koch et al.[31]) G & M assume that
+96: mBHs “do not undergo Hawking decay” in a purely ad hoc manner, in or-
+97: der to “conduct an independent check of their benign nature”. They further
+98: plausibly assumed that mBHs shed any electrical charge they acquired due
+99: to accretion very rapidly via the Schwinger mechanism. They rightly point
+100: out that this scenario 2, while not being completely unphysical 2 , is not pre-
+101: ferred “on very general grounds”. G & M study the behaviour of mBHs after
+102: their production at the LHC in this scenario and find that for certain possible
+103: choices of parameters a collider produced mBH might accrete Earth on time
+104: scales, quote, “that are too short to provide comfortable constraints”. The
+105: existence of mBHs within this “dangerous” parameter range is then excluded
+106: by making the case that cosmic-ray produced mBHs would accrete certain
+107: observed white dwarfs with small magnetic fields on smaller time scales than
+108: their age 3 . G & M find that the fact that our Earth, the sun and other stars
+109: were not destroyed by “dangerous” cosmic-ray produced black holes does not
+110: exclude their existence because they would not be stopped within them after
+111: production. Koch et al.[31] use similar arguments and reach the same conclu-
+112: sions.
+113: 
+114: 
+115: 1.2.2 A new scenario not discussed previously by G & M or Koch et al.:Scenario
+116:       3
+117: 
+118: It is the aim of the present paper to explore a third scenario, in addition
+119: to the two presented by G & M and the ones by Koch et al.[31] 4 . Its ba-
+120: sic difference to scenario 1 is a completely different “microcanonical” treat-
+121: ment of mBH thermodynamics (i.e. one in which the total energy remains
+122: fixed)[25,11,39,24], leading to a strongly reduced, but not completely switched-
+123: off intensity of Hawking radiation for black holes with small masses. This
+124: treatment is thought to be more fundamental than the one from G & M’s
+125: scenario 1 using the canonical ensemble. The mBHs are typically described
+126: as extended stringy objects, like e.g. “p-branes”. They are then a new type of
+127: elementary particle a “quantum black hole”[26,32,27]. It is still assumed that
+128: mBHs neutralize quasi instantenously via the Schwinger mechanism.
+129: In a sense such a framework is more plausible than both frameworks studied
+130: 2  G & M quote Unruh & Schützhold[42,41] who constructed a speculative model
+131: potentially without Hawking radiation.
+132: 3 G & M argue that neutron stars might survive on time scales comparable to their
+133: 
+134: observed age, so that their existence does not compellingly rule out the existence
+135: of “dangerous” black holes.
+136: 4 Koch et al. quote the present paper in connection with their case “D1-B” (which
+137: 
+138: corresponds to scenario 2). If they thought that the present paper is about this
+139: case, they erred. Moreover they present three additional scenarios in which mBHs
+140: are electrically charged and turn out to be “harmless”.
+141: 
+142: 
+143:                                        3
+144: 
+145: by G & M because it can avoid a violation of unitary evolution and energy
+146: conservation[12,8], serious problems that are well known to beset the first sce-
+147: nario used by G & M[36,22]. Moreover it is not “ad hoc” such as scenario 2,
+148: but based on models published in the peer-reviewed literature. G & M endorse
+149: a quantum mechanical treatment of mBHs at the end of their section 2.1, but
+150: they do not develop this possibility further in their report.
+151: Scenario 3 adopts Casadio & Harms’ (C & H)[10] model for mBHs. The fa-
+152: mous “Randall-Sundrum 2 (RS 2) model”[37] - presented in one of the most
+153: frequently quoted papers in the recent history of high energy physics - is cho-
+154: sen as the description of a 4th spatial dimension 5 . In trying to understand if
+155: mBHs could be dangerous in scenario 3 I will repeatedly resort to a use of G
+156: & M’s excellent theoretical tools. I try to assume reasonably mild worst case
+157: parameter choices, similar to the strategy of G & M 6 . However, I strove to
+158: introduce no “ad hoc” or fine tuned assumption, that would be deemed highly
+159: implausible to experts.
+160: Section 2 reviews the Hawking luminosity of mBHs within scenario 3. Section
+161: 3 explains why - for certain parameter ranges - scenario 3 predicts a disaster
+162: that is not ruled out by astrophyiscal considerations. It also explores if such
+163: disasters could be of limited scale. Section 4 points out a gap in the astrophys-
+164: ical “safety arguments” of G & M that is independent of the consideration in
+165: section 3. Finally section 5 concludes. Appendix 7 answers a critical comment
+166: of G & M on the present paper and appendix 8 comments recent work of
+167: Casadio et al. on the present issue.
+168: 
+169: 
+170: 
+171: 2   Properties of RS 2 quantum microscopic black holes in the Casa-
+172:     dio & Harms model
+173: 
+174: 
+175: 2.1 Introduction
+176: 
+177: 
+178: It seems likely that quantum black holes are in principle unstable, i.e. they
+179: eventually evaporate by Hawking radiation because no conserved quantum
+180: number forbids them to do so[22]. However within the microcanonical treat-
+181: ment of black holes developed by R.Casadio, B.Harms and Y.Leblanc [12]
+182: (assumed in my scenario 3), if their mass is smaller than a certain mass scale
+183: “MN ” of their theory, they live much longer than expected within the stan-
+184: dard thermodynamic treatment that was employed for G & M’s scenario 1.
+185: Therefore - in contradistinction to G & M’s scenario 1 - we can neither simply
+186: assume that the mBHs evaporate before they can do harm, nor that there
+187: 5 Thus I follow the treatment in section III.B of C & H[10].
+188: 6 G& M wrote: “...at each point where we encountered an uncertainty, we have
+189: replaced it by a conservative or “worst case” assumption”.
+190: 
+191: 
+192:                                        4
+193: 
+194: is no potentially dangerous Hawking radiation (as in G & M’s scenario 2).
+195: Rather we will need to study their fate after production taking into account
+196: both accretion and possible effects from Hawking radiation in section 3. As a
+197: preparation I review the intensity of Hawking radiation of quantum mBHs in
+198: scenario 3 in this section.
+199: 
+200: 
+201: 2.2 Stability of microscopic black holes for various possible input parameters
+202: 
+203: 
+204: If the additional curved spatial dimension of the RS 2 model exists, C & H
+205: predict a Hawking luminosity of the mBH of[10]:
+206: 
+207:              MBH ~c6
+208:     P5 =                                                                        (1)
+209:            15360πG2MN3
+210: 
+211: 
+212: Casadio & Harms[10] apply this formula to black holes with a mass MBH
+213: smaller than the parameter “MN ” within their theory. I follow them and all
+214: calculations in my section 3 below assume this relation. For black-hole masses
+215: exceeding MN C & H assumed the classical canonical 4-dimensional expression
+216: for the Hawking luminosity:
+217: 
+218:               ~c6
+219:     P4 =          2
+220:                      .                                                          (2)
+221:          15360πG2MBH
+222: 
+223: 
+224: The luminosity of eq.(1) is normalized to the classical expression at the mass
+225: MN (eq.(1) is already normalized in this way). The critical difference of this
+226: treatment to the usual, canonical one is exactly that the new microcanocial
+227: “quantum” expression eq.(1) has to be employed.
+228: For given curvature scale “L” (a length scale associated with the warping in
+229: the RS 2 model) C & H assumed that MN is equal to a black hole mass at
+230: which Schwarzschild radius of a 5-dimensional mBH reaches L. This gives:
+231: 
+232:             3πL2 c2 M53
+233:     MN =                                                                        (3)
+234:                8~2
+235: 
+236: Here M5 is the “new” Planck scale (set to 1 TeV in all numerical estimates
+237:                              M3
+238: below). Because P5 = P4 M BH   N
+239:                                  3 , the Hawking luminosity of black-holes with
+240: 
+241: initial masses (typically 10 −23
+242:                                   kg) much below MN (possibly ≫ kg, see section
+243: 8.2) is strongly suppressed with respect to the classical value P4 7 . However,
+244: 7  G & M do not deny that the Hawking luminosity of 5-dimensional black holes is
+245: suppressed with respect eq.(2)[22], but the suppression is weaker in scenario 1 than
+246: it is in scenario 3.
+247: 
+248: 
+249:                                         5
+250: 
+251: with growing mass (e.g. by accretion) the suppression of the Hawking radiation
+252: is lifted.
+253: The geometry of mBHs with Schwarzschild radii between L and ≈ 6 × L 8
+254: is not known, and it remains presently unclear if eq.(2) can be applied in
+255: this “transitional region” as assumed above. Only for black holes with masses
+256: above “MC ”, the mass of a mBH with a Schwarzschild radius of 6L, above
+257: which a 4-dimensional description of the mBH is a good approximation, does
+258: this appear to be certain. MC is given as:
+259: 
+260:          3Lc2
+261:     MC ≈                                                                       (4)
+262:           G
+263: 
+264: Thus one might equally well normalize the luminosity equally MC setting:
+265: 
+266:     MN = MC                                                                    (5)
+267: 
+268: 
+269: The decision between normalisation in eq.(3) and eq.(5) comes down to the
+270: question of whether the luminosity of a mBH is described by the 5-dimensional
+271: (eq.(1)) or 4-dimensional (eq.(2)) expression in the transitional region between
+272: L and ≈ 6 L. All one can presently say with reasonable certainty is that the
+273: correct normalisation lies at some intermediate value between (and including)
+274: the two extremes.
+275: C & H discuss that with their normalisation metastable mBHs with lifetimes
+276: of many years exist, but only for very large values of L approaching the ex-
+277: perimentally excluded range L>10−4 m[29]. It can be easily shown that with
+278: normalisation eq.(5) mBHs are quasistable for all possible values of L 9 .
+279: 
+280: 
+281: 2.3 Summary
+282: 
+283: 
+284: Summarising, mBHs can be “quasistable” in scenario 3 (in the sense of life-
+285: times exceeding O(msecs)), without introducing highly implausible “ad hoc”
+286: assumptions. Because G & M concluded that 5-dimensional and sufficiently
+287: stable mBHs might accrete matter at an extremely fast rate (growth rate
+288: much below a second, see below section 3) quasistable mBHs are potentially
+289: dangerous. In contradistinction to G & M’s scenario 2, my scenario 3 is plau-
+290: sible as a fundamental theory of mBHs and therefore an astrophysical (or
+291: other empirical) exclusion of the existence of such mBHs is a “critical safety
+292: 8 This range was derived from eq.(3.26) of G & M for the scales of L of interest
+293: in this manuscript: 10−9 m < L < 10−4 m. If L was smaller, mBHs in the third
+294: scenario would pose no catastrophic risk, because they would decay faster than they
+295: would grow.
+296: 9 i.e. the range from ~/(c M ) to 10−4 m
+297:                             5
+298: 
+299: 
+300: 
+301:                                         6
+302: 
+303: guarantee” rather than an “additional check of their benign nature” as it was
+304: characterised by G & M for scenario 2.
+305: 
+306: 
+307: 
+308: 3    A potential threat from microscopic black holes Hawking-radiating
+309:      at the Eddington limit within scenario 3
+310: 
+311: 
+312: 3.1 Introduction
+313: 
+314: 
+315: The mBHs in scenario 3 emit Hawking radiation, and according to eq.(1) the
+316: emitted power rises linearly with the their mass. Might this radiation be more
+317: dangerous than the mechanical action of the accretion? Unfortunately it turns
+318: out that this might be the case for certain parameter choices. In this section
+319: I choose possible and not fine-tuned parameters to study and illustrate the
+320: nature of the possible risk.
+321: 
+322: 
+323: 3.2 The nature of “Hawking radiation risk” for one exemplary choice of input
+324:     parameters
+325: 
+326: 
+327: For purely illustrative purposes - as one concrete instantiation of scenario 3 -
+328: I set L=10−7 m below. Let us further assume that MN = 1.9 × 105 kg, a value
+329: intermediate between the one given by first and second normalisation (section
+330: 2). According to eq.(1) mBHs would then have a lifetime of about 2 seconds.
+331: A collider-produced mBH that has been captured and slowed down to thermal
+332: velocities, accretes and quickly grows by the “subatomic accretion mechanism”
+333: (the sucking in of particle within an atom by the mBH) characterised in section
+334: 4.2 of G & M. According to G & M’s eq.(4.22) it will take about 0.15 msec until
+335: the so called “electromagnetic radius” reaches atomic sizes 10 . Thereafter the
+336: accretion is well described as Bondi accretion (the sucking in of whole atoms
+337: by the mBH) and according to eq.(4.40) in G& M it will take about 2.2 msec
+338: until the mBH’s Schwarzschild radius reaches L=10−7 m at a mass of 0.54 kg.
+339: The further evolution of the mBH’s shape and size in the “transitional region”
+340: between 5 and 4-dimensional behaviour (see section 2) is not well understood.
+341: For simplicity I will assume that the radius remains constant at L (a radius
+342: increase logarithmic with the mBH’s mass[19] would not change the results
+343: appreciably.). For the input parameters chosen in this subsection, eq.(4.31) of
+344: G & M predicts an increase of the mBHs mass at a rate of 1.9 × 104 kg/sec.
+345: It will then take about 20 µsec until its mass reaches about 1 kg. At this
+346: 10 A conservative thermal velocity of 1500 m/sec was used to convert the units in
+347: eq.(4.22) to a time.
+348: 
+349: 
+350:                                        7
+351: 
+352: mass the luminosity of the mBH is predicted by eq.(1) to be 5.1 × 1016 W
+353: or a mass equivalent of dm/dt = 0.57 kg/sec. It is easy to verify that the
+354: five-dimensional Eddington limit (eq.(B.25) of G & M)
+355: 
+356:                2.44 × 8πmp RB c2s
+357:     dM/dt =                                                                   (6)
+358:                       ησc
+359: 
+360: 
+361: has the same magnitude for an efficiency η=1. Here mp is the mass of the
+362: proton, RB the Bondi radius (4.1 mm for our parameters), cs the velocity of
+363: sound in the interior of Earth (5200 m/sec) and σ the Thomson cross section.
+364: Therefore the radiation pressure of this Hawking radiation is intense enough
+365: to limit the mass of accreted matter to the mass-energy radiated away: dm/dt
+366: = dM/dt i.e. the mBHs accretes at the 5-dimensional Eddington limit. All
+367: accreted mass is then reradiated, and the mBH’s mass remains constant on
+368: average. G & M discussed the possibility of a radiation-limited accretion and
+369: excluded it, but only because in their scenario 2 the Hawking radiation is
+370: completely switched off.
+371: For the next 3 × 1017 years, a time span vastly exceeding the life time of our
+372: sun as a normal star, the mBH will radiate at the quoted, constant luminosity.
+373: The power of 5.2 × 1016 W is 1300 times larger than the total geothermal
+374: power emitted by Earth[1], and only 3 times less than the total power Earth
+375: receives from the sun. The radiated power exceeds the total seismic power if
+376: the Earth by an estimated factor of many millions[15]. 17000 metric tons of
+377: ambient matter would be converted to radiation each year. While the exact
+378: phenomenology provoked by such a mBH accreting at the Eddington limit
+379: remains to be worked out, eventually catastrophic consequences due to global
+380: heating on an unprecedented scale and global-scale earth-quakes would seem
+381: certain.
+382: 
+383: 
+384: 3.3 Can the risk be ruled out with astrophysical arguments?
+385: 
+386: 
+387: Disturbingly the effects of such a mBH on a white dwarf or neutron star would
+388: be negligible. Assuming the same mBH parameters as above and the theory
+389: of section 7 in G & M, the luminosity of the mBH accreting at the centre of
+390: a white dwarf is predicted to be 5.9 × 1019 W or a fraction of 1.5 × 10−7 of
+391: the solar luminosity. This is about 104 times smaller than the cooling rate of
+392: white dwarfs in G & M’s sample[22,28] and thus cannot be detected 11 . The
+393: accretion time of a white dwarf would exceed their present age by a large
+394: 11 G & M find that many mBHs are produced in white dwarfs in the course of time.
+395: 
+396: However, these mBHs will also tend to merge over time, so that the total number of
+397: black holes in a given white dwarf might remain small. This question needs further
+398: study.
+399: 
+400: 
+401:                                        8
+402: 
+403: factor of > 1010 . Therefore no conclusions about mBHs can be drawn from
+404: the observed existence of such objects with ages exceeding a billion years. The
+405: conditions for a neutron star would be similarly unspectacular. Therefore the
+406: astrophysical argument of G & M fails to exclude the existence of mBHs in
+407: scenario 3 that are dangerous not because they accrete the whole Earth but
+408: because of their intense Hawking radiation.
+409: 
+410: 
+411: 3.4 A local accident at CERN?
+412: 
+413: 
+414: The luminosity of a mBH accreting at the Eddington limit with the parameters
+415: assumed above corresponds to 12 Mt TNT equivalent/sec[15], or the energy
+416: released in a major thermonuclear explosion per second. If such a mBH would
+417: accrete near the surface of Earth the damage they create would be much larger
+418: than deep in its interior. With the very small accretion timescale (≪ 1 second)
+419: that was found with the parameters in subsection 3.2, a mBH created with
+420: very small (thermal or subthermal) velocities in a collider would appear like a
+421: major nuclear explosion in the immediate vicinity of the collider. The risk from
+422: collider-produced black holes is not necessarily an Armageddon, but could be
+423: a locally contained catastrophe.
+424: 
+425: 
+426: 3.5 Conclusion
+427: 
+428: 
+429: If black holes are described by scenario 3 the Hawking radiation from collider-
+430: produced black holes might be dangerous. The input parameters used in this
+431: section were only one example. It can however be shown that there is a wide
+432: range of values for L and MN that lead to dangerous mBHs accreting at the
+433: Eddington limit with various luminosities.
+434: In general the example developed above demonstrates that widely held in-
+435: tuitions - namely that accretion by mBHs must be extremely slow[5], and
+436: that events which are catastrophic for Earth must also be for compact stel-
+437: lar objects (necessary for any safety argument based on such objects) - are
+438: insufficient as safety guarantees.
+439: 
+440: 
+441: 
+442: 4   Does the observed existence of old white dwarfs with a low mag-
+443:     netic field rule out “dangerous” stable black holes? - A gap in G
+444:     & M’s exclusion of their scenario 2
+445: 
+446: 
+447: In this section I point out a fundamental weakness of G & M’s argument that
+448: cosmic rays impinging on white dwarfs rule out the existence of dangerous
+449: 
+450: 
+451:                                        9
+452: 
+453: mBHs. This argument puts into question whether scenario 2 as defined in the
+454: introduction is really ruled out by existing astrophysical observations.
+455: In the text following their eq. (E.2) G & M formulate the following assumption:
+456: 
+457:      Mmin > 3 M5                                                                (7)
+458: 
+459: 
+460: Thereby G & M introduce the assumption that mBHs in general have a mini-
+461: mal mass Mmin that exceeds the new Planck scale by at least a factor of 3. This
+462: constraint is motivated by the fact that the thermodynamical, semiclassical
+463: treatment of mBHs in their scenario 2 is expected to be reliable within this
+464: mass range. This is certainly a most reasonable argument for all purposes of
+465: pure research, e.g. when predicting collider signatures etc.. However, it does
+466: not mean that mBHs below Mmin cannot be produced. It rather means that
+467: we are presently unable to reliably predict the behaviour of such mBHs 12 .
+468: This fact raises a fundamental doubt about G & M’s exclusion of “danger-
+469: ous mBHs” by way of observationally constraining the age of a certain class of
+470: white dwarfs. This exclusion depends on their careful and detailed demonstra-
+471: tion in their section 5 that “dangerous” mBHs are stopped in white dwarfs
+472: after their production in collisions of cosmic rays. However, this demonstra-
+473: tion is based on an assumed validity of the semiclassical approximation. mBHs
+474: deep in the “quantum gravity” regime (violating eq.(7)) might have smaller
+475: scattering cross section than expected in the semiclassically and escape white
+476: dwarfs, just as they could escape ordinary stars 13 . This would void G & M’s
+477: exclusion of the existence of potentially “dangerous” black holes.
+478: Concluding, G & M did not demonstrate with reasonable certainty that white
+479: dwarfs stop cosmic-ray produced mBHs in general. Their exclusion of danger-
+480: ous mBHs thus remains not definite.
+481: 
+482: 
+483: 
+484: 5    Conclusion
+485: 
+486: 
+487: 5.1 Summary of reasons for concern
+488: 
+489: 
+490: I showed in section 3 that within scenario 3 (as outlined in section 1.2.2),
+491: mBHs produced at a collider can be captured by Earth and accrete at the
+492: 12  In a previous paper[21] Giddings wrote: “For masses of order the fundamental
+493: Planck scale [i.e. M5 ] there is no control over quantum gravity effects which are
+494: likely to invalidate the semiclassical ... picture.”
+495: 13 This is a real concern because the “safety critical” black holes in theories with
+496: 
+497: 2 extra dimensions cannot be excluded anymore if their scattering cross section is
+498: smaller by less than a mere factor 10 than semiclassically expected (see fig.2 of G
+499: & M[22]).
+500: 
+501: 
+502:                                         10
+503: 
+504: Eddington limit. Thereby they might emit Hawking radiation that might be
+505: dangerous to Earth as a whole or the inhabitants of CERN and its surround-
+506: ings. The astrophysical argument by G & M[22] and Koch et al.[31] does not
+507: exclude this scenario, because it allows for lifetimes of white dwarfs and neu-
+508: tron stars with Eddington accreting mBHs (section 3) far exceeding the age of
+509: the universe. Such stars could still exist, even if they harboured a microscopic
+510: accreting black hole since the dawn of time.
+511: Moreover - in section 4 - I outlined another independent gap in the “astro-
+512: physical exclusion” of potentially dangerous mBHs.
+513: Thus, at the present stage of knowledge there is a definite residual risk from
+514: mBH production at colliders. This final conclusion differs from the one drawn
+515: by G & M. This is not because of any disagreement over any specific conclu-
+516: sion of their excellent paper. Rather the difference is the sole result of either
+517: employing the alternative, physically plausible scenario 3 for the physics of
+518: mBHs or including parameter regions in which mBHs are not expected to be
+519: well described by a semiclassical approximation of quantum gravity into the
+520: safety analysis.
+521: 
+522: 
+523: 5.2 Proposal for risk mitigating measures
+524: 
+525: 
+526: It is not the aim of the present paper to recommend or discuss consequences
+527: for the future operation of colliders comprehensively. Here I just put up for
+528: further discussion three feasible measures for risk mitigation, at least in the
+529: start up phase of LHC:
+530: 1. Increase of collision energy by reasonably small factors (say, 2) in one step
+531: and proceed to higher energies only after excluding any indication for poten-
+532: tially dangerous processes. Currently it is planned to perform the first produc-
+533: tion runs at LHC at an energy more than five times higher than previously
+534: reached[35] 14 . This might result in the copious production of completely novel
+535: states, which production was exponentially suppressed at the previous ener-
+536: gies. “Proceeding in small steps” mitigates this risk.
+537: 2. No operation in which no or only a very tiny fraction of events are analysed.
+538: Currently it is planned to eventually record and analyse only a fraction of 10−7
+539: of all events[40]. This is the equivalent of entering new territory and to be on
+540: the lookout only for the interesting but not the potentially dangerous.
+541: 3. Safety considerations influence the trigger and operational procedures. Meta
+542: stable black holes might not yield very spectacular events, but it seems de-
+543: sirable to ensure that their presence is immediately and reliably detected. An
+544: immediate interruption of operation and detailed off-line study of the event
+545: might be a possible risk-mitigating measure.
+546: 
+547: 14 Due to technical problems, very recently a reduction of this value to 3.5 times
+548: 
+549: higher has been decided[7].
+550: 
+551: 
+552:                                        11
+553: 
+554: Measures 1. only reduces the risk if measure 3. is also taken.
+555: To take such safety measures would not exclude but reduce any remaining
+556: risk. Methodologically similar measures have been taken in other areas of fun-
+557: damental research under analogous circumstances, e.g. in biotechnology[4].
+558: 
+559: 
+560: 
+561: 6   Acknowledgements
+562: 
+563: 
+564: I thank G.t’Hooft, M.Jarnot, M.Leggett and S.Pezzoni for critical comments
+565: on a previous version of the present manuscript. I thank R.Casadio for his
+566: patient and helpful explanations of his theory.
+567: 
+568: 
+569: 
+570: 7   Appendix - Answer to the manuscript “Comments on claimed
+571:     risk from metastable black holes” by S.Giddings & M.Mangano
+572: 
+573: 
+574: In a preprint[23] S.Giddings and M.Mangano (G & M) raise five objections
+575: against the conclusions of the present manuscript. I answer them below and
+576: raise, as a sixth point, an omission in their report.
+577: 1. They “find a negligible power output [from a black hole with the properties
+578: described in section 3 of the present manuscript] of the size 0.1 µW, differing
+579: by a factor of 1023 from [my] claim.”
+580: My reply:
+581: G & M employ their eq.(1)[22] - i.e. they assume scenario 1 (see section 1.2
+582: of my paper) - to calculate the power output of a 5-dimensional microscopic
+583: black hole with a radius of 10−7 m within the canonical thermodynamic de-
+584: scription of microscopic black holes. They correctly find it to be 23 orders of
+585: magnitude smaller than the power output calculated in section 3 of my paper
+586: for a black hole of the same size and conclude that my result is erroneous.
+587: They claim that I mistakenly applied their eq.(1) “written in terms of the
+588: mass using the four-dimensional relationship between radius and mass”.
+589: However it is the crucial point of my paper to introduce scenario 3 that does
+590: not employ their eq.(1) or my eq.(2) i.e. a thermodynamic, canonical descrip-
+591: tion to calculate the power output of the black hole. Rather, following Casadio
+592: & Harms[10], it exclusively employs my eq.(1) (eq. (28) in [10]) which has a
+593: qualitatively different form. Following Casadio & Harms [10] (sentence after
+594: their eq.(28)), my eq.(2) was only used to normalize the luminosity eq.(1) at
+595: the mass MN .
+596: This objection criticises something I did not do and did not intend to do.
+597: Therefore it does not apply to my paper. Implicitly G & M simply insist, here
+598: and in the third objection below, on a canonical treatment of mBHs, i.e. to
+599: employ their scenario 1, without stating any reason for implicitely ruling out
+600: 
+601: 
+602:                                      12
+603: 
+604: scenario 3.
+605: 2. They claim that “even ignoring the inconsistency” above, the bounds es-
+606: tablished in Giddings & Mangano[22] on Eddington limited accretion (like
+607: established in their eq.(B13)) still apply.
+608: I reply:
+609: As already pointed out in the 4th sentence after my eq.(6) all results on
+610: Eddington limited accretion of G&M were derived for their scenario 2 with
+611: “switched off” Hawking radiation and therefore do not apply for the case
+612: “Hawking-radiation limited” accretion at the Eddington limit, considered in
+613: my section 3.
+614: 3. They feel that a “serious difference between the microcanonical picture and
+615: the usual Hawking calculation appears implausible in the large black hole re-
+616: gion” I considered (following Casadio & Harms).
+617: I reply:
+618: G & M give reason for this evaluation - which, I note, is also in flat contradic-
+619: tion to the work of Casadio & Harms[10] - so I need to wait for their promised
+620: “further comments” to take a position.
+621: In light of our poor understanding of black-hole evaporation in general (see
+622: quote below) I feel that in any case it will be difficult to rule out such a serious
+623: difference with reasonable certainty.
+624: 4. G & M rightly point out that in my quote: “...at each point where we
+625: encountered an uncertainty, we have replaced it by a conservative or “worst
+626: case” assumption”. The bold “or” was missing. I corrected this oversight in
+627: the revised version.
+628: 5. G & M further propose that I quote from an abstract of a talk by W.Unruh[41],
+629: in addition to the references of my paper. I hereby accept their suggestion.
+630: An excerpt from Unruh’s abstract reads: “...Black Hole evaporation is one of
+631: the most puzzling features of gravity and quantum theory. The derivation by
+632: Hawking is nonsense, in that it uses features of the theory in regimes where
+633: we know the theory is wrong. Analog models of gravity have given us a clue
+634: that despite the shaky derivation, the effect is almost certainly right. Where
+635: then are the particles in black hole evaporation really created?...”
+636: From this quote I conclude: theories with extra dimensions robustly predict
+637: the existence of microscopic collider-producible black holes and Hawking ra-
+638: diation. But the detailed decay properties presently remain very uncertain. It
+639: then seems important to study the safety issue assuming plausible, literature-
+640: based alternatives to the standard thermodynamical treatment of Hawking
+641: radiation. This is the aim of my paper.
+642: 6. Finally G & M’s comment did not address section 4 of the present manuscript
+643: in which I argue that their exclusion of dangerous mBHs is not completely
+644: definite for a general, simple reason, completely independent of the above ar-
+645: guments.
+646: I stand by my general conclusion that there is a residual catastrophic risk from
+647: metastable microscopic black holes produced at particle colliders.
+648: 
+649: 
+650: 
+651:                                        13
+652: 
+653: 8   Appendix - Comment on the manuscript “On the possibility of
+654:     Catastrophic Black Hole Growth in the Warped Brane World
+655:     Scenario at the LHC” by Casadio et al.
+656: 
+657: 
+658: 8.1 Identity of the general approach of Casadio et al. and the present paper
+659: 
+660: 
+661: In a recent important preprint[13], Casadio et al. studied the same question as
+662: the present manuscript: might collider-produced black holes grow catastrophi-
+663: cally? Based on their own earlier groundbreaking 15 work[10] they assume the
+664: same theoretical approaches for the behaviour of quantum black holes as I
+665: did. For the calculation of accretion (the sucking in of matter by gravitational
+666: forces) we both used the results of Giddings & Mangano[22]. As a consequence,
+667: e.g., the calculated lifetimes of black holes in the left-handed panel of their
+668: fig. 4 16 are reproduced by my eq.(1). We will see below that with identical
+669: parameter choices their results on black-hole accretion also broadly agree with
+670: the ones obtained by the methods employed in the present manuscript 17 .
+671: Casadio et al.[13] and I study the evolution of collider-produced metastable
+672: black holes under the same general assumptions that correspond to scenario
+673: 3 discussed in the introduction to the present manuscript. This disagrees with
+674: the criticism of the CERN team[23] of my manuscript that basically denied
+675: the possibility of my third scenario (see above section 7). Still, Casadio et
+676: al. “argue against the possibility of catastrophic black hole growth” whereas
+677: I find a “residual risk” for it. Let us examine in detail how their parameter
+678: choices differ from mine.
+679: 
+680: 
+681: 8.2 Analysis of parameter choices of Casadio et al.
+682: 
+683: 
+684: 8.2.1 The crucial difference is that Casadio et al. assumed that Mc < 104 kg
+685: 
+686: For the parameter values generally assumed by Casadio et al.[13] 18 (new
+687: Planck scale M5 = 1 TeV/c2 , atomic number accreted nuclei A=53, mate-
+688: rial constant K=224 J/m2 , number of dimensions D=5) I find from eq.(4.22)
+689: of Giddings & Mangano[22] that a black hole needs a time taccr ≈ 0.6 msec
+690: 
+691: 15 Casadio & Harms (2002) Ref.[10] is in the “top cite 100+” category of High-
+692: 
+693: Energy Physics Literature Database “Spires” and one of the earliest and most fre-
+694: quently cited papers on microscopic black holes.
+695: 16 My discussion refers exclusively to their final version 2 of their manuscript.
+696: 17 Casadio et al. modelled the evolution of quantum black holes numerically, whereas
+697: 
+698: I merely used analytical approximations from Giddings & Mangano[22] for the ac-
+699: cretion.
+700: 18 Given in their section II.C and IV.B.
+701: 
+702: 
+703: 
+704: 
+705:                                         14
+706: 
+707:                            ◦
+708: to reach a size 19 of 1 A via “subatomic accretion” (i.e. via gravitationally
+709: sucking in elementary particles within one atom) 20 . When the expected life-
+710: time of the black holes “tdecay ” exceeds taccr the black hole can reach this size
+711: before decaying and at later times “Bondi accretion” (the sucking in of whole
+712: atoms) takes over which is even faster than subatomic accretion for the as-
+713: sumed parameters (its time scale is about 0.1 msec) and leads to exponential,
+714: catastrophic growth. However, one sees from fig. 4 in Casadio et al.[13] that
+715: tdecay remains below taccr just for the range of critical masses Mc < 104 kg con-
+716: sidered by Casadio et al.[13] (Mc is a “free parameter” of the theory of Casadio
+717: & Harms[10], i.e. its value is not fixed). Therefore, I completely agree with the
+718: technical conclusion of Casadio et al.[13]: If Mc < 104 kg, collider-produced
+719: black holes never reach the Bondi regime and growth to catastrophic sizes is
+720: not expected.
+721: However, the crucial question clearly is: can Mc exceed a critical value of about
+722: 1.3 × 104 kg, which would make the predicted liftime tdecay of quantum black
+723: holes in the theory of Casadio & Harms exceed the accretion time taccr , needed
+724: to reach the catastrophic Bondi regime? In section 3 of the present paper I
+725: chose Mc = 1.9 × 105 kg (called MN there), thus implying that it can. On the
+726: other hand Casadio et al.[10] call values of Mc exceeding 104 kg “physically
+727: unreasonable”. Let us analyse how they reached this conclusion, that directly
+728: led them to the exclusion of a catastrophic risk.
+729: 
+730: 
+731: 8.2.2 Can Mc > 104 kg be excluded?
+732: 
+733: Casadio et al.[13] employed their eq.(18) (in section II.C) and eq.(25) (in
+734: section III.A) 21 as the “defining condition” to estimate the value Mc as a
+735: function of the warping scale “L”, a free parameter in the RS2 theory of extra
+736: dimensions[37] 22 . Using eq.(18) (eq.(25)) I find that Mc exceeds the critical
+737: value of Mc of about 1.3 × 104 kg where the growth becomes catastrophic if
+738: L > 15.3 µm (L > 12.2 micrometer). As pointed out by Casadio et al. the
+739: current best experimental current limit on L is L < 44 µm[29]. This limit is
+740: a 95 % upper limit, i.e. there is a chance of 5 % that L actually exceeds 44
+741: µm. I conclude therefore that there is certainly no comprehensible reason to
+742: exclude values of L between 15.3 and 44 µm.
+743: 
+744: 19 more precisely: to reach an electromagnetic capture radius “R
+745:                                                                  EM ”.
+746: 20 A thermal velocity of 1500 m/sec of the ambient atoms was assumed.
+747: 21 The derivation of eq.(25) is based on the requirement that the so called “electro-
+748: 
+749: magnetic capture radius” of a black hole with a mass of Mc shall always be smaller
+750: than L. I do not understand what plausible connection there could be between the
+751: capture radius and black hole properties. However, in view of our limited under-
+752: standing of black holes with radii near L their eq.(25) might accepted; besides their
+753: eq.(16) and eq.(18), as another “possible choice” for the estimation of Mc .
+754: 22 L specifies the length over which a fourth spatial dimension is significantly curved.
+755: 
+756: 
+757: 
+758: 
+759:                                           15
+760: 
+761: In section II.C directly after pointing out that L . 44 µm, Casadio et al.
+762: continue: “For example setting L ≃ 1 µm ... gives ... Mc ≃ 102 kg.” This is
+763: correct, but in the rest of their paper, the latter value is suddenly and without
+764: giving any reason, treated as an upper limit on Mc . To me only the value of Mc
+765: obtained with 44 µm is comprehensible as the upper limit. Inserting L=44 µm
+766: into eq.(18) (eq.(25)) of Casadio et al. one obtains Mc =1.1 × 105 kg (2.2 ×
+767: 106 kg) as the presently valid upper limit. The predicted lifetime of the black
+768: hole assuming Mc = 1.1 × 105 kg tdecay = 0.3 sec, exceeds the accretion time
+769: scale taccr =0.6 msec by a factor of 50: in this case growth is catastrophic.
+770: Moreover - as pointed out by Casadio et al.[13] - within the uncertainties of
+771: their theory, eq.(16) is, quote, “another possible choice” for the estimation of
+772: Mc . Inserting L=44 µm into eq.(16) of Casadio et al. one obtains the huge value
+773: Mc =5.9 × 1022 kg. With this choice for Mc growth is found to be catastrophic
+774: for all reasonable values of L 23 .
+775: Until reasons are brought forward to exclude values of L exceeding 15.3 µm
+776: and the use of their eq.(16) to estimate Mc , catastrophic growth remains a
+777: possibility.
+778: 
+779: 
+780: 8.3 The “astrophysical” safety argument of G & M in the light of the model
+781:     of Casadio et al.
+782: 
+783: 
+784: Giddings & Mangano[22] did not categorically exclude the possibility of catas-
+785: trophic growth, but argued that if it happened certain astrophysical objects
+786: would be completely consumed by cosmic-ray produced black holes on time
+787: scales smaller than their age, which is contrary to observations. In the current
+788: manuscript (section 3) I discussed a mechanism that invalidates this argument
+789: in the case of metastable black holes (“third scenario”) because their growth
+790: by accretion is eventually stopped at intermediate sizes via their emission of
+791: Hawking radiation. The question of which other mechanisms in the evolution
+792: of quantum black holes in a microcanonical framework might avoid G & M’s
+793: basic safety argument needs further scrutiny.
+794: 
+795: 
+796: 8.4 Summary
+797: 
+798: 
+799: Summarizing, the work of Casadio et al.[13] confirms the validity and plausibil-
+800: ity of my “scenario 3” based on their microcanonical description of metastable
+801: black holes. This scenario was completely excluded from the safety analysis
+802: 
+803: 23 I discuss these alternative choices in my section 2. I call Casadio et al.’s M “M ”,
+804:                                                                                  c  N
+805: their eqs.(16),(18) correspond to my eqs.(5),(3). My choice of Mc =1.9 × 105 kg in
+806: section 3.2 is justified when assuming eq.(16) in Casadio et al..
+807: 
+808: 
+809:                                          16
+810: 
+811: conducted by CERN[22] 24 without providing any reason for this, at least up
+812: to now (see third bullet point in section 7). Casadio et al. correctly and usefully
+813: identify the range of a crucial theoretical parameter Mc for which black-hole
+814: growth is not catastrophic, but offer no argument of how to exclude that the
+815: real Mc lies outside this range.
+816: Acknowledgement
+817: I thank M.Jarnot, M.Leggett, L.Lueptow, E.Penrose and S.Pezzoni for helpful
+818: remarks on previous versions of this section and R.Casadio and B.Harms for
+819: answering some questions about their manuscript.
+820: 
+821: 
+822: References
+823: 
+824: 
+825: [1] T.Araki et al., Nature 436, 499-503 (2005).
+826: 
+827: [2] N.Arkani-Hamed, S.Dimopoulos, G.Dvali, Phys.Lett. B429, 263-272 (1998)
+828:     [hep-ph/9803315].
+829: 
+830: [3] A.Barrau, J.Grain, CERN Courier, November 2004.
+831: 
+832: [4] Berg, P. et al., Proc. Nat. Acad. Sci. 72, 1981-1984 (1975);
+833:     http://en.wikipedia.org/wiki/Asilomar conference on recombinant DNA,
+834:     accessed July 23, 2008.
+835: 
+836: [5] M.Bleicher, Eur.J.Phys 28, 509-516 (2007); arXiv:physics/0703062.
+837: 
+838: [6] M.Cavaglia, R.Godang, L.M.Cremaldi, D.J.Summers, JHEP06, 055 (2007).
+839: 
+840: [7] A.Cho, Science 325, 522 (2009).
+841: 
+842: [8] C.G.Callan, J.M. Maldacena, Nucl. Phys. B472, 591 (1996).
+843: 
+844: [9] F.Calogero, Interdisciplinary Science Reviews 25,191-202 (2000).
+845: 
+846: [10] R.Casadio, B.Harms, Int.J.Mod.Phys. A17, 4635-4646 (2002) [hep-th/0110255].
+847: 
+848: [11] R.Casadio, B.Harms, Phys.Rev. D 64, 024016 (2001).
+849: 
+850: [12] R.Casadio, B.Harms, Y.Leblanc, Phys. Rev. D 58, 044014 (1998).
+851: 
+852: [13] R.Casadio, S.Fabi, B.Harms, [arXiv.org:0901.2948v2] (2009).
+853: 24 Even in a revised version of their report with “updated references”([22] v2 of
+854: 
+855: the arXiv version) that was prepared after its authors had quoted Ref.[10] in Ref.
+856: [23]) they fail to even quote Casadio & Harms[10] or indeed any paper on the
+857: microcanonical approach to black hole physics. The revised manuscript still contains
+858: sentences such as “Thus, on very general grounds such [with a mass of about 10
+859: TeV] black holes are expected to be extremely short-lived... tD ≈ 10−27 sec...” which
+860: completely fly into the face of Casadio et al.’s conclusions: they argue that lifetimes
+861: exceeding tD by about 17 orders of magnitude are possible.
+862: 
+863: 
+864:                                          17
+865: 
+866: [14] S.Dimopoulos, G.Landsberg, Phys.Rev.Lett. 87,161602 (2001).
+867: 
+868: [15] http://en.wikipedia.org/wiki/Richter magnitude scale, accessed July, 17, 2008.
+869: 
+870: [16] J.Ellis et al., cern.ch/lsag/LSAG-Report.pdf (2008).
+871: 
+872: [17] S.Forste, Fortsch.Phys. 50, 221-403 (2002).
+873: 
+874: [18] S.B.Giddings, Gen.Rel.Grav. 34, 1775-1779 (2002) [hep-ph/0205205v1].
+875: 
+876: [19] S.B.Giddings, Phys.Rev. D67, 126001 (2003).
+877: 
+878: [20] S.B.Giddings, [hep-ph/0709.1107v3].
+879: 
+880: [21] S.B.Giddings, S.Thomas, Phys. Rev. D 65, 056010 (2002).
+881: 
+882: [22] S.B.Giddings, M.Mangano, CERN-PH-TH/2008-025,[hep-ph/0806.3381v1],
+883:      Phys.Rev.D78, 035009 (2008).
+884: 
+885: [23] S.B.Giddings, M.Mangano, CERN-PH-TH/2008-184,[hep-ph/0808.4087v1].
+886: 
+887: [24] D.M.Gingrich, K.Martell, J. Phys. G: Nucl. Part. Phys. 35, 035001 (2008).
+888: 
+889: [25] B.C.Harms, Y.Leblanc, Phys.Rev. D46, 2334-2340 (1992).
+890: 
+891: [26] B.C.Harms, Y.Leblanc, Phys. Rev. D47, 2438 - 2445 (1993).
+892: 
+893: [27] C.F.E. Holzhey, F. Wilczek, Nucl. Phys. B, 380, 447 - 477 (1992).
+894: 
+895: [28] J.Isern et al., [astro-ph/0806.2807v1], ApJL in the press (2008).
+896: 
+897: [29] D.J.Kapner et al., Phys.Rev.Lett. 98, 021101 (2007).
+898: 
+899: [30] A.Kent, Risk Anal. 24,157-168 (2004).
+900: 
+901: [31] B.Koch, M.Bleicher, H.Stöcker, [hep-ph/0807.3349v1] (2008), Phys.Lett. B672,
+902:      71-76 (2009).
+903: 
+904: [32] E.Keski-Vakkuri, P.Kraus, Nucl.Phys. B491, 249 (1997).
+905: 
+906: [33] G.Landsberg, J.Phys. G32, R337-R365 (2006).
+907: 
+908: [34] L.M.W.Leggett, Futures 38, 778 - 809 (2006).
+909: 
+910: [35] LHC                           commissioning                         home,
+911:      http://lhc-commissioning.web.cern.ch/lhc-commissioning/, accessed May 27,
+912:      2008.
+913: 
+914: [36] T.Banks, M.E.Peskin, L.Susskind, Nucl.Phys. 244,125 (1984); M.K.Parikh,
+915:      hep-th/0402166v2.
+916: 
+917: [37] L.Randall,R.Sundrum, Phys.Rev.Lett. 83,4690 (1999).
+918: 
+919: [38] M.Rees, Our Final Hour: A Scientist’s Warning: How Terror, Error, and
+920:      Environmental Disaster Threaten Humankind’s Future In This Century On
+921:      Earth and Beyond, Basic books (2003).
+922: 
+923: 
+924:                                         18
+925: 
+926: [39] T.G. Rizzo, Class.Quant.Grav. 23, 4263-4280 (2006).
+927: 
+928: [40] S.Stapnes, Nature 448, 290-296 (2007).
+929: 
+930: [41] W.                                                                 Unruh,
+931:      http://www.perimeterinstitute.ca/Events/Effective Models of Quantum Gravity/Abstracts
+932: 
+933: [42] W.G.Unruh, R.Schützhold, Phys.Rev D71, 024028 (2005) [gr-qc/0408009].
+934: 
+935: [43] W.L.Wagner, F.Wilczek, Letters to the editor, Scientific American, July 1999.
+936: 
+937: 
+938: 
+939: 
+940:                                        19
+941:

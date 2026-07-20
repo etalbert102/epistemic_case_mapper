@@ -148,6 +148,20 @@ The [multi-model blinded audit](../review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md)
 
 This is an agent-authored qualitative audit, not a human score. Its strongest implication is methodological: a map plus erosion audit lets a reviewer identify exactly where a baseline preserved, flattened, omitted, or distorted a distinction. The result is allowed to narrow the project's claim.
 
+## Live Generation Boundary
+
+The [paired Gemma MLX packet](../../examples/live_model_runs/README.md) records
+two production map runs with prompt/raw transcripts and unedited outputs. The
+eggs run produced a semantically valid 26-claim, 22-relation candidate rated
+`usable_with_review`; its quality report still flags excess claim count,
+near-duplicates, and skipped chunks. The LHC run suffered two backend timeouts
+and produced one claim with no relations or cruxes. Its attempted repair failed
+schema and coverage validation, so the output remains explicitly rejected.
+
+The pair demonstrates that the machinery can generate a reviewable map and can
+fail visibly. It does not show that a local 12B model reliably produces maps at
+curated quality, and neither live output has independent human approval.
+
 ## Direct Answers To The Four Judge Questions
 
 ### Would this help someone reason better?
@@ -160,7 +174,7 @@ The same schema and validators operate across a closed technical-risk case, a he
 
 ### Does it scale with better AI or more compute?
 
-The workflow decomposes extraction, relation proposal, crux identification, synthesis, stress testing, and review into bounded stages, so stronger models or additional passes can be substituted locally. Current high-quality maps still depend materially on curation; hands-free quality is not demonstrated.
+The workflow decomposes extraction, relation proposal, crux identification, synthesis, stress testing, and review into bounded stages, so stronger models or additional passes can be substituted locally. The paired live run demonstrates one valid-with-review candidate and one explicit failure from the same Gemma MLX backend. Current high-quality maps still depend materially on curation; hands-free quality is not demonstrated.
 
 ### Does it compound?
 

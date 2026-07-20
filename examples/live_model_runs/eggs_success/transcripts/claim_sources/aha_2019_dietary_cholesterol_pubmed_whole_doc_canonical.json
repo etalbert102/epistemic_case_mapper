@@ -1,0 +1,467 @@
+{
+  "claims": [
+    {
+      "claim": "Observational studies generally do not indicate a significant association between dietary cholesterol intake and cardiovascular disease risk.",
+      "claim_quantities": [],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Provides the foundational evidence from large-scale population studies regarding the safety of dietary cholesterol.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Provides the foundational evidence from large-scale population studies regarding the safety of dietary cholesterol.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk.",
+      "span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Observational studies",
+          "exposure_or_option": "Dietary cholesterol",
+          "outcome_or_endpoint": "Cardiovascular disease risk",
+          "population": "General population (implied by observational study scope)",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "multiple countries"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "observational studies",
+          "significant association",
+          "cardiovascular disease risk"
+        ],
+        "natural_bottom_line": "Observational data suggests that dietary cholesterol is not significantly associated with cardiovascular disease risk.",
+        "quantities": [],
+        "scope_conditions": [
+          "observational data"
+        ],
+        "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+        "supporting_quotes": [
+          {
+            "line_hint": "125",
+            "quote": "Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Meta-analyses of intervention studies show that cholesterol intakes exceeding current average levels are associated with elevated total or low-density lipoprotein (LDL) cholesterol concentrations.",
+      "claim_quantities": [],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations.",
+      "span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Meta-analyses of intervention studies",
+          "exposure_or_option": "Cholesterol intakes exceeding current average levels",
+          "outcome_or_endpoint": "Total or low-density lipoprotein cholesterol concentrations",
+          "population": "General population (intervention study participants)",
+          "stated_dose_or_threshold": "exceeding current average levels",
+          "stated_limitations": [],
+          "stated_scope": []
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "meta-analyses",
+          "intervention studies",
+          "elevated total or low-density lipoprotein cholesterol concentrations"
+        ],
+        "natural_bottom_line": "High dietary cholesterol can increase total and LDL cholesterol levels in some intervention studies.",
+        "quantities": [],
+        "scope_conditions": [
+          "intervention study results",
+          "lipid measurements"
+        ],
+        "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+        "supporting_quotes": [
+          {
+            "line_hint": "125",
+            "quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.",
+      "claim_quantities": [],
+      "decision_importance": "critical",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+      "span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Science Advisory/Guidance",
+          "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)",
+          "outcome_or_endpoint": "Cardiovascular health / diet quality",
+          "population": "General population",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Specific dietary cholesterol targets are challenging to implement"
+          ],
+          "stated_scope": [
+            "clinicians",
+            "consumers"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "healthy dietary patterns",
+          "Mediterranean-style",
+          "DASH-style",
+          "specific dietary cholesterol target"
+        ],
+        "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.",
+        "quantities": [],
+        "scope_conditions": [
+          "official guidance",
+          "dietary patterns"
+        ],
+        "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+        "supporting_quotes": [
+          {
+            "line_hint": "125",
+            "quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake."
+          },
+          {
+            "line_hint": "125",
+            "quote": "A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health."
+          }
+        ]
+      }
+    }
+  ],
+  "extractor": "whole-doc",
+  "prompt_version": "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json",
+  "source_card": {
+    "canonical_claims": [
+      {
+        "claim": "Observational studies generally do not indicate a significant association between dietary cholesterol intake and cardiovascular disease risk.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Observational studies",
+          "exposure_or_option": "Dietary cholesterol",
+          "outcome_or_endpoint": "Cardiovascular disease risk",
+          "population": "General population (implied by observational study scope)",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "multiple countries"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          "observational studies",
+          "significant association",
+          "cardiovascular disease risk"
+        ],
+        "natural_bottom_line": "Observational data suggests that dietary cholesterol is not significantly associated with cardiovascular disease risk.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "observational data"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "125",
+            "quote": "Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk."
+          }
+        ],
+        "why_it_matters": "Provides the foundational evidence from large-scale population studies regarding the safety of dietary cholesterol."
+      },
+      {
+        "claim": "Meta-analyses of intervention studies show that cholesterol intakes exceeding current average levels are associated with elevated total or low-density lipoprotein (LDL) cholesterol concentrations.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Meta-analyses of intervention studies",
+          "exposure_or_option": "Cholesterol intakes exceeding current average levels",
+          "outcome_or_endpoint": "Total or low-density lipoprotein cholesterol concentrations",
+          "population": "General population (intervention study participants)",
+          "stated_dose_or_threshold": "exceeding current average levels",
+          "stated_limitations": [],
+          "stated_scope": []
+        },
+        "claim_quantities": [],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          "meta-analyses",
+          "intervention studies",
+          "elevated total or low-density lipoprotein cholesterol concentrations"
+        ],
+        "natural_bottom_line": "High dietary cholesterol can increase total and LDL cholesterol levels in some intervention studies.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "intervention study results",
+          "lipid measurements"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "125",
+            "quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations."
+          }
+        ],
+        "why_it_matters": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk."
+      },
+      {
+        "claim": "The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Science Advisory/Guidance",
+          "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)",
+          "outcome_or_endpoint": "Cardiovascular health / diet quality",
+          "population": "General population",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "Specific dietary cholesterol targets are challenging to implement"
+          ],
+          "stated_scope": [
+            "clinicians",
+            "consumers"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "critical",
+        "must_preserve_terms": [
+          "healthy dietary patterns",
+          "Mediterranean-style",
+          "DASH-style",
+          "specific dietary cholesterol target"
+        ],
+        "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "official guidance",
+          "dietary patterns"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "125",
+            "quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake."
+          },
+          {
+            "line_hint": "125",
+            "quote": "A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health."
+          }
+        ],
+        "why_it_matters": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health."
+      }
+    ],
+    "excluded_as_not_decision_relevant": [
+      "Publication types (Meta-Analysis, Systematic Review)",
+      "MeSH terms",
+      "Substances list"
+    ],
+    "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+    "source_id": "aha_2019_dietary_cholesterol_pubmed"
+  },
+  "source_evidence_unit_quality_report": {
+    "exact_quote_count": 4,
+    "issues": [],
+    "quantity_tuple_count": 0,
+    "quote_count": 4,
+    "schema_id": "source_evidence_unit_quality_report_v1",
+    "source_id": "aha_2019_dietary_cholesterol_pubmed",
+    "status": "ready",
+    "unit_count": 3,
+    "warning_counts": {}
+  },
+  "source_evidence_units": {
+    "schema_id": "source_evidence_units_v1",
+    "source_id": "aha_2019_dietary_cholesterol_pubmed",
+    "units": [
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "Observational studies",
+          "exposure_or_option": "Dietary cholesterol",
+          "outcome_or_endpoint": "Cardiovascular disease risk",
+          "population": "General population (implied by observational study scope)",
+          "stated_scope": "['multiple countries']"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "Cardiovascular disease risk",
+        "estimate": "",
+        "evidence_type": "Observational studies",
+        "exposure_or_intervention": "Dietary cholesterol",
+        "method": "Observational studies",
+        "must_preserve_terms": [
+          "observational studies",
+          "significant association",
+          "cardiovascular disease risk"
+        ],
+        "natural_bottom_line": "Observational data suggests that dietary cholesterol is not significantly associated with cardiovascular disease risk.",
+        "population": "General population (implied by observational study scope)",
+        "proposition": "Observational studies generally do not indicate a significant association between dietary cholesterol intake and cardiovascular disease risk.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "125",
+            "quote": "Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "observational data"
+        ],
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk.",
+        "source_span": "125",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "aha_2019_dietary_cholesterol_pubmed_eu001",
+        "warnings": [],
+        "why_it_matters": "Provides the foundational evidence from large-scale population studies regarding the safety of dietary cholesterol."
+      },
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "Meta-analyses of intervention studies",
+          "exposure_or_option": "Cholesterol intakes exceeding current average levels",
+          "outcome_or_endpoint": "Total or low-density lipoprotein cholesterol concentrations",
+          "population": "General population (intervention study participants)",
+          "stated_dose_or_threshold": "exceeding current average levels"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "Total or low-density lipoprotein cholesterol concentrations",
+        "estimate": "exceeding current average levels",
+        "evidence_type": "Meta-analyses of intervention studies",
+        "exposure_or_intervention": "Cholesterol intakes exceeding current average levels",
+        "method": "Meta-analyses of intervention studies",
+        "must_preserve_terms": [
+          "meta-analyses",
+          "intervention studies",
+          "elevated total or low-density lipoprotein cholesterol concentrations"
+        ],
+        "natural_bottom_line": "High dietary cholesterol can increase total and LDL cholesterol levels in some intervention studies.",
+        "population": "General population (intervention study participants)",
+        "proposition": "Meta-analyses of intervention studies show that cholesterol intakes exceeding current average levels are associated with elevated total or low-density lipoprotein (LDL) cholesterol concentrations.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "125",
+            "quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "intervention study results",
+          "lipid measurements"
+        ],
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations.",
+        "source_span": "125",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "aha_2019_dietary_cholesterol_pubmed_eu002",
+        "warnings": [],
+        "why_it_matters": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk."
+      },
+      {
+        "caveat": "['Specific dietary cholesterol targets are challenging to implement']",
+        "claim_context": {
+          "evidence_design": "Science Advisory/Guidance",
+          "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)",
+          "outcome_or_endpoint": "Cardiovascular health / diet quality",
+          "population": "General population",
+          "stated_limitations": "['Specific dietary cholesterol targets are challenging to implement']",
+          "stated_scope": "['clinicians', 'consumers']"
+        },
+        "comparator": "",
+        "decision_importance": "critical",
+        "endpoint": "Cardiovascular health / diet quality",
+        "estimate": "",
+        "evidence_type": "Science Advisory/Guidance",
+        "exposure_or_intervention": "Healthy dietary patterns (Mediterranean, DASH)",
+        "method": "Science Advisory/Guidance",
+        "must_preserve_terms": [
+          "healthy dietary patterns",
+          "Mediterranean-style",
+          "DASH-style",
+          "specific dietary cholesterol target"
+        ],
+        "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.",
+        "population": "General population",
+        "proposition": "The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "125",
+            "quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+            "quote_match_status": "exact_or_normalized"
+          },
+          {
+            "line_hint": "125",
+            "quote": "A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "official guidance",
+          "dietary patterns"
+        ],
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+        "source_span": "125",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "aha_2019_dietary_cholesterol_pubmed_eu003",
+        "warnings": [],
+        "why_it_matters": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health."
+      }
+    ]
+  },
+  "source_quantity_tuples": {
+    "canonical_record_type": "source_result_quantity_tuple_v1",
+    "schema_id": "source_quantity_tuples_v1",
+    "source_id": "aha_2019_dietary_cholesterol_pubmed",
+    "tuples": []
+  }
+}

@@ -1,0 +1,455 @@
+# Task
+
+Extract a compact source-level claim card from one whole source document.
+
+# Metadata
+
+Prompt version: whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json
+Source ID: aha_2019_dietary_cholesterol_pubmed
+Source title: Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association
+Decision question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+
+# Rules
+
+- Read the whole document before choosing claims.
+- Return 3 to 3 canonical claims for this source, not one claim per paragraph or table row.
+- A canonical claim should be something a decision analyst would want in the main evidence map.
+- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.
+- Prefer one canonical claim per distinct result cluster until the claim budget is reached.
+- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.
+- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.
+- Keep related statistics together only when they answer the same population-endpoint-dose proposition.
+- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.
+- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.
+- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.
+- Preserve key quantities inside the relevant canonical claim rather than as separate claims.
+- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.
+- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.
+- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.
+- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.
+- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.
+- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.
+- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.
+- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.
+- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.
+- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.
+- Output JSON only.
+
+# Preferred Output Schema
+
+Return only JSON matching this schema:
+{
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string"
+    },
+    "source_bottom_line": {
+      "type": "string"
+    },
+    "canonical_claims": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "question_relevance": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect",
+              "scope_limit",
+              "background",
+              "irrelevant"
+            ]
+          },
+          "scope_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_importance": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "why_it_matters": {
+            "type": "string"
+          },
+          "natural_bottom_line": {
+            "type": "string"
+          },
+          "must_preserve_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_context": {
+            "type": "object",
+            "properties": {
+              "population": {
+                "type": "string"
+              },
+              "exposure_or_option": {
+                "type": "string"
+              },
+              "outcome_or_endpoint": {
+                "type": "string"
+              },
+              "evidence_design": {
+                "type": "string"
+              },
+              "stated_dose_or_threshold": {
+                "type": "string"
+              },
+              "stated_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stated_limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "applicability_limits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "population",
+              "exposure_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "stated_dose_or_threshold",
+              "stated_scope",
+              "stated_limitations",
+              "applicability_limits"
+            ]
+          },
+          "supporting_quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "quote": {
+                  "type": "string"
+                },
+                "line_hint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quote",
+                "line_hint"
+              ]
+            }
+          },
+          "quantities": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "quantity_role": {
+                      "type": "string",
+                      "enum": [
+                        "baseline_or_absolute_risk",
+                        "context",
+                        "cost_or_resource",
+                        "effect_estimate",
+                        "exposure_or_intervention_level",
+                        "population_descriptor",
+                        "source_reported_quantity",
+                        "study_descriptor",
+                        "threshold_or_guideline",
+                        "time_horizon",
+                        "uncertainty_interval"
+                      ]
+                    },
+                    "measures": {
+                      "type": "string"
+                    },
+                    "local_interpretation": {
+                      "type": "string"
+                    },
+                    "source_quote": {
+                      "type": "string"
+                    },
+                    "line_hint": {
+                      "type": "string"
+                    },
+                    "retention_hint": {
+                      "type": "string",
+                      "enum": [
+                        "audit_only",
+                        "must_retain",
+                        "use_if_space"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "quantity_role",
+                    "measures",
+                    "local_interpretation",
+                    "source_quote",
+                    "line_hint",
+                    "retention_hint"
+                  ]
+                }
+              ]
+            }
+          },
+          "scope_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "claim",
+          "question_relevance",
+          "scope_flags",
+          "decision_importance",
+          "why_it_matters",
+          "natural_bottom_line",
+          "must_preserve_terms",
+          "claim_context",
+          "supporting_quotes",
+          "quantities",
+          "scope_conditions"
+        ]
+      }
+    },
+    "excluded_as_not_decision_relevant": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "source_id",
+    "source_bottom_line",
+    "canonical_claims",
+    "excluded_as_not_decision_relevant"
+  ]
+}
+
+# Source Document With Line Numbers
+
+1: Skip to main page content
+2: 
+3: An official website of the United States government Here's how you know
+4: 
+5: The .gov means it’s official. 
+6: Federal government websites often end in .gov or .mil. Before sharing sensitive information, make sure you’re on a federal government site.
+7: 
+8: The site is secure. 
+9: The https:// ensures that you are connecting to the official website and that any information you provide is encrypted and transmitted securely.
+10: 
+11: 
+12: 
+13: Close
+14: ACCOUNT
+15: Logged in as:
+16: username
+17: 	•	Dashboard
+18: 	•	Publications
+19: 	•	Account settings
+20: 	•	Log out
+21: Access keys
+22: NCBI Homepage
+23: MyNCBI Homepage
+24: Main Content
+25: Main Navigation
+26: 
+27: 
+28: 
+29: 
+30: Search:
+31: 
+32: Search
+33: Advanced
+34: User Guide
+35: 
+36: Save Email Send to
+37: Display options
+38: 
+39: 
+40: Full text links
+41:     
+42:   
+43: 
+44:   
+45: 
+46:   
+47:     
+48:       Title & authors
+49:     
+50:   
+51: 
+52:   
+53: 
+54:   
+55:     
+56:       Abstract
+57:     
+58:   
+59: 
+60:   
+61: 
+62:   
+63: 
+64:   
+65: 
+66:   
+67: 
+68:   
+69: 
+70:   
+71: 
+72:   
+73: 
+74:   
+75: 
+76:   
+77: 
+78:   
+79:     
+80:       Publication types
+81:     
+82:   
+83: 
+84:   
+85:     
+86:       MeSH terms
+87:     
+88:   
+89: 
+90:   
+91:     
+92:       Substances
+93:     
+94:   
+95: 
+96:   
+97: 
+98:   
+99: 
+100:   
+101: 
+102:   
+103: 
+104:   
+105: 
+106:   
+107:     
+108:       LinkOut - more resources
+109:     
+110:   
+111: 
+112:   
+113: 
+114:   
+115: Meta-Analysis
+116: Circulation
+117: . 2020 Jan 21;141(3):e39-e53. doi: 10.1161/CIR.0000000000000743. Epub 2019 Dec 16.
+118: Dietary Cholesterol and Cardiovascular Risk: A Science Advisory From the American Heart Association
+119: Jo Ann S Carson, Alice H Lichtenstein, Cheryl A M Anderson, Lawrence J Appel, Penny M Kris-Etherton, Katie A Meyer, Kristina Petersen, Tamar Polonsky, Linda Van Horn; American Heart Association Nutrition Committee of the Council on Lifestyle and Cardiometabolic Health; Council on Arteriosclerosis, Thrombosis and Vascular Biology; Council on Cardiovascular and Stroke Nursing; Council on Clinical Cardiology; Council on Peripheral Vascular Disease; and Stroke Council
+120: 
+121: 	•	PMID: 31838890 DOI: 10.1161/CIR.0000000000000743
+122: Free article
+123: Full text links Cite
+124: Abstract
+125: The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.
+126: Keywords: AHA Scientific Statements; cholesterol; diet; eggs; risk factors.
+127: PubMed Disclaimer
+128: 
+129: Publication types
+130: 	•	Meta-Analysis 
+131: 	•	Systematic Review 
+132: MeSH terms
+133: 	•	Cardiovascular Diseases* / blood 
+134: 	•	Cardiovascular Diseases* / etiology 
+135: 	•	Cardiovascular Diseases* / prevention & control 
+136: 	•	Cholesterol, Dietary* / administration & dosage 
+137: 	•	Cholesterol, Dietary* / adverse effects 
+138: 	•	Diet, Western* 
+139: 	•	Humans 
+140: 	•	Nutrition Policy* 
+141: 	•	Recommended Dietary Allowances* 
+142: Substances
+143: 	•	Cholesterol, Dietary 
+144: 
+145: LinkOut - more resources
+146: 	•	Full Text Sources
+147: 	•	Atypon
+148: 	•	Ingenta plc
+149: 	•	Ovid Technologies, Inc.
+150: FULL TEXT LINKS
+151: [x]
+152: 
+153: [x]
+154: cite
+155: 
+156: Copy
+157: 
+158: Download .nbib
+159: Format:
+160:     
+161:        AMA
+162:     
+163:        APA
+164:     
+165:        MLA
+166:     
+167:        NLM
+168:     
+169:   
+170: 
+171: NCBI Literature Resources MeSH PMC Bookshelf Disclaimer The PubMed wordmark and PubMed logo are registered trademarks of the U.S. Department of Health and Human Services (HHS). Unauthorized use of these marks is strictly prohibited.
+172: FOLLOW NCBI
+173: 
+174: 
+175: 
+176: .cls-11, .cls-12 { fill: #737373; } .cls-11 { fill-rule: evenodd; }
+177: .cls-1{fill:#737373;}
+178: Connect with NLM
+179: 	•	.st10 { fill: #FFFFFF; } .st110 { fill: none; stroke: #FFFFFF; stroke-width: 8; stroke-miterlimit: 10; } .st4 { fill: none; stroke: #FFFFFF; stroke-width: 8; stroke-miterlimit: 10; } .st5 { fill: #FFFFFF; }
+180: National Library of Medicine
+181: 8600 Rockville Pike
+182: Bethesda, MD 20894
+183: Web Policies
+184: FOIA
+185: HHS Vulnerability Disclosure
+186: Help
+187: Accessibility
+188: Careers
+189: 	•	NLM
+190: 	•	NIH
+191: 	•	HHS
+192: 	•	USA.gov

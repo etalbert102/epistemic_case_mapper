@@ -1,0 +1,2735 @@
+{
+  "actions": [
+    {
+      "action": "targeted_relation_classification",
+      "count": 8
+    },
+    {
+      "action": "append_evidence_check_rows",
+      "count": 8
+    },
+    {
+      "action": "append_crux_review_notes",
+      "count": 5
+    }
+  ],
+  "crux_review_notes": [
+    "eggs_c001 and eggs_c008 require relation adjudication.",
+    "eggs_c006 and eggs_c016 require relation adjudication.",
+    "eggs_c006 and eggs_c019 require relation adjudication.",
+    "eggs_c007 and eggs_c005 require relation adjudication.",
+    "eggs_c009 and eggs_c006 require relation adjudication."
+  ],
+  "evidence_check_rows": [
+    [
+      "Map critique",
+      "Needs review",
+      "quality:high_claim_count: Accepted 26 claims; region target is at most 25."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:near_duplicate_claims: Near-duplicate claim pairs: eggs_c011/eggs_c029, eggs_c020/eggs_c021"
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:chunk_budget_skipped_content: Skipped 83 source chunks due to configured chunk budgets."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "label_audit_warning: Audited routing disagrees with or qualifies model-provided labels."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "label_audit_warning: Audited routing disagrees with or qualifies model-provided labels."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "label_audit_warning: Audited routing disagrees with or qualifies model-provided labels."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "label_audit_warning: Audited routing disagrees with or qualifies model-provided labels."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "label_audit_warning: Audited routing disagrees with or qualifies model-provided labels."
+    ]
+  ],
+  "original_counts": {
+    "claims": 26,
+    "relations": 15
+  },
+  "relation_pairs": [
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_endpoint+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 24.179,
+      "left": {
+        "claim": "For individuals 2 years and older who do not consume seafood, the regular intake of other foods high in omega-3 fatty acids, such as eggs that contain omega-3 fatty acids, is appropriate.",
+        "claim_id": "eggs_c001",
+        "claim_quantities": [
+          {
+            "line_hint": "75",
+            "local_interpretation": "Minimum age for the recommendation",
+            "measures": "age",
+            "quantity_role": "population_descriptor",
+            "quantity_type": "duration",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "individuals 2 years and older",
+            "value": "2 years and older"
+          }
+        ],
+        "decision_edge_role": "guidance_or_recommendation",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "background_or_context",
+        "decision_edge_role_deterministic_confidence": "medium",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label",
+          "context_only_source_claim"
+        ],
+        "decision_edge_role_reasons": [
+          "Provides specific dietary advice regarding the appropriateness of egg intake as a source of omega-3 fatty acids."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "This provides a specific recommendation for eggs as a source of omega-3 fatty acids for those avoiding seafood, which is relevant to cardiovascular health.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "On the basis of its review of the evidence for a relationship between types of dietary fats consumed and cardiovascular disease risk, the Committee advised limiting intake of saturated fats to less than 10% of energy per day by replacing them with unsaturated fats and keeping dietary cholesterol intake as low as possible. The Committee also recommended 2 or more servings of cooked seafood per week for individuals 2 years and older to ensure intake of key nutrients and as part of an overall healthy dietary pattern. Serving sizes vary based on age and seafood choices should emphasize species higher in omega-3 fatty acids and low in methylmercury, following federal and local fish and seafood advisories.6 For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This provides a specific recommendation for eggs as a source of omega-3 fatty acids for those avoiding seafood, which is relevant to cardiovascular health.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "guidance_or_recommendation",
+        "quantity_values": [
+          "2 years and older"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "This provides a specific recommendation for eggs as a source of omega-3 fatty acids for those avoiding seafood, which is relevant to cardiovascular health.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.255,
+          "matched_text": "For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.",
+          "method": "exact_match",
+          "proposed_span_id": "dga_2020_2025_pmc_summary_s0075",
+          "resolved_span_id": "dga_2020_2025_pmc_summary_s0075",
+          "source_quote": "For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.",
+          "status": "exact_match"
+        },
+        "source_id": "dga_2020_2025_pmc_summary",
+        "source_quote": "For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.",
+        "source_span": "lines 75-75",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Committee review of evidence on types of dietary fats and cardiovascular disease risk",
+            "exposure_or_option": "Regular intake of eggs containing omega-3 fatty acids",
+            "outcome_or_endpoint": "Appropriate dietary pattern for those avoiding seafood",
+            "population": "Individuals 2 years and older who do not consume seafood",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": [
+              "Cardiovascular disease risk",
+              "Omega-3 fatty acids"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "75",
+              "local_interpretation": "Minimum age for the recommendation",
+              "measures": "age",
+              "quantity_role": "population_descriptor",
+              "quantity_type": "duration",
+              "retention_hint": "must_retain",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "individuals 2 years and older",
+              "value": "2 years and older"
+            }
+          ],
+          "must_preserve_terms": [
+            "individuals 2 years and older",
+            "do not consume seafood",
+            "eggs that contain omega-3 fatty acids",
+            "appropriate"
+          ],
+          "natural_bottom_line": "Eggs containing omega-3 fatty acids are an appropriate substitute for those who do not eat seafood.",
+          "quantities": [
+            "2 years and older"
+          ],
+          "scope_conditions": [
+            "non-seafood consumers"
+          ],
+          "source_bottom_line": "The 2020-2025 Dietary Guidelines recommend a healthy dietary pattern including various protein sources, specifically noting that for individuals who do not consume seafood, regular intake of eggs containing omega-3 fatty acids is appropriate.",
+          "supporting_quotes": [
+            {
+              "line_hint": "75",
+              "quote": "For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_001",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "refines",
+          "depends_on",
+          "in_tension_with",
+          "challenges",
+          "crux_for",
+          "similar_to",
+          "none"
+        ],
+        "intent": "generic_decision_relation"
+      },
+      "right": {
+        "claim": "Individuals with high LDL cholesterol or other risk factors (overweight, obesity) should reduce sources of both saturated fat and dietary cholesterol.",
+        "claim_id": "eggs_c008",
+        "claim_quantities": [],
+        "decision_edge_role": "scope_or_subgroup_boundary",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Identifies a specific subgroup (individuals with high LDL or obesity) for whom the advice changes."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Identifies the specific population where egg/cholesterol restriction is necessary.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "question_outcome_mismatch",
+          "status": "warning"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Identifies the specific population where egg/cholesterol restriction is necessary.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 48,
+          "deterministic_relevance_reason": "question_outcome_mismatch",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "supporting_map",
+          "routing_importance_level": "medium",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "supporting",
+          "warnings": [
+            "deterministic_relevance:question_outcome_mismatch",
+            "model_direct_with_deterministic_warning",
+            "model_high_importance_with_deterministic_warning",
+            "model_main_map_demoted_by_audit"
+          ]
+        },
+        "map_relation_role": "scope_or_subgroup_boundary",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "question_mismatch:question_outcome_mismatch",
+          "core_label",
+          "direct_relevance",
+          "high_importance",
+          "supporting_label"
+        ],
+        "relevance_rationale": "Identifies the specific population where egg/cholesterol restriction is necessary.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 1.0,
+          "matched_text": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2023_dietary_cholesterol_news_s0066",
+          "resolved_span_id": "aha_2023_dietary_cholesterol_news_s0066",
+          "source_quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+        "source_span": "lines 66-66",
+        "validation_warnings": [
+          "question_outcome_mismatch",
+          "deterministic_relevance:question_outcome_mismatch",
+          "model_direct_with_deterministic_warning",
+          "model_high_importance_with_deterministic_warning",
+          "model_main_map_demoted_by_audit"
+        ],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Expert consensus/clinical guidance",
+            "exposure_or_option": "Saturated fat and dietary cholesterol",
+            "outcome_or_endpoint": "Arterial plaque reduction",
+            "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": [
+              "high LDL level"
+            ]
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "high LDL cholesterol",
+            "saturated fat",
+            "dietary cholesterol",
+            "overweight",
+            "obesity"
+          ],
+          "natural_bottom_line": "People with high LDL or obesity should limit both saturated fat and dietary cholesterol.",
+          "quantities": [],
+          "scope_conditions": [
+            "high LDL",
+            "overweight/obesity"
+          ],
+          "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+          "supporting_quotes": [
+            {
+              "line_hint": "66",
+              "quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 25.2415,
+      "left": {
+        "claim": "The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.",
+        "claim_id": "eggs_c006",
+        "claim_quantities": [],
+        "decision_edge_role": "guidance_or_recommendation",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Provides specific guidance on focusing on dietary patterns over individual cholesterol targets."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "critical",
+          "rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "guidance_or_recommendation",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.166,
+          "matched_text": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "resolved_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+        "source_span": "lines 125-125",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Science Advisory/Guidance",
+            "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)",
+            "outcome_or_endpoint": "Cardiovascular health / diet quality",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [
+              "Specific dietary cholesterol targets are challenging to implement"
+            ],
+            "stated_scope": [
+              "clinicians",
+              "consumers"
+            ]
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "healthy dietary patterns",
+            "Mediterranean-style",
+            "DASH-style",
+            "specific dietary cholesterol target"
+          ],
+          "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.",
+          "quantities": [],
+          "scope_conditions": [
+            "official guidance",
+            "dietary patterns"
+          ],
+          "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+          "supporting_quotes": [
+            {
+              "line_hint": "125",
+              "quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake."
+            },
+            {
+              "line_hint": "125",
+              "quote": "A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_002",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "depends_on",
+          "in_tension_with",
+          "none"
+        ],
+        "intent": "mechanism_to_outcome"
+      },
+      "right": {
+        "claim": "The association between egg consumption and incident CVD was no longer significant after adjusting for dietary cholesterol consumption.",
+        "claim_id": "eggs_c016",
+        "claim_quantities": [
+          {
+            "line_hint": "50",
+            "local_interpretation": "Non-significant association for CVD after adjusting for cholesterol.",
+            "measures": "Adjusted Hazard Ratio (HR)",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "adjusted HR, 0.99 [95% CI, 0.93-1.05]",
+            "value": "0.99"
+          }
+        ],
+        "decision_edge_role": "method_or_validity_limit",
+        "decision_edge_role_confidence": "medium",
+        "decision_edge_role_deterministic": "mechanism_or_biomarker",
+        "decision_edge_role_deterministic_confidence": "medium",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label",
+          "mechanism_text_signal"
+        ],
+        "decision_edge_role_reasons": [
+          "Describes the adjustment for dietary cholesterol to determine if the association remains significant."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "indirect_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "This analysis included 29\u2009615 participants (mean [SD] age, 51.6 [13.5] years at baseline) of whom 13\u2009299 (44.9%) were men and 9204 (31.1%) were black. During a median follow-up of 17.5 years (interquartile range, 13.0-21.7; maximum, 31.3), there were 5400 incident CVD events and 6132 all-cause deaths. The associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were monotonic (all P values for nonlinear terms, .19-.83). Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]). Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06 [95% CI, 1.03-1.10]; adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]) and all-cause mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; adjusted ARD, 1.93% [95% CI, 1.10%-2.76%]). The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 78,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "indirect",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "high",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "method_or_validity_limit",
+        "quantity_values": [
+          "0.99"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "partial"
+        },
+        "question_relevance": "indirect",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "high_importance",
+          "indirect_relevance"
+        ],
+        "relevance_rationale": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {
+          "ARD": "absolute risk difference",
+          "CVD": "cardiovascular disease",
+          "HR": "Hazard ratio"
+        },
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.191,
+          "matched_text": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+          "method": "exact_match",
+          "proposed_span_id": "jama_2019_dietary_cholesterol_eggs_s0050",
+          "resolved_span_id": "jama_2019_dietary_cholesterol_eggs_s0050",
+          "source_quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+          "status": "exact_match"
+        },
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+        "source_span": "lines 50-50",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Pooled cohort study",
+            "exposure_or_option": "Egg consumption",
+            "outcome_or_endpoint": "Incident CVD",
+            "population": "US adults (n=29,615)",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": [
+              "US adults"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "50",
+              "local_interpretation": "Non-significant association for CVD after adjusting for cholesterol.",
+              "measures": "Adjusted Hazard Ratio (HR)",
+              "quantity_role": "effect_estimate",
+              "quantity_type": "unknown",
+              "retention_hint": "use_if_space",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "adjusted HR, 0.99 [95% CI, 0.93-1.05]",
+              "value": "0.99"
+            }
+          ],
+          "must_preserve_terms": [
+            "egg consumption",
+            "dietary cholesterol",
+            "adjusted HR, 0.99",
+            "not significant"
+          ],
+          "natural_bottom_line": "The CVD risk from eggs is fully accounted for by the cholesterol they contain.",
+          "quantities": [
+            "0.99"
+          ],
+          "scope_conditions": [
+            "Adjusted for dietary cholesterol"
+          ],
+          "source_bottom_line": "Among US adults, higher consumption of dietary cholesterol or eggs is significantly associated with a higher risk of incident cardiovascular disease (CVD) and all-cause mortality in a dose-response manner, independent of fat quality and overall diet quality.",
+          "supporting_quotes": [
+            {
+              "line_hint": "50",
+              "quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_endpoint+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 24.798,
+      "left": {
+        "claim": "The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.",
+        "claim_id": "eggs_c006",
+        "claim_quantities": [],
+        "decision_edge_role": "guidance_or_recommendation",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Provides specific guidance on focusing on dietary patterns over individual cholesterol targets."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "critical",
+          "rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "guidance_or_recommendation",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.166,
+          "matched_text": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "resolved_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+        "source_span": "lines 125-125",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Science Advisory/Guidance",
+            "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)",
+            "outcome_or_endpoint": "Cardiovascular health / diet quality",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [
+              "Specific dietary cholesterol targets are challenging to implement"
+            ],
+            "stated_scope": [
+              "clinicians",
+              "consumers"
+            ]
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "healthy dietary patterns",
+            "Mediterranean-style",
+            "DASH-style",
+            "specific dietary cholesterol target"
+          ],
+          "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.",
+          "quantities": [],
+          "scope_conditions": [
+            "official guidance",
+            "dietary patterns"
+          ],
+          "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+          "supporting_quotes": [
+            {
+              "line_hint": "125",
+              "quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake."
+            },
+            {
+              "line_hint": "125",
+              "quote": "A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_003",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "depends_on",
+          "in_tension_with",
+          "none"
+        ],
+        "intent": "mechanism_to_outcome"
+      },
+      "right": {
+        "claim": "The association between dietary cholesterol consumption and all-cause mortality was independent of fat quality (saturated vs. unsaturated) and overall diet quality.",
+        "claim_id": "eggs_c019",
+        "claim_quantities": [
+          {
+            "line_hint": "402",
+            "local_interpretation": "Risk of mortality for high-saturated fat diet.",
+            "measures": "Adjusted Hazard Ratio (HR)",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "adjusted HR, 1.24 [95% CI, 1.13-1.36]",
+            "value": "1.24"
+          },
+          {
+            "line_hint": "402",
+            "local_interpretation": "Risk of mortality for low-saturated fat diet.",
+            "measures": "Adjusted Hazard Ratio (HR)",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "adjusted HR, 1.12 [95% CI, 1.04-1.21]",
+            "value": "1.12"
+          }
+        ],
+        "decision_edge_role": "method_or_validity_limit",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Addresses independence of findings from fat quality and overall diet (confounding/adjustment)."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "indirect_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Confirms that the association is not merely a byproduct of high saturated fat intake or poor overall eating habits.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "question_outcome_mismatch",
+          "status": "warning"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet. These findings are consistent with the evidence that a reduction of dietary cholesterol intake, in addition to isocaloric replacement of saturated fat by unsaturated fat, was significantly associated with reduced total cholesterol (primarily LDL cholesterol) concentration.39 Further, the significant association between egg consumption and incident CVD was fully accounted for by the cholesterol content in eggs, which also largely explained the significant association between egg consumption and all-cause mortality, offering additional support for the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality. Although the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were no longer significant after accounting for egg, unprocessed red meat, and processed meat consumption, it remains unclear if cholesterol from these foods is more harmful than other cholesterol-containing foods. Statistically, the remaining variation in dietary cholesterol consumption from other foods may not be sufficient to materially modify the associations. Egg consumption contributed 25% to the total dietary cholesterol consumption and meat consumption contributed 42%.27 Mechanistically, eggs and processed or unprocessed red meat are rich in other nutrients such as choline, iron, carnitine, and added sodium (for processed meat) that have been implicated in CVD risk via different pathways. Further, the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were similar between participants who consumed a higher-quality diet and those who did not, suggesting that people may need to minimize dietary cholesterol and egg yolk intake when consuming a healthier eating pattern, as recommended by the Institute of Medicine.40",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Confirms that the association is not merely a byproduct of high saturated fat intake or poor overall eating habits.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 34,
+          "deterministic_relevance_reason": "question_outcome_mismatch",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "indirect",
+            "role": "source_claim"
+          },
+          "routing_default_use": "appendix",
+          "routing_importance_level": "low",
+          "routing_role": "background",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "appendix",
+          "warnings": [
+            "deterministic_relevance:question_outcome_mismatch",
+            "model_high_importance_with_deterministic_warning",
+            "model_main_map_demoted_by_audit"
+          ]
+        },
+        "map_relation_role": "method_or_validity_limit",
+        "quantity_values": [
+          "1.24",
+          "1.12"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "partial"
+        },
+        "question_relevance": "indirect",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "question_mismatch:question_outcome_mismatch",
+          "core_label",
+          "high_importance",
+          "indirect_relevance",
+          "appendix_label"
+        ],
+        "relevance_rationale": "Confirms that the association is not merely a byproduct of high saturated fat intake or poor overall eating habits.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {
+          "CVD": "cardiovascular disease"
+        },
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.09,
+          "matched_text": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet.",
+          "method": "exact_match",
+          "proposed_span_id": "jama_2019_dietary_cholesterol_eggs_s0479",
+          "resolved_span_id": "jama_2019_dietary_cholesterol_eggs_s0479",
+          "source_quote": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet.",
+          "status": "exact_match"
+        },
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_quote": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet.",
+        "source_span": "lines 479-479",
+        "validation_warnings": [
+          "question_outcome_mismatch",
+          "deterministic_relevance:question_outcome_mismatch",
+          "model_high_importance_with_deterministic_warning",
+          "model_main_map_demoted_by_audit"
+        ],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Pooled cohort study",
+            "exposure_or_option": "Dietary cholesterol (per 300 mg/day)",
+            "outcome_or_endpoint": "All-cause mortality",
+            "population": "US adults",
+            "stated_dose_or_threshold": "300 mg per day",
+            "stated_limitations": [],
+            "stated_scope": [
+              "US adults"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "402",
+              "local_interpretation": "Risk of mortality for high-saturated fat diet.",
+              "measures": "Adjusted Hazard Ratio (HR)",
+              "quantity_role": "effect_estimate",
+              "quantity_type": "unknown",
+              "retention_hint": "use_if_space",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "adjusted HR, 1.24 [95% CI, 1.13-1.36]",
+              "value": "1.24"
+            },
+            {
+              "line_hint": "402",
+              "local_interpretation": "Risk of mortality for low-saturated fat diet.",
+              "measures": "Adjusted Hazard Ratio (HR)",
+              "quantity_role": "effect_estimate",
+              "quantity_type": "unknown",
+              "retention_hint": "use_if_space",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "adjusted HR, 1.12 [95% CI, 1.04-1.21]",
+              "value": "1.12"
+            }
+          ],
+          "must_preserve_terms": [
+            "independent of fat amount and quality",
+            "higher-quality diet",
+            "adjusted HR, 1.24",
+            "adjusted HR, 1.12"
+          ],
+          "natural_bottom_line": "The link between dietary cholesterol and mortality remains even when accounting for fat quality and diet quality.",
+          "quantities": [
+            "1.24",
+            "1.12"
+          ],
+          "scope_conditions": [
+            "Independent of fat quality",
+            "Independent of diet quality"
+          ],
+          "source_bottom_line": "Among US adults, higher consumption of dietary cholesterol or eggs is significantly associated with a higher risk of incident cardiovascular disease (CVD) and all-cause mortality in a dose-response manner, independent of fat quality and overall diet quality.",
+          "supporting_quotes": [
+            {
+              "line_hint": "479",
+              "quote": "The current study found that the significant associations of dietary cholesterol consumption with incident CVD and all-cause mortality were independent of fat amount and quality of the diet."
+            },
+            {
+              "line_hint": "480",
+              "quote": "the significant associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were similar between participants who consumed a higher-quality diet and those who did not"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_endpoint+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 23.288,
+      "left": {
+        "claim": "Healthy people can include up to one whole egg daily in their diets, while older people with healthy cholesterol levels may have two.",
+        "claim_id": "eggs_c007",
+        "claim_quantities": [
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum daily allowance for healthy people",
+            "measures": "eggs per day",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to a whole egg... each day",
+            "value": "1"
+          },
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum for older people with healthy levels",
+            "measures": "eggs",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "older people with healthy cholesterol levels can have two",
+            "value": "2"
+          }
+        ],
+        "decision_edge_role": "guidance_or_recommendation",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "mechanism_or_biomarker",
+        "decision_edge_role_deterministic_confidence": "medium",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label",
+          "mechanism_text_signal"
+        ],
+        "decision_edge_role_reasons": [
+          "Provides specific practical advice on the quantity of whole eggs for healthy individuals."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "critical",
+          "rationale": "Provides specific guidance on egg consumption for the general healthy population.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Provides specific guidance on egg consumption for the general healthy population.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "guidance_or_recommendation",
+        "quantity_values": [
+          "1",
+          "2"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "Provides specific guidance on egg consumption for the general healthy population.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 1.0,
+          "matched_text": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2023_dietary_cholesterol_news_s0064",
+          "resolved_span_id": "aha_2023_dietary_cholesterol_news_s0064",
+          "source_quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+        "source_span": "lines 64-64",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "2019 AHA science advisory",
+            "exposure_or_option": "Whole eggs",
+            "outcome_or_endpoint": "Dietary inclusion/tolerance",
+            "population": "Healthy people; older people with healthy cholesterol levels",
+            "stated_dose_or_threshold": "one whole egg (daily); two (for older people)",
+            "stated_limitations": [],
+            "stated_scope": [
+              "healthy cholesterol levels"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "64",
+              "local_interpretation": "Maximum daily allowance for healthy people",
+              "measures": "eggs per day",
+              "quantity_role": "threshold_or_guideline",
+              "quantity_type": "unknown",
+              "retention_hint": "must_retain",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "up to a whole egg... each day",
+              "value": "1"
+            },
+            {
+              "line_hint": "64",
+              "local_interpretation": "Maximum for older people with healthy levels",
+              "measures": "eggs",
+              "quantity_role": "threshold_or_guideline",
+              "quantity_type": "unknown",
+              "retention_hint": "must_retain",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "older people with healthy cholesterol levels can have two",
+              "value": "2"
+            }
+          ],
+          "must_preserve_terms": [
+            "healthy people",
+            "one whole egg",
+            "daily",
+            "older people",
+            "healthy cholesterol levels",
+            "two"
+          ],
+          "natural_bottom_line": "Healthy adults can eat up to one egg a day, and older adults with healthy levels may have two.",
+          "quantities": [
+            "1",
+            "2"
+          ],
+          "scope_conditions": [
+            "healthy cholesterol levels"
+          ],
+          "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+          "supporting_quotes": [
+            {
+              "line_hint": "64",
+              "quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_004",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "refines",
+          "depends_on",
+          "in_tension_with",
+          "challenges",
+          "crux_for",
+          "similar_to",
+          "none"
+        ],
+        "intent": "generic_decision_relation"
+      },
+      "right": {
+        "claim": "Meta-analyses of intervention studies show that cholesterol intakes exceeding current average levels are associated with elevated total or low-density lipoprotein (LDL) cholesterol concentrations.",
+        "claim_id": "eggs_c005",
+        "claim_quantities": [],
+        "decision_edge_role": "mechanism_or_biomarker",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "mechanism_or_biomarker",
+        "decision_edge_role_deterministic_confidence": "medium",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label",
+          "mechanism_text_signal"
+        ],
+        "decision_edge_role_reasons": [
+          "Describes the physiological response (LDL cholesterol concentrations) to dietary cholesterol intake."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "question_outcome_mismatch",
+          "status": "warning"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 48,
+          "deterministic_relevance_reason": "question_outcome_mismatch",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "supporting_map",
+          "routing_importance_level": "medium",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "supporting",
+          "warnings": [
+            "deterministic_relevance:question_outcome_mismatch",
+            "model_direct_with_deterministic_warning",
+            "model_high_importance_with_deterministic_warning",
+            "model_main_map_demoted_by_audit"
+          ]
+        },
+        "map_relation_role": "mechanism_or_biomarker",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "question_mismatch:question_outcome_mismatch",
+          "core_label",
+          "direct_relevance",
+          "high_importance",
+          "supporting_label"
+        ],
+        "relevance_rationale": "Identifies a specific physiological response (elevated LDL) to high cholesterol intake, though it may not directly translate to increased disease risk.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.152,
+          "matched_text": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "resolved_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "source_quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations.",
+        "source_span": "lines 125-125",
+        "validation_warnings": [
+          "question_outcome_mismatch",
+          "deterministic_relevance:question_outcome_mismatch",
+          "model_direct_with_deterministic_warning",
+          "model_high_importance_with_deterministic_warning",
+          "model_main_map_demoted_by_audit"
+        ],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Meta-analyses of intervention studies",
+            "exposure_or_option": "Cholesterol intakes exceeding current average levels",
+            "outcome_or_endpoint": "Total or low-density lipoprotein cholesterol concentrations",
+            "population": "General population (intervention study participants)",
+            "stated_dose_or_threshold": "exceeding current average levels",
+            "stated_limitations": [],
+            "stated_scope": []
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "meta-analyses",
+            "intervention studies",
+            "elevated total or low-density lipoprotein cholesterol concentrations"
+          ],
+          "natural_bottom_line": "High dietary cholesterol can increase total and LDL cholesterol levels in some intervention studies.",
+          "quantities": [],
+          "scope_conditions": [
+            "intervention study results",
+            "lipid measurements"
+          ],
+          "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+          "supporting_quotes": [
+            {
+              "line_hint": "125",
+              "quote": "Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 25.9125,
+      "left": {
+        "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "claim_id": "eggs_c009",
+        "claim_quantities": [],
+        "consolidation_method": "tfidf_overlap_polarity_guarded_components",
+        "decision_edge_role": "outcome_finding",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Direct finding regarding the association between dietary cholesterol and cardiovascular risk."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "outcome_finding",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.571,
+          "matched_text": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "resolved_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "source_span": "lines 52-52",
+        "supporting_claim_ids": [
+          "eggs_c004",
+          "eggs_c009"
+        ],
+        "supporting_excerpts": [
+          {
+            "claim_id": "eggs_c004",
+            "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+            "source_id": "aha_2019_dietary_cholesterol_pubmed",
+            "source_span": "lines 125-125"
+          },
+          {
+            "claim_id": "eggs_c009",
+            "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+            "source_id": "aha_2023_dietary_cholesterol_news",
+            "source_span": "lines 52-52"
+          }
+        ],
+        "supporting_extraction_methods": [
+          "whole_doc_source_card"
+        ],
+        "supporting_sources": [
+          "aha_2019_dietary_cholesterol_pubmed",
+          "aha_2023_dietary_cholesterol_news"
+        ],
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "2019 AHA science advisory / scientific studies",
+            "exposure_or_option": "Dietary cholesterol",
+            "outcome_or_endpoint": "Cardiovascular risk",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": []
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "dietary cholesterol",
+            "cardiovascular risk",
+            "not generally supported"
+          ],
+          "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+          "quantities": [],
+          "scope_conditions": [],
+          "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+          "supporting_quotes": [
+            {
+              "line_hint": "52",
+              "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_005",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "refines",
+          "depends_on",
+          "in_tension_with",
+          "challenges",
+          "crux_for",
+          "similar_to",
+          "none"
+        ],
+        "intent": "generic_decision_relation"
+      },
+      "right": {
+        "claim": "The American Heart Association recommends focusing on healthy dietary patterns (e.g., Mediterranean-style and DASH) rather than specific dietary cholesterol targets to improve cardiovascular health.",
+        "claim_id": "eggs_c006",
+        "claim_quantities": [],
+        "decision_edge_role": "guidance_or_recommendation",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Provides specific guidance on focusing on dietary patterns over individual cholesterol targets."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "critical",
+          "rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "guidance_or_recommendation",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "This is the official guidance for clinical and consumer application regarding cholesterol and heart health.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.166,
+          "matched_text": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "resolved_span_id": "aha_2019_dietary_cholesterol_pubmed_s0125",
+          "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2019_dietary_cholesterol_pubmed",
+        "source_quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake.",
+        "source_span": "lines 125-125",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Science Advisory/Guidance",
+            "exposure_or_option": "Healthy dietary patterns (Mediterranean, DASH)",
+            "outcome_or_endpoint": "Cardiovascular health / diet quality",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [
+              "Specific dietary cholesterol targets are challenging to implement"
+            ],
+            "stated_scope": [
+              "clinicians",
+              "consumers"
+            ]
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "healthy dietary patterns",
+            "Mediterranean-style",
+            "DASH-style",
+            "specific dietary cholesterol target"
+          ],
+          "natural_bottom_line": "Focus on Mediterranean or DASH-style diets rather than specific cholesterol limits to improve heart health.",
+          "quantities": [],
+          "scope_conditions": [
+            "official guidance",
+            "dietary patterns"
+          ],
+          "source_bottom_line": "The AHA advises that dietary cholesterol does not appear to significantly impact cardiovascular disease risk in most populations, and recommends focusing on healthy dietary patterns (like Mediterranean or DASH) rather than specific cholesterol targets.",
+          "supporting_quotes": [
+            {
+              "line_hint": "125",
+              "quote": "Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake."
+            },
+            {
+              "line_hint": "125",
+              "quote": "A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 25.423,
+      "left": {
+        "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "claim_id": "eggs_c009",
+        "claim_quantities": [],
+        "consolidation_method": "tfidf_overlap_polarity_guarded_components",
+        "decision_edge_role": "outcome_finding",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Direct finding regarding the association between dietary cholesterol and cardiovascular risk."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "outcome_finding",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.571,
+          "matched_text": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "resolved_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "source_span": "lines 52-52",
+        "supporting_claim_ids": [
+          "eggs_c004",
+          "eggs_c009"
+        ],
+        "supporting_excerpts": [
+          {
+            "claim_id": "eggs_c004",
+            "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+            "source_id": "aha_2019_dietary_cholesterol_pubmed",
+            "source_span": "lines 125-125"
+          },
+          {
+            "claim_id": "eggs_c009",
+            "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+            "source_id": "aha_2023_dietary_cholesterol_news",
+            "source_span": "lines 52-52"
+          }
+        ],
+        "supporting_extraction_methods": [
+          "whole_doc_source_card"
+        ],
+        "supporting_sources": [
+          "aha_2019_dietary_cholesterol_pubmed",
+          "aha_2023_dietary_cholesterol_news"
+        ],
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "2019 AHA science advisory / scientific studies",
+            "exposure_or_option": "Dietary cholesterol",
+            "outcome_or_endpoint": "Cardiovascular risk",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": []
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "dietary cholesterol",
+            "cardiovascular risk",
+            "not generally supported"
+          ],
+          "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+          "quantities": [],
+          "scope_conditions": [],
+          "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+          "supporting_quotes": [
+            {
+              "line_hint": "52",
+              "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_006",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "refines",
+          "depends_on",
+          "in_tension_with",
+          "challenges",
+          "crux_for",
+          "similar_to",
+          "none"
+        ],
+        "intent": "generic_decision_relation"
+      },
+      "right": {
+        "claim": "Moderate egg consumption (up to one egg per day) is not associated with incident cardiovascular disease risk in large US cohorts after adjusting for lifestyle and dietary factors.",
+        "claim_id": "eggs_c010",
+        "claim_quantities": [
+          {
+            "line_hint": "41",
+            "local_interpretation": "Hazard ratio for at least one egg per day vs less than one egg per month",
+            "measures": "hazard ratio",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05",
+            "value": "0.93"
+          },
+          {
+            "line_hint": "41",
+            "local_interpretation": "Confidence interval for the hazard ratio of one egg per day",
+            "measures": "95% confidence interval",
+            "quantity_role": "uncertainty_interval",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05",
+            "value": "0.82 to 1.05"
+          }
+        ],
+        "decision_edge_role": "outcome_finding",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Direct finding about the impact of moderate egg consumption on incident CVD risk."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "critical",
+          "rationale": "This is the primary finding of the three large prospective US cohort studies and addresses the core question of whether eggs are harmful to cardiovascular health.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "Over up to 32 years of follow-up (>5.54 million person years), 14\u2009806 participants with incident cardiovascular disease were identified in the three cohorts. Participants with a higher egg intake had a higher body mass index, were less likely to be treated with statins, and consumed more red meats. Most people consumed between one and less than five eggs per week. In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05). In the updated meta-analysis of prospective cohort studies (33 risk estimates, 1\u2009720\u2009108 participants, 139\u2009195 cardiovascular disease events), an increase of one egg per day was not associated with cardiovascular disease risk (pooled relative risk 0.98, 95% confidence interval 0.93 to 1.03, I2=62.3%). Results were similar for coronary heart disease (21 risk estimates, 1\u2009411\u2009261 participants, 59\u2009713 coronary heart disease events; 0.96, 0.91 to 1.03, I2=38.2%), and stroke (22 risk estimates, 1\u2009059\u2009315 participants, 53\u2009617 stroke events; 0.99, 0.91 to 1.07, I2=71.5%). In analyses stratified by geographical location (P for interaction=0.07), no association was found between egg consumption and cardiovascular disease risk among US cohorts (1.01, 0.96 to 1.06, I2=30.8%) or European cohorts (1.05, 0.92 to 1.19, I2=64.7%), but an inverse association was seen in Asian cohorts (0.92, 0.85 to 0.99, I2=44.8%).",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This is the primary finding of the three large prospective US cohort studies and addresses the core question of whether eggs are harmful to cardiovascular health.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "outcome_finding",
+        "quantity_values": [
+          "0.93",
+          "0.82 to 1.05"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "This is the primary finding of the three large prospective US cohort studies and addresses the core question of whether eggs are harmful to cardiovascular health.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.25,
+          "matched_text": "In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05).",
+          "method": "exact_match",
+          "proposed_span_id": "bmj_2020_egg_consumption_cvd_s0041",
+          "resolved_span_id": "bmj_2020_egg_consumption_cvd_s0041",
+          "source_quote": "In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05).",
+          "status": "exact_match"
+        },
+        "source_id": "bmj_2020_egg_consumption_cvd",
+        "source_quote": "In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05).",
+        "source_span": "lines 41-41",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Prospective cohort study (pooled analysis of three cohorts)",
+            "exposure_or_option": "at least one egg per day",
+            "outcome_or_endpoint": "incident cardiovascular disease",
+            "population": "US health professionals (NHS, NHS II, HPFS)",
+            "stated_dose_or_threshold": "one egg per day vs less than one egg per month",
+            "stated_limitations": [
+              "health professionals only"
+            ],
+            "stated_scope": [
+              "US population"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "41",
+              "local_interpretation": "Hazard ratio for at least one egg per day vs less than one egg per month",
+              "measures": "hazard ratio",
+              "quantity_role": "effect_estimate",
+              "quantity_type": "unknown",
+              "retention_hint": "must_retain",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05",
+              "value": "0.93"
+            },
+            {
+              "line_hint": "41",
+              "local_interpretation": "Confidence interval for the hazard ratio of one egg per day",
+              "measures": "95% confidence interval",
+              "quantity_role": "uncertainty_interval",
+              "quantity_type": "unknown",
+              "retention_hint": "must_retain",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05",
+              "value": "0.82 to 1.05"
+            }
+          ],
+          "must_preserve_terms": [
+            "one egg per day",
+            "hazard ratio 0.93 (0.82 to 1.05)",
+            "adjusted for lifestyle and dietary factors"
+          ],
+          "natural_bottom_line": "Eating up to one egg per day does not appear to increase cardiovascular disease risk in US populations.",
+          "quantities": [
+            "0.93",
+            "0.82 to 1.05"
+          ],
+          "scope_conditions": [
+            "adjusted for lifestyle and dietary factors"
+          ],
+          "source_bottom_line": "Moderate egg consumption (up to one egg per day) is not associated with cardiovascular disease risk in the general population, though a potential association with higher risk may exist for individuals with type 2 diabetes.",
+          "supporting_quotes": [
+            {
+              "line_hint": "41",
+              "quote": "In the pooled multivariable analysis, consumption of at least one egg per day was not associated with incident cardiovascular disease risk after adjustment for updated lifestyle and dietary factors associated with egg intake (hazard ratio for at least one egg per day v less than one egg per month 0.93, 95% confidence interval 0.82 to 1.05)."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 25.2405,
+      "left": {
+        "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "claim_id": "eggs_c009",
+        "claim_quantities": [],
+        "consolidation_method": "tfidf_overlap_polarity_guarded_components",
+        "decision_edge_role": "outcome_finding",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Direct finding regarding the association between dietary cholesterol and cardiovascular risk."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "outcome_finding",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.571,
+          "matched_text": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "resolved_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "source_span": "lines 52-52",
+        "supporting_claim_ids": [
+          "eggs_c004",
+          "eggs_c009"
+        ],
+        "supporting_excerpts": [
+          {
+            "claim_id": "eggs_c004",
+            "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+            "source_id": "aha_2019_dietary_cholesterol_pubmed",
+            "source_span": "lines 125-125"
+          },
+          {
+            "claim_id": "eggs_c009",
+            "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+            "source_id": "aha_2023_dietary_cholesterol_news",
+            "source_span": "lines 52-52"
+          }
+        ],
+        "supporting_extraction_methods": [
+          "whole_doc_source_card"
+        ],
+        "supporting_sources": [
+          "aha_2019_dietary_cholesterol_pubmed",
+          "aha_2023_dietary_cholesterol_news"
+        ],
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "2019 AHA science advisory / scientific studies",
+            "exposure_or_option": "Dietary cholesterol",
+            "outcome_or_endpoint": "Cardiovascular risk",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": []
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "dietary cholesterol",
+            "cardiovascular risk",
+            "not generally supported"
+          ],
+          "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+          "quantities": [],
+          "scope_conditions": [],
+          "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+          "supporting_quotes": [
+            {
+              "line_hint": "52",
+              "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_007",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "depends_on",
+          "in_tension_with",
+          "none"
+        ],
+        "intent": "mechanism_to_outcome"
+      },
+      "right": {
+        "claim": "The association between egg consumption and incident CVD was no longer significant after adjusting for dietary cholesterol consumption.",
+        "claim_id": "eggs_c016",
+        "claim_quantities": [
+          {
+            "line_hint": "50",
+            "local_interpretation": "Non-significant association for CVD after adjusting for cholesterol.",
+            "measures": "Adjusted Hazard Ratio (HR)",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "unknown",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "adjusted HR, 0.99 [95% CI, 0.93-1.05]",
+            "value": "0.99"
+          }
+        ],
+        "decision_edge_role": "method_or_validity_limit",
+        "decision_edge_role_confidence": "medium",
+        "decision_edge_role_deterministic": "mechanism_or_biomarker",
+        "decision_edge_role_deterministic_confidence": "medium",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label",
+          "mechanism_text_signal"
+        ],
+        "decision_edge_role_reasons": [
+          "Describes the adjustment for dietary cholesterol to determine if the association remains significant."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "indirect_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "This analysis included 29\u2009615 participants (mean [SD] age, 51.6 [13.5] years at baseline) of whom 13\u2009299 (44.9%) were men and 9204 (31.1%) were black. During a median follow-up of 17.5 years (interquartile range, 13.0-21.7; maximum, 31.3), there were 5400 incident CVD events and 6132 all-cause deaths. The associations of dietary cholesterol or egg consumption with incident CVD and all-cause mortality were monotonic (all P values for nonlinear terms, .19-.83). Each additional 300 mg of dietary cholesterol consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.17 [95% CI, 1.09-1.26]; adjusted ARD, 3.24% [95% CI, 1.39%-5.08%]) and all-cause mortality (adjusted HR, 1.18 [95% CI, 1.10-1.26]; adjusted ARD, 4.43% [95% CI, 2.51%-6.36%]). Each additional half an egg consumed per day was significantly associated with higher risk of incident CVD (adjusted HR, 1.06 [95% CI, 1.03-1.10]; adjusted ARD, 1.11% [95% CI, 0.32%-1.89%]) and all-cause mortality (adjusted HR, 1.08 [95% CI, 1.04-1.11]; adjusted ARD, 1.93% [95% CI, 1.10%-2.76%]). The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 78,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "indirect",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "high",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "method_or_validity_limit",
+        "quantity_values": [
+          "0.99"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "partial"
+        },
+        "question_relevance": "indirect",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "high_importance",
+          "indirect_relevance"
+        ],
+        "relevance_rationale": "This indicates that the risk associated with eggs is primarily driven by their cholesterol content rather than other unique components of the egg.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {
+          "ARD": "absolute risk difference",
+          "CVD": "cardiovascular disease",
+          "HR": "Hazard ratio"
+        },
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.191,
+          "matched_text": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+          "method": "exact_match",
+          "proposed_span_id": "jama_2019_dietary_cholesterol_eggs_s0050",
+          "resolved_span_id": "jama_2019_dietary_cholesterol_eggs_s0050",
+          "source_quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+          "status": "exact_match"
+        },
+        "source_id": "jama_2019_dietary_cholesterol_eggs",
+        "source_quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption.",
+        "source_span": "lines 50-50",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Pooled cohort study",
+            "exposure_or_option": "Egg consumption",
+            "outcome_or_endpoint": "Incident CVD",
+            "population": "US adults (n=29,615)",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": [
+              "US adults"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "50",
+              "local_interpretation": "Non-significant association for CVD after adjusting for cholesterol.",
+              "measures": "Adjusted Hazard Ratio (HR)",
+              "quantity_role": "effect_estimate",
+              "quantity_type": "unknown",
+              "retention_hint": "use_if_space",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "adjusted HR, 0.99 [95% CI, 0.93-1.05]",
+              "value": "0.99"
+            }
+          ],
+          "must_preserve_terms": [
+            "egg consumption",
+            "dietary cholesterol",
+            "adjusted HR, 0.99",
+            "not significant"
+          ],
+          "natural_bottom_line": "The CVD risk from eggs is fully accounted for by the cholesterol they contain.",
+          "quantities": [
+            "0.99"
+          ],
+          "scope_conditions": [
+            "Adjusted for dietary cholesterol"
+          ],
+          "source_bottom_line": "Among US adults, higher consumption of dietary cholesterol or eggs is significantly associated with a higher risk of incident cardiovascular disease (CVD) and all-cause mortality in a dose-response manner, independent of fat quality and overall diet quality.",
+          "supporting_quotes": [
+            {
+              "line_hint": "50",
+              "quote": "The associations between egg consumption and incident CVD (adjusted HR, 0.99 [95% CI, 0.93-1.05]; adjusted ARD, \u22120.47% [95% CI, \u22121.83% to 0.88%]) and all-cause mortality (adjusted HR, 1.03 [95% CI, 0.97-1.09]; adjusted ARD, 0.71% [95% CI, \u22120.85% to 2.28%]) were no longer significant after adjusting for dietary cholesterol consumption."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "candidate_reason": "cross_source+source_extracted_claim_pair+critical_importance_pair+main_map_pair+support_limit_tension+tfidf_semantic_similarity+shared_terms",
+      "candidate_score": 25.2715,
+      "left": {
+        "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "claim_id": "eggs_c009",
+        "claim_quantities": [],
+        "consolidation_method": "tfidf_overlap_polarity_guarded_components",
+        "decision_edge_role": "outcome_finding",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Direct finding regarding the association between dietary cholesterol and cardiovascular risk."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "outcome_finding",
+        "quantity_values": [],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 0.571,
+          "matched_text": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "method": "exact_match",
+          "proposed_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "resolved_span_id": "aha_2023_dietary_cholesterol_news_s0052",
+          "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+          "status": "exact_match"
+        },
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "source_span": "lines 52-52",
+        "supporting_claim_ids": [
+          "eggs_c004",
+          "eggs_c009"
+        ],
+        "supporting_excerpts": [
+          {
+            "claim_id": "eggs_c004",
+            "excerpt": "The elimination of specific dietary cholesterol target recommendations in recent guidelines has raised questions about its role with respect to cardiovascular disease. This advisory was developed after a review of human studies on the relationship of dietary cholesterol with blood lipids, lipoproteins, and cardiovascular disease risk to address questions about the relevance of dietary cholesterol guidance for heart health. Evidence from observational studies conducted in several countries generally does not indicate a significant association with cardiovascular disease risk. Although meta-analyses of intervention studies differ in their findings, most associate intakes of cholesterol that exceed current average levels with elevated total or low-density lipoprotein cholesterol concentrations. Dietary guidance should focus on healthy dietary patterns (eg, Mediterranean-style and DASH [Dietary Approaches to Stop Hypertension]-style diets) that are inherently relatively low in cholesterol with typical levels similar to the current US intake. These patterns emphasize fruits, vegetables, whole grains, low-fat or fat-free dairy products, lean protein sources, nuts, seeds, and liquid vegetable oils. A recommendation that gives a specific dietary cholesterol target within the context of food-based advice is challenging for clinicians and consumers to implement; hence, guidance focused on dietary patterns is more likely to improve diet quality and to promote cardiovascular health.",
+            "source_id": "aha_2019_dietary_cholesterol_pubmed",
+            "source_span": "lines 125-125"
+          },
+          {
+            "claim_id": "eggs_c009",
+            "excerpt": "Although dietary cholesterol was once singled out as a contributor to heart disease, the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+            "source_id": "aha_2023_dietary_cholesterol_news",
+            "source_span": "lines 52-52"
+          }
+        ],
+        "supporting_extraction_methods": [
+          "whole_doc_source_card"
+        ],
+        "supporting_sources": [
+          "aha_2019_dietary_cholesterol_pubmed",
+          "aha_2023_dietary_cholesterol_news"
+        ],
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "2019 AHA science advisory / scientific studies",
+            "exposure_or_option": "Dietary cholesterol",
+            "outcome_or_endpoint": "Cardiovascular risk",
+            "population": "General population",
+            "stated_dose_or_threshold": "",
+            "stated_limitations": [],
+            "stated_scope": []
+          },
+          "claim_quantities": [],
+          "must_preserve_terms": [
+            "dietary cholesterol",
+            "cardiovascular risk",
+            "not generally supported"
+          ],
+          "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+          "quantities": [],
+          "scope_conditions": [],
+          "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+          "supporting_quotes": [
+            {
+              "line_hint": "52",
+              "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+            }
+          ]
+        }
+      },
+      "pair_id": "pair_008",
+      "pair_intent": {
+        "allowed_relation_types": [
+          "supports",
+          "refines",
+          "depends_on",
+          "in_tension_with",
+          "challenges",
+          "crux_for",
+          "similar_to",
+          "none"
+        ],
+        "intent": "generic_decision_relation"
+      },
+      "right": {
+        "claim": "High egg intake (>1 egg/day) is associated with a higher risk of cardiovascular disease and heart failure, primarily in US-based studies.",
+        "claim_id": "eggs_c025",
+        "claim_quantities": [
+          {
+            "line_hint": "157",
+            "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+            "measures": "Relative Risk",
+            "quantity_role": "effect_estimate",
+            "quantity_type": "percentage",
+            "retention_hint": "use_if_space",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14)",
+            "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+          }
+        ],
+        "decision_edge_role": "scope_or_subgroup_boundary",
+        "decision_edge_role_confidence": "high",
+        "decision_edge_role_deterministic": "outcome_finding",
+        "decision_edge_role_deterministic_confidence": "high",
+        "decision_edge_role_deterministic_reasons": [
+          "model_answer_bearing_label"
+        ],
+        "decision_edge_role_reasons": [
+          "Identifies a geographic subgroup (US-based studies) for the finding."
+        ],
+        "decision_edge_role_source": "model",
+        "decision_function": "answer_bearing",
+        "decision_importance": {
+          "calibrated_level": "high",
+          "calibration_reasons": [
+            "direct_question_relevance",
+            "decision_function:answer_bearing",
+            "evidence_signal",
+            "quantity_signal"
+          ],
+          "decision_function": "answer_bearing",
+          "default_use": "main_map",
+          "model_level": "high",
+          "rationale": "Distinguishes the risks of high consumption versus moderate consumption.",
+          "schema_id": "claim_decision_importance_v1"
+        },
+        "decision_importance_level": "high",
+        "default_use": "main_map",
+        "deterministic_relevance_validation": {
+          "blocking": false,
+          "method": "deterministic_question_fit_check_v1",
+          "reason": "",
+          "status": "ok"
+        },
+        "entailed_by_excerpt": "yes",
+        "excerpt": "RR = 1.04 (95% CI 1.00\u20131.08). In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+        "extraction_method": "whole_doc_source_card",
+        "importance_rationale": "Distinguishes the risks of high consumption versus moderate consumption.",
+        "included_in_final_map": true,
+        "label_audit": {
+          "core_decision_priority": 92,
+          "deterministic_relevance_reason": "",
+          "method": "deterministic_label_routing_v1",
+          "model_labels": {
+            "decision_function": "answer_bearing",
+            "decision_importance_level": "high",
+            "default_use": "main_map",
+            "question_relevance": "direct",
+            "role": "source_claim"
+          },
+          "routing_default_use": "main_map",
+          "routing_importance_level": "critical",
+          "routing_role": "source_claim",
+          "schema_id": "claim_label_audit_v1",
+          "synthesis_bucket": "core",
+          "warnings": []
+        },
+        "map_relation_role": "scope_or_subgroup_boundary",
+        "quantity_values": [
+          "RR = 1.08 (95% CI 1.02\u20131.14)"
+        ],
+        "question_fit": {
+          "schema_id": "claim_question_fit_from_extraction_v1",
+          "scope_mismatch_flags": [],
+          "source": "model_question_relevance_with_deterministic_scope_flags",
+          "status": "match"
+        },
+        "question_relevance": "direct",
+        "relation_building_eligible": true,
+        "relation_triage_bucket": "core",
+        "relation_triage_reasons": [
+          "core_label",
+          "direct_relevance",
+          "high_importance"
+        ],
+        "relevance_rationale": "Distinguishes the risks of high consumption versus moderate consumption.",
+        "role": "source_claim",
+        "scope_flags": [
+          "none"
+        ],
+        "source_acronym_expansions": {},
+        "source_alignment": {
+          "coverage": 1.0,
+          "density": 1.0,
+          "matched_text": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+          "method": "exact_match",
+          "proposed_span_id": "nnr_2023_eggs_scoping_review_s0157",
+          "resolved_span_id": "nnr_2023_eggs_scoping_review_s0157",
+          "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+          "status": "exact_match"
+        },
+        "source_id": "nnr_2023_eggs_scoping_review",
+        "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06).",
+        "source_span": "lines 157-157",
+        "validation_warnings": [],
+        "whole_doc_source_card": {
+          "claim_context": {
+            "applicability_limits": [],
+            "evidence_design": "Meta-analysis of observational studies",
+            "exposure_or_option": "High egg intake (>1 egg/day)",
+            "outcome_or_endpoint": "Cardiovascular disease (CVD), heart failure",
+            "population": "USA populations",
+            "stated_dose_or_threshold": ">1 egg/day",
+            "stated_limitations": [
+              "Residual confounding",
+              "Limited generalizability"
+            ],
+            "stated_scope": [
+              "US studies"
+            ]
+          },
+          "claim_quantities": [
+            {
+              "line_hint": "157",
+              "local_interpretation": "Increased risk of CVD in US studies per 50g/day higher intake",
+              "measures": "Relative Risk",
+              "quantity_role": "effect_estimate",
+              "quantity_type": "percentage",
+              "retention_hint": "use_if_space",
+              "schema_id": "claim_bound_quantity_v1",
+              "source_quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14)",
+              "value": "RR = 1.08 (95% CI 1.02\u20131.14)"
+            }
+          ],
+          "must_preserve_terms": [
+            ">1 egg/day",
+            "US studies",
+            "heart failure",
+            "CVD"
+          ],
+          "natural_bottom_line": "Higher egg intake (>1/day) may be associated with higher CVD and heart failure risk, but these findings are mostly from US studies.",
+          "quantities": [
+            "RR = 1.08 (95% CI 1.02\u20131.14)"
+          ],
+          "scope_conditions": [
+            "US population",
+            "high intake"
+          ],
+          "source_bottom_line": "Current evidence suggests that moderate egg intake (up to one egg/day) is not associated with increased risk of cardiovascular disease, mortality, or type 2 diabetes in European populations. While high egg intake may increase serum LDL cholesterol concentrations in some individuals, there is no clear evidence for a detrimental effect on overall disease risk at moderate levels.",
+          "supporting_quotes": [
+            {
+              "line_hint": "157-158",
+              "quote": "In the US studies, RR = 1.08 (95% CI 1.02\u20131.14); in the European studies, RR = 1.05 (95% CI 0.98\u20131.14); and in the Asian studies, RR = 0.96 (95% CI 0.87\u20131.06)."
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "schema_id": "staged_map_repair_plan_v1"
+}

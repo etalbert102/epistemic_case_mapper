@@ -1,0 +1,462 @@
+# Task
+
+Extract a compact source-level claim card from one whole source document.
+
+# Metadata
+
+Prompt version: whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json
+Source ID: dga_2020_2025_pmc_summary
+Source title: Dietary Guidelines for Americans, 2020-2025
+Decision question: For generally healthy adults, should eggs be treated as meaningfully harmful, neutral, or beneficial in dietary advice, especially with respect to cardiovascular risk?
+
+# Rules
+
+- Read the whole document before choosing claims.
+- Return 3 to 5 canonical claims for this source, not one claim per paragraph or table row.
+- A canonical claim should be something a decision analyst would want in the main evidence map.
+- Split claims when the source reports materially distinct populations, endpoints, stated dose thresholds, or applicability boundaries.
+- Prefer one canonical claim per distinct result cluster until the claim budget is reached.
+- Result clusters include measured outcomes, harms, benefits, costs, operational effects, subgroup results, mechanism measures, implementation constraints, legal or policy consequences, and source-stated guidance.
+- If the same endpoint cluster has materially different populations or dose thresholds, split those into separate claims.
+- Keep related statistics together only when they answer the same population-endpoint-dose proposition.
+- Do not merge blood pressure, blood lipids, mortality, major cardiovascular events, subgroup populations, and final guidance into one claim when the source distinguishes them.
+- Turn table results into interpretable claims with row/column context; treat headings, references, and labels as context.
+- If a table result matters, combine row/column context into one interpretable claim and cite a table-adjacent quote or narrative sentence.
+- Preserve key quantities inside the relevant canonical claim rather than as separate claims.
+- For quantities, prefer objects with value, quantity_role, measures, local_interpretation, source_quote, line_hint, and retention_hint.
+- Use retention_hint must_retain only when the memo would be materially worse without that number; otherwise use use_if_space or audit_only.
+- For each claim, fill claim_context with descriptive source-local fields likely to be stated in the source: population, exposure_or_option, outcome_or_endpoint, evidence_design, stated_dose_or_threshold, stated_scope, stated_limitations, and applicability_limits.
+- Use empty strings or an empty applicability_limits list when the source does not state a descriptive field; do not guess.
+- natural_bottom_line should be a concise reader-facing version of this claim, not a final answer to the whole decision question.
+- must_preserve_terms should list exact populations, endpoints, quantities, comparators, and caveats that must survive later compression.
+- Assign only extraction fields here; later stages assign support, counterweight, crux, scope, mechanism, and final map roles after an overall answer frame exists.
+- For every canonical claim, set question_relevance and scope_flags to explain why it belongs in this decision map.
+- Use decision_importance sparingly: critical only if the claim would materially change the answer or confidence.
+- supporting_quotes must be exact substrings from the document; line_hint can be approximate, such as lines 50-52.
+- Output JSON only.
+
+# Preferred Output Schema
+
+Return only JSON matching this schema:
+{
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string"
+    },
+    "source_bottom_line": {
+      "type": "string"
+    },
+    "canonical_claims": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "question_relevance": {
+            "type": "string",
+            "enum": [
+              "direct",
+              "indirect",
+              "scope_limit",
+              "background",
+              "irrelevant"
+            ]
+          },
+          "scope_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_importance": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "why_it_matters": {
+            "type": "string"
+          },
+          "natural_bottom_line": {
+            "type": "string"
+          },
+          "must_preserve_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_context": {
+            "type": "object",
+            "properties": {
+              "population": {
+                "type": "string"
+              },
+              "exposure_or_option": {
+                "type": "string"
+              },
+              "outcome_or_endpoint": {
+                "type": "string"
+              },
+              "evidence_design": {
+                "type": "string"
+              },
+              "stated_dose_or_threshold": {
+                "type": "string"
+              },
+              "stated_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stated_limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "applicability_limits": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "population",
+              "exposure_or_option",
+              "outcome_or_endpoint",
+              "evidence_design",
+              "stated_dose_or_threshold",
+              "stated_scope",
+              "stated_limitations",
+              "applicability_limits"
+            ]
+          },
+          "supporting_quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "quote": {
+                  "type": "string"
+                },
+                "line_hint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "quote",
+                "line_hint"
+              ]
+            }
+          },
+          "quantities": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "quantity_role": {
+                      "type": "string",
+                      "enum": [
+                        "baseline_or_absolute_risk",
+                        "context",
+                        "cost_or_resource",
+                        "effect_estimate",
+                        "exposure_or_intervention_level",
+                        "population_descriptor",
+                        "source_reported_quantity",
+                        "study_descriptor",
+                        "threshold_or_guideline",
+                        "time_horizon",
+                        "uncertainty_interval"
+                      ]
+                    },
+                    "measures": {
+                      "type": "string"
+                    },
+                    "local_interpretation": {
+                      "type": "string"
+                    },
+                    "source_quote": {
+                      "type": "string"
+                    },
+                    "line_hint": {
+                      "type": "string"
+                    },
+                    "retention_hint": {
+                      "type": "string",
+                      "enum": [
+                        "audit_only",
+                        "must_retain",
+                        "use_if_space"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "quantity_role",
+                    "measures",
+                    "local_interpretation",
+                    "source_quote",
+                    "line_hint",
+                    "retention_hint"
+                  ]
+                }
+              ]
+            }
+          },
+          "scope_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "claim",
+          "question_relevance",
+          "scope_flags",
+          "decision_importance",
+          "why_it_matters",
+          "natural_bottom_line",
+          "must_preserve_terms",
+          "claim_context",
+          "supporting_quotes",
+          "quantities",
+          "scope_conditions"
+        ]
+      }
+    },
+    "excluded_as_not_decision_relevant": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "source_id",
+    "source_bottom_line",
+    "canonical_claims",
+    "excluded_as_not_decision_relevant"
+  ]
+}
+
+# Source Document With Line Numbers
+
+1: Skip to main content
+2: 
+3: An official website of the United States government
+4: Here's how you know
+5: 
+6: 
+7: 
+8: Search
+9: 
+10: Log in
+11: Primary site navigation
+12: 
+13: Search PMC Full-Text Archive
+14: 
+15: Search in PMC
+16: 	•	Journal List
+17: 	•	User Guide
+18: As a library, NLM provides access to scientific literature. Inclusion in an NLM database does not imply endorsement of, or agreement with, the contents by NLM or the National Institutes of Health.
+19: Learn more: PMC Disclaimer | PMC Copyright Notice
+20: 
+21: Nutr Today. 2021 Nov 12;56(6):287–295. doi: 10.1097/NT.0000000000000512
+22: Dietary Guidelines for Americans, 2020–2025
+23: Understanding the Scientific Process, Guidelines, and Key Recommendations
+24: Linda G Snetselaar 1,2,3,4, Janet M de Jesus 1,2,3,4, Dana M DeSilva 1,2,3,4, Eve E Stoody 1,2,3,4
+25: 	•	Author information
+26: 	•	Article notes
+27: 	•	Copyright and License information
+28: 
+29: PMCID: PMC8713704  PMID: 34987271
+30: Abstract
+31: The Dietary Guidelines for Americans, 2020–2025 was issued jointly by the US Departments of Agriculture and of Health and Human Services in December 2020. It is the ninth edition of the Dietary Guidelines and is the first to provide recommendations by life stage, from birth to older adulthood. The Dietary Guidelines is grounded in the current body of scientific evidence on diet and health outcomes and aims to promote health and prevent chronic diseases. The process to develop the Dietary Guidelines involved 4 steps: (1) identifying the topics and supporting scientific questions, (2) appointing a Dietary Guidelines Advisory Committee (Committee) to review current scientific evidence, (3) developing the new edition of the Dietary Guidelines, and (4) implementing the Dietary Guidelines. The 2020-2025 edition provides 4 overarching guidelines and supporting key recommendations that encourage healthy dietary patterns across the life span. The foods and beverages that people consume have a profound impact on health, and it is never too late or too early to eat healthfully.
+32: 
+33: The Dietary Guidelines for Americans, 2020–2025 (Dietary Guidelines) includes an important call to action for health professionals and policymakers, to help the public “make every bite count.”1 This article provides an overview of the recommendations in the recent edition and background on the scientific review process that informed the development of the Dietary Guidelines.
+34: The US Departments of Agriculture (USDA) and of Health and Human Services (HHS) update the Dietary Guidelines every 5 years, based on the current science. Although many recommendations have remained relatively consistent over time, the Dietary Guidelines also has evolved as scientific knowledge has grown. The 2020–2025 Dietary Guidelines for Americans reflects this in 3 important ways. The first is its recognition that diet-related chronic diseases, such as cardiovascular disease, type 2 diabetes, obesity, and some types of cancer, are very prevalent among Americans and pose a major public health problem. A fundamental premise of the Dietary Guidelines is that everyone, no matter their age, race, or ethnicity, economic circumstances, or health status, can benefit from shifting food and beverage choices to better support healthy dietary patterns. The second is its focus on dietary patterns. Researchers and public health experts understand that nutrients and foods are not consumed in isolation. Rather, people consume them in various combinations over time—a dietary pattern—and these foods and beverages act synergistically to affect health. The 2020–2025 Dietary Guidelines carries forward this emphasis on the importance of a healthy dietary pattern as a whole—rather than on individual nutrients, foods, or food groups in isolation. The third is its focus on a life span approach. This edition of the Dietary Guidelines highlights the importance of encouraging healthy dietary patterns at every life stage from infancy through older adulthood. For the first time since the 1985 edition, the 2020–2025 Dietary Guidelines includes recommendations for healthy dietary patterns for infants and toddlers.
+35: PURPOSE OF THE DIETARY GUIDELINES FOR AMERICANS
+36: The Dietary Guidelines provides science-based advice on what to eat and drink to promote health, help reduce the risk of chronic disease, and meet nutrient needs. It serves as the cornerstone of federal nutrition programs and policies and is mandated by law to reflect the preponderance of scientific evidence and to be published by USDA and HHS at least every 5 years.2
+37: As an important part of a complex, multifaceted approach to promote health and reduce chronic disease risk, the Dietary Guidelines is written for a professional audience, including policymakers, healthcare professionals, nutrition educators, and federal nutrition program operators. Health professionals are a critically important audience who work with the public to help them consume a healthy and nutritionally adequate diet. Comprehensive, coordinated strategies built on the science-based foundation of the Dietary Guidelines—and a commitment to drive these strategies over time across sectors and settings—can help all Americans consume healthy dietary patterns, achieve and maintain good health, and reduce the risk of chronic diseases.
+38: DIETARY GUIDELINES PROCESS
+39: The process to develop the Dietary Guidelines has evolved over time, in step with developments in nutrition science, public health, and best practices in scientific review and guidance development. In establishing the process for the 2020–2025 Dietary Guidelines, USDA and HHS considered and integrated recommendations from a comprehensive 2017 National Academies' study, “Review of the Process to Update the Dietary Guidelines.”3 Greater transparency figured prominently in the Academies' recommendations. As a result, USDA and HHS made significant changes to increase transparency and public participation while maintaining the core element of scientific integrity.
+40: The 2020–2025 process consisted of 4 stages: (1) identifying the topics and supporting scientific questions to be examined, (2) appointing a Dietary Guidelines Advisory Committee (Committee) to review current scientific evidence and develop a scientific report, (3) developing the new edition of the Dietary Guidelines, and (4) implementing the Dietary Guidelines through federal programs and nonfederal program entities (Figure 1).
+41: FIGURE 1.
+42: 
+43: Open in a new tab
+44: The four stages of the process to develop the Dietary Guidelines for Americans.
+45: Identifying Scientific Topics and Questions
+46: The Departments added a new first step of identifying topics and scientific questions to begin the process of developing the next Dietary Guidelines. This step was added to promote a deliberate and transparent process, better define the expertise needed on the Committee, ensure the scientific review conducted by the Committee would address federal nutrition policy and program needs, and help manage resources. Topics and questions were made available for the public to view and provide comments. The USDA and HHS considered each public and agency comment to refine the topics and questions. Final topics and questions were posted along with the public call for nominations to the 2020 Dietary Guidelines Advisory Committee.
+47: 2020 Dietary Guidelines Advisory Committee Scientific Report Development
+48: In the second stage, the Secretaries of USDA and HHS appointed the Committee with the single, time-limited task of reviewing the 2015–2020 Dietary Guidelines, examining the evidence on the selected nutrition and public health topics and scientific questions, and providing independent, science-based advice and recommendations to USDA and HHS. The Committee was announced in February and appointed at the first public meeting in March 2019. Public comments were accepted throughout the process. The Committee met a total of 6 times. The Committee timeline was extended by 1 month because of the impact of COVID-19 (Figure 2).
+49: FIGURE 2.
+50: 
+51: Open in a new tab
+52: The 2020 Dietary Guidelines Advisory Committee timeline.
+53: The 20 nationally recognized scientific experts appointed to the Committee represented a mix of practitioners, epidemiologists, scientists, clinical trial experts, and others from every region of the United States. This is the largest Committee to date because of the additional emphasis on infants, toddlers, and pregnant women. The Committee members were selected on predetermined criteria including educational background, professional experience, scientific expertise, obligations under the Federal Advisory Committee Act, and requirements regarding a balanced membership. The USDA and HHS not only examined nomination packages individually to ensure each person met the criteria but also considered how a potential candidate's expertise fits with other members of the Committee to ensure a balanced committee with expertise across the topic areas.
+54: The Committee's work had 3 defining characteristics: the use of 3 approaches to examine the evidence, the creation of transparent protocols before the evidence review began, and the development of scientific review conclusion statements. The Committee answered each question on diet and health using 1 of 3 approaches: data analysis, food pattern modeling, and Nutrition Evidence Systematic Review (NESR) systematic reviews. Each of these approaches has its own rigorous, protocol-driven methodology and plays a unique, complementary role in examining the science.
+55: 	•	Data analysis: The method of data analysis includes a collection of analyses that uses national data sets to describe and understand the current health and dietary intakes of Americans. These data help make the Dietary Guidelines practical, relevant, and achievable. The Committee conducted more than 150 analyses of federal data sets.
+56: 	•	Food pattern modeling: Food pattern modeling shows how changes to the amounts or types of foods and beverages in a pattern may impact meeting nutrient needs across the US population. Several food pattern modeling analyses were completed including, for the first time, analyses of food patterns for children from 6 to 24 months old.
+57: 	•	NESR systematic reviews: NESR systematic reviews are research projects that answer a question on diet and health by searching for, evaluating, and synthesizing all relevant, peer-reviewed studies within a specified period. More than 270 000 citations were screened, and nearly 1500 original research articles were included in 33 original systematic reviews.
+58: The 2020 Committee created a protocol for each question, with support from USDA and HHS staff, before it examined any of the scientific evidence. This protocol served as a plan to examine research related to each of the questions (eg, inclusion/exclusion criteria for study design and date of publication).
+59: The Committee looked across all of the conclusion statements—the totality of the scientific review—to develop overarching advice for USDA and HHS to consider as the Departments developed the 2020–2025 Dietary Guidelines. For example, the Committee reviewed 8 specific questions on dietary patterns related to health outcomes such as cardiovascular disease, risk of overweight and obesity, type 2 diabetes, bone health, cancer, neurocognitive health, and all-cause mortality. The Committee found consistent evidence that certain dietary components are associated with multiple outcomes and based their advice to the Department on this consistent evidence.
+60: The updated process for developing the Dietary Guidelines for Americans increased transparency and public participation, as well as ensured that the scientific review conducted by the Committee would address federal nutrition policy and program needs and help manage resources.
+61: Scientific Report of the 2020 Dietary Guidelines Advisory Committee
+62: The Committee's work culminated in the release of the Scientific Report of the 2020 Dietary Guidelines Advisory Committee posted at DietaryGuidelines.gov on July 15, 2020.4 There were more than 10 000 downloads for this document in the first week.
+63: As part of the Committee's scientific review, the report summarizes current intakes of foods, beverages, and nutrients across the life span. It is interesting to note that what Americans eat has not changed appreciably for the past decade. Throughout their life span, Americans overconsume calories, saturated fats, sodium, added sugars, and alcohol. In addition, they underconsume fruits, vegetables, dairy, and whole grains compared with recommendations. The report also identifies nutrients or food components of public health concern due to underconsumption, where inadequacy of those nutrients is linked to specific health conditions. This is based on intake data and evidence through biochemical indices or functional status indicators. These nutrients or food components are of public health concern for all Americans: vitamin D, calcium, dietary fiber, and potassium.
+64: The Committee reviewed evidence on the relationship between nutrition and health outcomes for the entire life span from infants to older adults and including pregnancy and lactation. The report emphasized the importance of consuming a healthy dietary pattern at every life stage to meet nutrient needs, maintain proper growth or energy balance, and reduce the risk of chronic disease.
+65: PREGNANT AND LACTATING WOMEN
+66: The evidence reviewed by the Committee reinforces the importance of nutrition for women before and during pregnancy and lactation for optimal maternal and fetal outcomes. The Committee concluded that consuming a healthy dietary pattern before and/or during pregnancy may modestly reduce the risk of gestational diabetes, hypertensive disorders of pregnancy, excessive gestational weight gain, and preterm birth. For both pregnancy and lactation, the Committee's review suggested that seafood choices are important components of a healthy dietary pattern along with other core components, including vegetables, fruits, legumes, whole grains, low-fat or nonfat dairy, lean meat and poultry, nuts, and unsaturated vegetable oils.
+67: On the basis of intake data, biomarker data, and clinical outcomes, women who are pregnant or lactating have similar food components of public health concern (vitamin D, calcium, dietary fiber, and potassium) as the rest of the population, but iron and folate/folic acid status is also of particular importance during pregnancy. Without supplements and careful food choices, women who are pregnant are at a high risk for inadequacy for these nutrients. The Committee determined that, during pregnancy and lactation, consuming a healthy dietary pattern (Healthy US-Style, Healthy Vegetarian, and Healthy Mediterranean-Style) would meet most nutrient needs. During pregnancy, women should also specifically incorporate foods rich in iron, folate, choline, and vitamins D and E. During lactation, foods rich in choline, and vitamins A, D, and E are important to incorporate. Because iron needs are lower during lactation compared with pregnancy, research supports the discontinuation of prenatal high–iron-dose supplements during lactation unless medically indicated.
+68: The Committee's review also indicated that the avoidance of potentially allergenic foods during pregnancy and lactation is not recommended, unless medically necessary to protect the mother's health. The Committee recommended that women follow existing guidance on alcohol and caffeine consumption during pregnancy and lactation and emphasized that maintaining a healthy prepregnancy weight, achieving appropriate weight gain during lactation, and returning to a healthy weight during the postpartum period are essential.
+69: INFANTS AND TODDLERS
+70: The Committee encouraged exclusive breastfeeding, ideally for the first 6 months of life, with continued breastfeeding through the first year of life or longer as desired by the mother and infant. On the basis of the evidence reviewed, the Committee concluded that complementary foods and beverages (CFB) should not be introduced before 4 months old. The Committee found that introduction at 4 to 5 months old as compared with 6 months old does not offer long-term advantages or disadvantages. It recommended that CFB include foods that are rich in iron and zinc, either intrinsically (eg, meats) or due to fortification (eg, iron-fortified infant cereal), particularly from the age of 6 to 12 months among breastfed infants. Complementary foods and beverages should also contain adequate amounts of polyunsaturated fatty acids. The Committee concluded that, once CFB are introduced, adding peanut and egg in developmentally appropriate forms in the first year of life (6-12 months old) may reduce the risk of food allergy to these foods. The Committee found no evidence that avoiding other potentially allergenic foods (fish, shellfish, cow milk products, tree nuts, seeds, wheat, and soy) in the first year of life is beneficial with regard to preventing food allergies or other atopic diseases.
+71: On the basis of its evidence review, the Committee concluded that routine iron supplementation of all breastfed infants may not be advisable, although it acknowledged that screening for iron deficiency using appropriate biomarkers, such as serum ferritin, may be challenging because it is not as simple as measuring hemoglobin. After 6 months, other sources of iron, such as iron-rich or iron-fortified complementary foods, can be provided, so iron supplementation is generally not needed. The Committee also concluded that there is no basis for recommending vitamin D supplementation higher than 400 IU per day during infancy.
+72: The Committee conducted food pattern modeling to determine whether USDA food patterns could be established for infants and toddlers ages 6 to 24 months.5 A food pattern for infants 6 to 12 months old could not be established because of challenges with uncertainty about nutrient requirements and difficulty in meeting the Recommended Dietary Allowance for iron through CFB. However, combinations of CFB were described by the Committee that meet most nutrient requirements while infants are still consuming different proportions of human milk or infant formula. The Committee recommended providing infants and toddlers with a variety of animal-source foods (meat, poultry, seafood, eggs, and dairy), fruits and vegetables, nuts and seeds, and whole-grain products, beginning at 6 to 12 months old and continuing thereafter. For toddlers 12 to 24 months old whose diets do not include meat, poultry, or seafood, the Committee advised providing eggs and dairy products on a regular basis, along with soy products and nuts or seeds, fruits, vegetables, grains, and oils. The Committee also recommended not providing foods and beverages with added sugars, such as sugar-sweetened beverages, to children younger than 2 months because energy from added sugars is likely to displace energy from nutrient-dense foods and because some evidence suggests a relationship with subsequent risk of child overweight. In addition, because food preferences begin at an early age, it is important to encourage regular consumption of nutrient-dense foods and beverages.
+73: TWO YEARS AND OLDER
+74: The Committee's extensive evidence review found that dietary patterns higher in vegetables, fruits, legumes, whole grains, low-fat or nonfat dairy, lean meat and poultry, seafood, nuts, and unsaturated vegetable oils, and low in red and processed meats, sugar-sweetened foods and beverages, and refined grains are associated with a range of beneficial health outcomes. Beneficial outcomes associated with these healthy dietary patterns include reduced risk of all-cause mortality, cardiovascular disease, type 2 diabetes, overweight and obesity, bone health, and several cancers. These core dietary pattern elements are appropriate across the life span from children to older adults.
+75: On the basis of its review of the evidence for a relationship between types of dietary fats consumed and cardiovascular disease risk, the Committee advised limiting intake of saturated fats to less than 10% of energy per day by replacing them with unsaturated fats and keeping dietary cholesterol intake as low as possible. The Committee also recommended 2 or more servings of cooked seafood per week for individuals 2 years and older to ensure intake of key nutrients and as part of an overall healthy dietary pattern. Serving sizes vary based on age and seafood choices should emphasize species higher in omega-3 fatty acids and low in methylmercury, following federal and local fish and seafood advisories.6 For those who do not consume seafood, the Committee concluded that regular intake of other foods high in omega-3 fatty acids, such as flaxseeds, walnuts, soy oil, algae, and eggs that contain omega-3 fatty acids, is appropriate.
+76: The Committee also examined the relationship between beverage consumption and weight status. It concluded that nutrient-rich beverages (eg, fat-free or low-fat milk, 100% juice) contribute substantively to food group and nutrient intakes but that it is important to be mindful of their contribution to total energy intake. Because sugar-sweetened beverages contribute substantial energy to the diet and contribute very little toward meeting food group and nutrient recommendations, the Committee encouraged only limited intake of these beverages. The Committee acknowledged that low- and no-calorie sweetened beverages may be a useful aid in weight management in adults, but that evidence was limited. The Committee emphasized that the role beverages play in diet quality and energy balance varies across the life span and that recommendations should be tailored appropriately.
+77: On the basis of its review of the evidence regarding alcohol consumption, the Committee concluded that, for those who do not drink, it is not wise to begin drinking alcohol or purposefully continue to drink alcohol for health reasons. For adults who do drink alcohol, the Committee's review indicated that, at all levels of consumption, drinking less is generally better for health than drinking more. The Committee recommended that adults limit alcohol intake to no more than 1 drink per day for both women and men for better health.
+78: The Committee suggested that, for adults and for children 2 years and older, a recommendation of less than 6% of energy from added sugars is more consistent with a dietary pattern that is both nutritionally and calorically appropriate, than is a pattern with less than 10% of energy from added sugars, as was recommended in past editions of the Dietary Guidelines. The Committee's advice was based on food pattern modeling and the evidence on health impacts of added sugars intake.
+79: Finally, the Committee continued to recommend established USDA Food Patterns: Healthy U.S.-Style, Healthy Vegetarian Style, and Healthy Mediterranean-Style. The core components of all 3 USDA Food Patterns include fruits, vegetables, legumes, whole grains, nuts, and seeds; protein and fats from nutrient-rich food sources; and limited amounts of added sugars, saturated fat, and sodium.
+80: The Scientific Report of the 2020 Dietary Guidelines Advisory Committee summarizes a wealth of nutrition research completed by nutrition investigators throughout the world and served as the scientific basis for the Dietary Guidelines for Americans, 2020–2025.
+81: PUBLIC ENGAGEMENT
+82: The public was encouraged to provide input at various times throughout the process of the development of the Dietary Guidelines. Before the 2020 Advisory Committee was established, the public was invited to provide comments on the topics and scientific questions to be examined by the Committee. The public was also able to nominate candidates for Committee membership. For the first time in the Committee process, draft protocols were posted online for public comments to the Committee before they were finalized. The public was also invited to submit written comments and to provide oral testimony to the Committee during the time that the Committee was reviewing the evidence. In addition, after the Committee's scientific report was submitted to the Departments, the public was able to give written comments, for a time, as well as oral comments on the report to federal staff at a public meeting. The Committee received more than 62 000 written public comments from March 12, 2019, to June 10, 2020, which consisted of approximately 4000 unique comments.
+83: Development of the Dietary Guidelines
+84: Each edition of the Dietary Guidelines builds on the preceding edition, with the scientific justification for revisions informed by the Advisory Committee's Scientific Report, consultation with subject matter experts within federal agencies, and consideration of comments from these agencies and the public. The USDA and HHS received 38 000 comments on the Advisory Committee's Scientific Report, and these were considered in the development of the Dietary Guidelines.
+85: Development of the Dietary Guidelines involves a step-by-step process of writing, review, and revision supported by a writing team of federal staff from USDA and HHS. The writing team included federal nutrition scientists with expertise in the Dietary Guidelines and related research and programs as well as specialists with expertise in communicating nutrition information. It was written with the fundamental understanding that it must represent the totality of the evidence, address the needs of federal programs, work to reduce unintended consequences, follow best practices, and use plain language. The draft Dietary Guidelines then underwent several rounds of review and revisions by all agencies with nutrition policies and programs across the USDA and HHS, as well as external experts. The review finally culminated with the Secretaries of USDA and HHS. After approval by the Secretaries, the Departments released the Dietary Guidelines to federal agencies and the public for implementation across programs and through educational activities.
+86: The Dietary Guidelines for Americans, 2020–2025 includes nearly all of the science-based recommendations of the 2020 Dietary Guidelines Advisory Committee, including new dietary advice for infants and toddlers. The Dietary Guidelines includes part, but not all, of the Committee's advice on added sugars and alcohol. The new edition emphasizes the importance of limiting intakes of added sugars and alcoholic beverages but does not include the changes to quantitative limits recommended by the Committee. The evidence that the Committee reviewed supports the need to continue to limit intakes of added sugars and alcoholic beverages to promote health and prevent diseases. However, there was not a preponderance of evidence in the Committee's review of studies since the 2015–2020 edition to substantiate changes to the quantitative limits for either added sugars or alcohol. The Dietary Guidelines underscores the importance of limiting added sugars and alcohol intake and carries forward the quantitative limits from the 2015–2020 edition. The USDA and HHS encourage more research on the relationship between added sugars and alcoholic beverages and health and will continue to monitor the evidence on these topics.
+87: KEY CONCEPTS FROM THE DIETARY GUIDELINES FOR AMERICANS, 2020–2025
+88: Chapter 1 of the Dietary Guidelines discusses 4 overarching guidelines (Figure 3) that serve to promote healthy dietary patterns across the life span and are supported by key recommendations that provide more specific guidance. These core recommendations are consistent with the 2015–2020 Dietary Guidelines.
+89: FIGURE 3.
+90: 
+91: Open in a new tab
+92: The four overarching guidelines of the Dietary Guidelines for Americans, 2020–2025.
+93: The 4 guidelines are as follows:
+94: 	1	Follow a healthy dietary pattern at every life stage: At every life stage—infancy, toddlerhood, childhood, adolescence, adulthood, pregnancy, lactation, and older adulthood—it is never too early or too late to eat healthfully.
+95: For approximately the first 6 months of life, exclusively feed infants human milk. Continue to feed infants human milk through at least the first year of life, and longer if desired. Feed infants iron-fortified infant formula during the first year of life when human milk is unavailable. Provide infants with supplemental vitamin D beginning soon after birth. At approximately 6 months old, introduce infants to nutrient-dense complementary foods. Introduce infants to potentially allergenic foods along with other complementary foods. Encourage infants and toddlers to consume a variety of foods from all food groups. Include foods rich in iron and zinc, particularly for infants fed human milk. From 3 months through older adulthood, follow a healthy dietary pattern across the life span to meet nutrient needs, help achieve a healthy body weight, and reduce the risk of chronic disease.
+96: 	2	Customize and enjoy nutrient-dense food and beverage choices to reflect personal preferences, cultural traditions, and budgetary considerations. A healthy dietary pattern can benefit all individuals regardless of age, race, ethnicity, or current health status. The Dietary Guidelines provides a framework intended to be customized to individual needs and preferences, as well as the foodways of the diverse cultures in the United States, which can be found at www.dietaryguidelines.gov/DGA_2020-2025_Customizing.pdf.
+97: 	3	Focus on meeting food group needs with nutrient-dense foods and beverages, and stay within calorie limits. An underlying premise of the Dietary Guidelines is that nutritional needs should be met primarily from foods and beverages—specifically, nutrient-dense foods and beverages. Nutrient-dense foods provide vitamins, minerals, and other health-promoting components and have no or little added sugars, saturated fat, and sodium. A healthy dietary pattern consists of nutrient-dense forms of foods and beverages across all food groups, in recommended amounts, and within calorie limits.
+98: The core elements that make up a healthy dietary pattern include the following:
+99: 	•	Vegetables of all types—dark green; red and orange; beans, peas, and lentils; starchy; and other vegetables
+100: 	•	Fruits, especially whole fruits
+101: 	•	Grains, at least half of which are whole grain
+102: 	•	Dairy, including fat-free or low-fat milk, yogurt, and cheese, and/or lactose-free versions and fortified soy beverages and yogurt as alternatives
+103: 	•	Protein foods, including lean meats, poultry, and eggs; seafood; beans, peas, and lentils; and nuts, seeds, and soy products
+104: 	•	Oils, including vegetable oils and oils in food, such as seafood and nuts
+105: 	4	Limit foods and beverages higher in added sugars, saturated fat, and sodium, and limit alcoholic beverages. At every life stage, meeting food group recommendations—even with nutrient-dense choices—requires most of a person's daily calorie needs and sodium limits. A healthy dietary pattern does not have much room for extra added sugars, saturated fat, or sodium—or for alcoholic beverages. A small amount of added sugars, saturated fat, or sodium can be added to nutrient-dense foods and beverages to help meet food group recommendations, but foods and beverages high in these components should be limited.
+106: 	•	Limits are the following:
+107: 	•	Added sugars—less than 10% of calories per day starting at the age of 2 years. Avoid foods and beverages with added sugars for those younger than 2 years.
+108: 	•	Saturated fat—less than 10% of calories per day starting at the age of 2 years.
+109: 	•	Sodium—less than 2300 mg per day and even less for children younger than 14 years.
+110: 	•	Alcoholic beverages—Adults of legal drinking age can choose not to drink or to drink in moderation by limiting intake to 2 drinks or less in a day for men and 1 drink or less in a day for women, when alcohol is consumed. Drinking less is better for health than drinking more. There are some adults who should not drink alcohol, such as women who are pregnant.
+111: In addition to the guidelines and key recommendations, there are several dietary principles provided to help inform decisions about nutrient-dense food and beverages. These are the following:
+112: 	1	Meet nutritional needs primarily from foods and beverages—a concept that has always been emphasized in the Dietary Guidelines.
+113: 	2	Choose a variety of options from each food group.
+114: 	3	Pay attention to portion size.
+115: The importance of nutrient-dense choices is a theme embedded within the Dietary Guidelines, with several graphic examples that help explain how single food and beverage choices can help people adopt healthy dietary patterns (Figure 4).
+116: FIGURE 4.
+117: 
+118: Open in a new tab
+119: Examples of nutrient-dense choices compared to typical choices.
+120: Consuming a healthy dietary pattern, meeting food group and nutrient needs with nutrient-dense foods and beverages, and limiting intake of foods and beverages that are not nutrient dense are related to many health benefits.
+121: LIFE STAGE GUIDANCE
+122: Guidance and special considerations for each life stage are discussed in Chapters 2 to 6. This is the first edition of the Dietary Guidelines to provide specific recommendations for each life stage. Chapter 2 provides specific key recommendations for infants and toddlers (birth through 23 months old), along with guidance on how to put these recommendations into action. Chapters 3 to 6 (Children – Older Adults) describe nutrition issues specific to each age group, present the recommended Healthy Dietary Patterns, explain how current intakes compare with recommendations, discuss special dietary guidance considerations, and conclude with ways to support healthy dietary patterns across each life stage. More detailed information about nutrition guidance for each life stage can be found in the full policy document at dietaryguidelines.gov.
+123: Implementation
+124: The US Government uses the Dietary Guidelines as the basis of its food assistance and meal programs, nutrition education efforts, and decisions about national health objectives. The Dietary Guidelines also provides a critical structure for state and local public health promotion and disease prevention initiatives. In addition, it provides foundational, evidence-based nutrition guidance for use by individuals and those who serve them in public and private settings, including health professionals, public health and social service agencies, healthcare and educational institutions, researchers, agricultural producers, food and beverage manufacturers, and more.
+125: The Dietary Guidelines for Americans is developed for the American public but is written for a professional audience. Therefore, its translation into actionable consumer messages and resources is crucial to help individuals, families, and communities achieve healthy dietary patterns.
+126: One implementation method is through USDA's MyPlate, which is a resource used by both federal and nonfederal professionals and programs to help Americans build healthy eating patterns by making healthy choices across the food groups (Figure 5). The Department of Agriculture's campaign “Start Simple with MyPlate” offers resources to help Americans put the Guidelines into practice starting today. This campaign provides inspiration and simple ideas that people can incorporate into their busy lives to help them improve their health and well-being over time. Key MyPlate tools and resources include the newly designed website MyPlate.gov, the new MyPlate Quiz to get personalized resources, Start Simple with MyPlate app that allows users to set goals, personalized MyPlate plans for personal food group targets, and a new toolkit for partners and professionals.
+127: FIGURE 5.
+128: 
+129: Open in a new tab
+130: USDA's MyPlate icon.
+131: In addition, HHS has developed a healthcare provider toolkit, which helps healthcare providers communicate Dietary Guidelines messages. The content covers nutrition tips and conversation starters for dietitians, nurses, medical doctors, and other providers working with the public.
+132: Everyone has a role to play to support individuals and families in accessing and following a healthy dietary pattern. For lifelong good health, make every bite count with the Dietary Guidelines for Americans, 2020–2025.
+133: Footnotes
+134: The authors have no conflicts of interest to disclose.
+135: Contributor Information
+136: Janet M. de Jesus, Email: Janet.deJesus@hhs.gov.
+137: Dana M. DeSilva, Email: Dana.Desilva@hhs.gov.
+138: Eve E. Stoody, Email: Eve.Stoody@usda.gov.
+139: REFERENCES
+140: 	•	1.US Department of Agriculture and US Department of Health and Human Services . Dietary Guidelines for Americans, 2020–2025. 9th ed. Washington, DC: US Government Publishing Office; 2020. DietaryGuidelines.gov. [Google Scholar]
+141: 	•	2.Congress.gov . H.R. 1608—National Nutrition Monitoring and Related Research Act of 1990. https://www.congress.gov/bill/101st-congress/house-bill/1608. Accessed June 7, 2021.
+142: 	•	3.National Academies of Sciences, Engineering, and Medicine . Redesigning the Process for Establishing the Dietary Guidelines for Americans. Washington, DC: The National Academies Press; 2017. 10.17226/24883. [DOI] [PubMed] [Google Scholar]
+143: 	•	4.Dietary Guidelines Advisory Committee . Scientific Report of the 2020 Dietary Guidelines Advisory Committee: Advisory Report to the Secretary of Agriculture and the Secretary of Health and Human Services. Washington, DC: US Department of Agriculture, Agricultural Research Service; 2020. [Google Scholar]
+144: 	•	5.Dewey KG Pannucci T Casavale KO, et al. Development of food pattern recommendations for infants and toddlers 6–24 months of age to support the Dietary Guidelines for Americans, 2020–2025. J Nutr. 2021;151(10):3113–3124. doi: 10.1093/jn/nxab201. [DOI] [PubMed] [Google Scholar]
+145: 	•	6.Fda.gov . Advice about eating fish. https://www.fda.gov/food/consumers/advice-about-eating-fish. Accessed June 7, 2021.
+146: 
+147: Articles from Nutrition Today are provided here courtesy of Wolters Kluwer Health
+148: ACTIONS
+149: 	•	
+150: 	•	View on publisher site
+151: 	•	
+152: 	•	PDF (1.8 MB)
+153: 	•	
+154: 	•	Cite
+155: 	•	
+156: 	•	Collections
+157: 	•	
+158: 	•	Permalink
+159: RESOURCES
+160: Similar articles
+161: 
+162: Cited by other articles
+163: 
+164: Links to NCBI Databases
+165: 
+166: 
+167: FOLLOW NCBI
+168: 
+169: NCBI on X (formerly known as Twitter)
+170: 
+171: NCBI on Facebook
+172: 
+173: NCBI on LinkedIn
+174: 
+175: NCBI on GitHub
+176: 
+177: NCBI RSS feed
+178: Connect with NLM
+179: 
+180: NLM on X (formerly known as Twitter)
+181: 
+182: NLM on Facebook
+183: 
+184: NLM on YouTube
+185: National Library of Medicine 
+186: 8600 Rockville Pike
+187: Bethesda, MD 20894
+188: 	•	Web Policies
+189: 	•	FOIA
+190: 	•	HHS Vulnerability Disclosure
+191: 	•	Help
+192: 	•	Accessibility
+193: 	•	Careers
+194: 	•	NLM
+195: 	•	NIH
+196: 	•	HHS
+197: 	•	USA.gov
+198: Back to Top
+199:

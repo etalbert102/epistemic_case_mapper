@@ -46,6 +46,7 @@ def main() -> int:
     manifest_args = ["--manifest", args.manifest]
     _run([sys.executable, "scripts/validate_submission_manifest.py", *manifest_args], repo_root, failures)
     _run([sys.executable, "scripts/validate_curated_submission.py", *manifest_args], repo_root, failures)
+    _run([sys.executable, "scripts/validate_live_model_examples.py", *manifest_args], repo_root, failures)
     _run([sys.executable, "scripts/validate_worked_regions.py", *manifest_args], repo_root, failures)
     _run([sys.executable, "scripts/validate_full_case_knowledge.py", *manifest_args], repo_root, failures)
     _run([sys.executable, "scripts/validate_realism_artifacts.py", *manifest_args], repo_root, failures)

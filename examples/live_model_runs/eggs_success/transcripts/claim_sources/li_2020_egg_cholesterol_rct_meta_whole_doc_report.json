@@ -1,0 +1,32 @@
+{
+  "claim_count": 4,
+  "effective_max_claims": 7,
+  "num_predict": 8192,
+  "repair_reason": "not_needed",
+  "repair_used": false,
+  "requested_max_claims": 3,
+  "rich_claim_context_field_counts": {
+    "evidence_design": 4,
+    "exposure_or_option": 4,
+    "outcome_or_endpoint": 4,
+    "population": 4,
+    "stated_dose_or_threshold": 1
+  },
+  "rich_claim_context_schema_id": "rich_claim_context_report_v1",
+  "rich_claim_must_preserve_terms_count": 4,
+  "rich_claim_natural_bottom_line_count": 4,
+  "rich_claim_stated_limitations_count": 4,
+  "schema_id": "whole_doc_claim_extraction_report_v1",
+  "schema_rejected_claim_count": 0,
+  "source_card_acronym_expansion_count": 7,
+  "source_card_exact_quote_count": 7,
+  "source_card_quote_count": 7,
+  "source_card_short_quote_count": 0,
+  "source_evidence_unit_count": 4,
+  "source_evidence_unit_warning_counts": {
+    "weak_quote_claim_overlap": 2
+  },
+  "source_id": "li_2020_egg_cholesterol_rct_meta",
+  "source_quantity_tuple_count": 8,
+  "status": "ok"
+}

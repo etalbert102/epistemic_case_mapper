@@ -1,0 +1,65 @@
+{
+  "actions": [
+    {
+      "action": "targeted_relation_classification",
+      "count": 0
+    },
+    {
+      "action": "append_evidence_check_rows",
+      "count": 8
+    },
+    {
+      "action": "append_crux_review_notes",
+      "count": 0
+    }
+  ],
+  "crux_review_notes": [],
+  "evidence_check_rows": [
+    [
+      "Map critique",
+      "Needs review",
+      "quality:low_claim_count: Accepted 1 claims; region target is at least 12."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_source_claim_coverage: No accepted claim from required source lsag_2008_safety_review."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_source_claim_coverage: No accepted claim from required source spc_2008_lsag_review."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_source_claim_coverage: No accepted claim from required source giddings_mangano_2008_stable_black_holes."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_source_claim_coverage: No accepted claim from required source giddings_mangano_2008_comments_plaga."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_claim_role: No accepted claim with role conclusion_support."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_claim_role: No accepted claim with role crux."
+    ],
+    [
+      "Map critique",
+      "Needs review",
+      "quality:missing_claim_role: No accepted claim with role scope_limit."
+    ]
+  ],
+  "original_counts": {
+    "claims": 1,
+    "relations": 0
+  },
+  "relation_pairs": [],
+  "schema_id": "staged_map_repair_plan_v1"
+}

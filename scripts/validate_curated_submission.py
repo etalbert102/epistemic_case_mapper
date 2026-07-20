@@ -16,7 +16,9 @@ CURATION_SUPPORT_PATHS = {
     "pyproject.toml",
     "scripts/run_blinded_baselines.py",
     "scripts/run_flf_demo.py",
+    "scripts/validate_live_model_examples.py",
     "scripts/validate_worked_regions.py",
+    "examples/live_model_runs/artifact_manifest.json",
     "ui/data.json",
 }
 

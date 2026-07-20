@@ -1,0 +1,656 @@
+{
+  "claims": [
+    {
+      "claim": "The Large Hadron Collider (LHC) produces collision energies that are significantly lower than those reached by high-energy cosmic rays bombarding the Earth and other astronomical bodies.",
+      "claim_quantities": [
+        {
+          "line_hint": "73",
+          "local_interpretation": "LHC design collision energy per beam",
+          "measures": "energy",
+          "quantity_role": "exposure_or_intervention_level",
+          "quantity_type": "unknown",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "designed to collide pairs of protons each with energies of 7 TeV",
+          "value": "7 TeV"
+        },
+        {
+          "line_hint": "170",
+          "local_interpretation": "Energy threshold for cosmic rays exceeding LHC energy",
+          "measures": "energy",
+          "quantity_role": "threshold_or_guideline",
+          "quantity_type": "unknown",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "if its energy reaches or exceeds 10^8 GeV, i.e., 10^17 eV",
+          "value": "10^17 eV"
+        }
+      ],
+      "decision_importance": "critical",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "This provides the fundamental empirical basis for safety: if nature has tolerated higher energies without catastrophe, the LHC is inherently safer.",
+      "quantity_values": [
+        "7 TeV",
+        "10^17 eV"
+      ],
+      "question_relevance": "direct",
+      "relevance_rationale": "This provides the fundamental empirical basis for safety: if nature has tolerated higher energies without catastrophe, the LHC is inherently safer.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {
+        "LHC": "Large Hadron Collider"
+      },
+      "source_quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays.",
+      "span_id": "lsag_2008_safety_review_s0061",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "comparative analysis",
+          "exposure_or_option": "collision energy",
+          "outcome_or_endpoint": "safety/stability of astronomical bodies",
+          "population": "LHC and cosmic rays",
+          "stated_dose_or_threshold": "10^17 eV",
+          "stated_limitations": [],
+          "stated_scope": [
+            "LHC design collision rate",
+            "cosmic-ray spectrum"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "73",
+            "local_interpretation": "LHC design collision energy per beam",
+            "measures": "energy",
+            "quantity_role": "exposure_or_intervention_level",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "designed to collide pairs of protons each with energies of 7 TeV",
+            "value": "7 TeV"
+          },
+          {
+            "line_hint": "170",
+            "local_interpretation": "Energy threshold for cosmic rays exceeding LHC energy",
+            "measures": "energy",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "if its energy reaches or exceeds 10^8 GeV, i.e., 10^17 eV",
+            "value": "10^17 eV"
+          }
+        ],
+        "must_preserve_terms": [
+          "7 TeV",
+          "10^17 eV",
+          "cosmic-ray collisions",
+          "astronomical bodies"
+        ],
+        "natural_bottom_line": "LHC collision energies are much lower than those of cosmic rays that have bombarded Earth for billions of years.",
+        "quantities": [
+          "7 TeV",
+          "10^17 eV"
+        ],
+        "scope_conditions": [
+          "comparative energy levels"
+        ],
+        "source_bottom_line": "The LHC's operation presents no conceivable threat because the energies achieved are significantly lower than those observed in cosmic-ray collisions with astronomical bodies, which have remained stable for billions of years.",
+        "supporting_quotes": [
+          {
+            "line_hint": "61-62",
+            "quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Microscopic black holes produced at the LHC are expected to decay via Hawking radiation before reaching detector walls, and even if stable, they would not accrete matter in a dangerous manner.",
+      "claim_quantities": [],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Addresses the specific concern of black hole production and their potential for runaway growth.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Addresses the specific concern of black hole production and their potential for runaway growth.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {
+        "LHC": "Large Hadron Collider"
+      },
+      "source_quote": "Any microscopic black holes produced at the LHC are expected to decay by Hawking radiation before they reach the detector walls.",
+      "span_id": "lsag_2008_safety_review_s0032",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "theoretical and empirical reasoning",
+          "exposure_or_option": "LHC collisions",
+          "outcome_or_endpoint": "stability/growth of black holes",
+          "population": "microscopic black holes",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "requires violation of basic physical principles for stability/suppressed decay"
+          ],
+          "stated_scope": [
+            "Hawking radiation",
+            "accretion rates"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "Hawking radiation",
+          "decay rate",
+          "accretion",
+          "quantum mechanics"
+        ],
+        "natural_bottom_line": "Microscopic black holes would decay quickly or, if stable, lack the mechanism to grow dangerously.",
+        "quantities": [],
+        "scope_conditions": [
+          "theoretical black hole stability"
+        ],
+        "source_bottom_line": "The LHC's operation presents no conceivable threat because the energies achieved are significantly lower than those observed in cosmic-ray collisions with astronomical bodies, which have remained stable for billions of years.",
+        "supporting_quotes": [
+          {
+            "line_hint": "32-33",
+            "quote": "Any microscopic black holes produced at the LHC are expected to decay by Hawking radiation before they reach the detector walls."
+          },
+          {
+            "line_hint": "341-342",
+            "quote": "the decay rate would be directly related to the production rate, and the expected lifetime would be very short."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "The continued existence of the Earth and other astronomical bodies (like the Sun and Moon) provides empirical evidence that high-energy collisions do not produce dangerous vacuum bubbles or magnetic monopoles.",
+      "claim_quantities": [],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Uses the survival of celestial bodies as a 'natural experiment' to rule out catastrophic vacuum decay or monopole catalysis.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Uses the survival of celestial bodies as a 'natural experiment' to rule out catastrophic vacuum decay or monopole catalysis.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {
+        "LHC": "Large Hadron Collider"
+      },
+      "source_quote": "The continued existence of the Universe means that such vacuum bubbles are not produced in cosmic-ray collisions, and hence the LHC will also not produce any vacuum bubbles.",
+      "span_id": "lsag_2008_safety_review_s0242",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "empirical reasoning (astrophysical observation)",
+          "exposure_or_option": "cosmic-ray collisions",
+          "outcome_or_endpoint": "vacuum decay / magnetic monopole catalysis",
+          "population": "Earth, Sun, Moon",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "vacuum bubbles",
+            "magnetic monopoles"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "vacuum bubbles",
+          "magnetic monopoles",
+          "astronomical bodies",
+          "cosmic-ray bombardment"
+        ],
+        "natural_bottom_line": "The Earth and Sun have survived billions of years of cosmic-ray bombardment, proving that such collisions do not trigger vacuum decay or dangerous magnetic monopoles.",
+        "quantities": [],
+        "scope_conditions": [
+          "vacuum stability",
+          "magnetic monopole safety"
+        ],
+        "source_bottom_line": "The LHC's operation presents no conceivable threat because the energies achieved are significantly lower than those observed in cosmic-ray collisions with astronomical bodies, which have remained stable for billions of years.",
+        "supporting_quotes": [
+          {
+            "line_hint": "242-243",
+            "quote": "The continued existence of the Universe means that such vacuum bubbles are not produced in cosmic-ray collisions, and hence the LHC will also not produce any vacuum bubbles."
+          },
+          {
+            "line_hint": "275-278",
+            "quote": "The continued existence of the Earth and other astronomical bodies after billions of years of high-energy cosmic-ray bombardment means that any monopoles produced could not catalyze proton decay at any appreciable rate."
+          }
+        ]
+      }
+    }
+  ],
+  "extractor": "whole-doc",
+  "prompt_version": "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json",
+  "source_card": {
+    "canonical_claims": [
+      {
+        "claim": "The Large Hadron Collider (LHC) produces collision energies that are significantly lower than those reached by high-energy cosmic rays bombarding the Earth and other astronomical bodies.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "comparative analysis",
+          "exposure_or_option": "collision energy",
+          "outcome_or_endpoint": "safety/stability of astronomical bodies",
+          "population": "LHC and cosmic rays",
+          "stated_dose_or_threshold": "10^17 eV",
+          "stated_limitations": [],
+          "stated_scope": [
+            "LHC design collision rate",
+            "cosmic-ray spectrum"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "73",
+            "local_interpretation": "LHC design collision energy per beam",
+            "measures": "energy",
+            "quantity_role": "exposure_or_intervention_level",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "designed to collide pairs of protons each with energies of 7 TeV",
+            "value": "7 TeV"
+          },
+          {
+            "line_hint": "170",
+            "local_interpretation": "Energy threshold for cosmic rays exceeding LHC energy",
+            "measures": "energy",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "if its energy reaches or exceeds 10^8 GeV, i.e., 10^17 eV",
+            "value": "10^17 eV"
+          }
+        ],
+        "decision_importance": "critical",
+        "must_preserve_terms": [
+          "7 TeV",
+          "10^17 eV",
+          "cosmic-ray collisions",
+          "astronomical bodies"
+        ],
+        "natural_bottom_line": "LHC collision energies are much lower than those of cosmic rays that have bombarded Earth for billions of years.",
+        "quantities": [
+          "7 TeV",
+          "10^17 eV"
+        ],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "comparative energy levels"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "61-62",
+            "quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays."
+          }
+        ],
+        "why_it_matters": "This provides the fundamental empirical basis for safety: if nature has tolerated higher energies without catastrophe, the LHC is inherently safer."
+      },
+      {
+        "claim": "Microscopic black holes produced at the LHC are expected to decay via Hawking radiation before reaching detector walls, and even if stable, they would not accrete matter in a dangerous manner.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "theoretical and empirical reasoning",
+          "exposure_or_option": "LHC collisions",
+          "outcome_or_endpoint": "stability/growth of black holes",
+          "population": "microscopic black holes",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [
+            "requires violation of basic physical principles for stability/suppressed decay"
+          ],
+          "stated_scope": [
+            "Hawking radiation",
+            "accretion rates"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          "Hawking radiation",
+          "decay rate",
+          "accretion",
+          "quantum mechanics"
+        ],
+        "natural_bottom_line": "Microscopic black holes would decay quickly or, if stable, lack the mechanism to grow dangerously.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "theoretical black hole stability"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "32-33",
+            "quote": "Any microscopic black holes produced at the LHC are expected to decay by Hawking radiation before they reach the detector walls."
+          },
+          {
+            "line_hint": "341-342",
+            "quote": "the decay rate would be directly related to the production rate, and the expected lifetime would be very short."
+          }
+        ],
+        "why_it_matters": "Addresses the specific concern of black hole production and their potential for runaway growth."
+      },
+      {
+        "claim": "The continued existence of the Earth and other astronomical bodies (like the Sun and Moon) provides empirical evidence that high-energy collisions do not produce dangerous vacuum bubbles or magnetic monopoles.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "empirical reasoning (astrophysical observation)",
+          "exposure_or_option": "cosmic-ray collisions",
+          "outcome_or_endpoint": "vacuum decay / magnetic monopole catalysis",
+          "population": "Earth, Sun, Moon",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "vacuum bubbles",
+            "magnetic monopoles"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          "vacuum bubbles",
+          "magnetic monopoles",
+          "astronomical bodies",
+          "cosmic-ray bombardment"
+        ],
+        "natural_bottom_line": "The Earth and Sun have survived billions of years of cosmic-ray bombardment, proving that such collisions do not trigger vacuum decay or dangerous magnetic monopoles.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "vacuum stability",
+          "magnetic monopole safety"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "242-243",
+            "quote": "The continued existence of the Universe means that such vacuum bubbles are not produced in cosmic-ray collisions, and hence the LHC will also not produce any vacuum bubbles."
+          },
+          {
+            "line_hint": "275-278",
+            "quote": "The continued existence of the Earth and other astronomical bodies after billions of years of high-energy cosmic-ray bombardment means that any monopoles produced could not catalyze proton decay at any appreciable rate."
+          }
+        ],
+        "why_it_matters": "Uses the survival of celestial bodies as a 'natural experiment' to rule out catastrophic vacuum decay or monopole catalysis."
+      }
+    ],
+    "excluded_as_not_decision_relevant": [
+      "Specific technical details of the RHIC experimental setup (e.g., specific detector names)",
+      "Detailed mathematical derivations of the penalty factor for A=20 nuclei",
+      "Historical context of 1980s/1990s experiments unless directly supporting safety conclusions"
+    ],
+    "source_bottom_line": "The LHC's operation presents no conceivable threat because the energies achieved are significantly lower than those observed in cosmic-ray collisions with astronomical bodies, which have remained stable for billions of years.",
+    "source_id": "lsag_2008_safety_review"
+  },
+  "source_evidence_unit_quality_report": {
+    "exact_quote_count": 5,
+    "issues": [],
+    "quantity_tuple_count": 2,
+    "quote_count": 5,
+    "schema_id": "source_evidence_unit_quality_report_v1",
+    "source_id": "lsag_2008_safety_review",
+    "status": "ready",
+    "unit_count": 3,
+    "warning_counts": {}
+  },
+  "source_evidence_units": {
+    "schema_id": "source_evidence_units_v1",
+    "source_id": "lsag_2008_safety_review",
+    "units": [
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "comparative analysis",
+          "exposure_or_option": "collision energy",
+          "outcome_or_endpoint": "safety/stability of astronomical bodies",
+          "population": "LHC and cosmic rays",
+          "stated_dose_or_threshold": "10^17 eV",
+          "stated_scope": "['LHC design collision rate', 'cosmic-ray spectrum']"
+        },
+        "comparator": "",
+        "decision_importance": "critical",
+        "endpoint": "safety/stability of astronomical bodies",
+        "estimate": "10^17 eV",
+        "evidence_type": "comparative analysis",
+        "exposure_or_intervention": "collision energy",
+        "method": "comparative analysis",
+        "must_preserve_terms": [
+          "7 TeV",
+          "10^17 eV",
+          "cosmic-ray collisions",
+          "astronomical bodies"
+        ],
+        "natural_bottom_line": "LHC collision energies are much lower than those of cosmic rays that have bombarded Earth for billions of years.",
+        "population": "LHC and cosmic rays",
+        "proposition": "The Large Hadron Collider (LHC) produces collision energies that are significantly lower than those reached by high-energy cosmic rays bombarding the Earth and other astronomical bodies.",
+        "quantities": [
+          {
+            "line_hint": "73",
+            "local_interpretation": "LHC design collision energy per beam",
+            "measures": "energy",
+            "quantity_role": "exposure_or_intervention_level",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "designed to collide pairs of protons each with energies of 7 TeV",
+            "value": "7 TeV"
+          },
+          {
+            "line_hint": "170",
+            "local_interpretation": "Energy threshold for cosmic rays exceeding LHC energy",
+            "measures": "energy",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "if its energy reaches or exceeds 10^8 GeV, i.e., 10^17 eV",
+            "value": "10^17 eV"
+          }
+        ],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "61-62",
+            "quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "comparative energy levels"
+        ],
+        "source_id": "lsag_2008_safety_review",
+        "source_quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays.",
+        "source_span": "61-62",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "lsag_2008_safety_review_eu001",
+        "warnings": [],
+        "why_it_matters": "This provides the fundamental empirical basis for safety: if nature has tolerated higher energies without catastrophe, the LHC is inherently safer."
+      },
+      {
+        "caveat": "['requires violation of basic physical principles for stability/suppressed decay']",
+        "claim_context": {
+          "evidence_design": "theoretical and empirical reasoning",
+          "exposure_or_option": "LHC collisions",
+          "outcome_or_endpoint": "stability/growth of black holes",
+          "population": "microscopic black holes",
+          "stated_limitations": "['requires violation of basic physical principles for stability/suppressed decay']",
+          "stated_scope": "['Hawking radiation', 'accretion rates']"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "stability/growth of black holes",
+        "estimate": "",
+        "evidence_type": "theoretical and empirical reasoning",
+        "exposure_or_intervention": "LHC collisions",
+        "method": "theoretical and empirical reasoning",
+        "must_preserve_terms": [
+          "Hawking radiation",
+          "decay rate",
+          "accretion",
+          "quantum mechanics"
+        ],
+        "natural_bottom_line": "Microscopic black holes would decay quickly or, if stable, lack the mechanism to grow dangerously.",
+        "population": "microscopic black holes",
+        "proposition": "Microscopic black holes produced at the LHC are expected to decay via Hawking radiation before reaching detector walls, and even if stable, they would not accrete matter in a dangerous manner.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "32-33",
+            "quote": "Any microscopic black holes produced at the LHC are expected to decay by Hawking radiation before they reach the detector walls.",
+            "quote_match_status": "exact_or_normalized"
+          },
+          {
+            "line_hint": "341-342",
+            "quote": "the decay rate would be directly related to the production rate, and the expected lifetime would be very short.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "theoretical black hole stability"
+        ],
+        "source_id": "lsag_2008_safety_review",
+        "source_quote": "Any microscopic black holes produced at the LHC are expected to decay by Hawking radiation before they reach the detector walls.",
+        "source_span": "32-33",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "lsag_2008_safety_review_eu002",
+        "warnings": [],
+        "why_it_matters": "Addresses the specific concern of black hole production and their potential for runaway growth."
+      },
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "empirical reasoning (astrophysical observation)",
+          "exposure_or_option": "cosmic-ray collisions",
+          "outcome_or_endpoint": "vacuum decay / magnetic monopole catalysis",
+          "population": "Earth, Sun, Moon",
+          "stated_scope": "['vacuum bubbles', 'magnetic monopoles']"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "vacuum decay / magnetic monopole catalysis",
+        "estimate": "",
+        "evidence_type": "empirical reasoning (astrophysical observation)",
+        "exposure_or_intervention": "cosmic-ray collisions",
+        "method": "empirical reasoning (astrophysical observation)",
+        "must_preserve_terms": [
+          "vacuum bubbles",
+          "magnetic monopoles",
+          "astronomical bodies",
+          "cosmic-ray bombardment"
+        ],
+        "natural_bottom_line": "The Earth and Sun have survived billions of years of cosmic-ray bombardment, proving that such collisions do not trigger vacuum decay or dangerous magnetic monopoles.",
+        "population": "Earth, Sun, Moon",
+        "proposition": "The continued existence of the Earth and other astronomical bodies (like the Sun and Moon) provides empirical evidence that high-energy collisions do not produce dangerous vacuum bubbles or magnetic monopoles.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "242-243",
+            "quote": "The continued existence of the Universe means that such vacuum bubbles are not produced in cosmic-ray collisions, and hence the LHC will also not produce any vacuum bubbles.",
+            "quote_match_status": "exact_or_normalized"
+          },
+          {
+            "line_hint": "275-278",
+            "quote": "The continued existence of the Earth and other astronomical bodies after billions of years of high-energy cosmic-ray bombardment means that any monopoles produced could not catalyze proton decay at any appreciable rate.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "vacuum stability",
+          "magnetic monopole safety"
+        ],
+        "source_id": "lsag_2008_safety_review",
+        "source_quote": "The continued existence of the Universe means that such vacuum bubbles are not produced in cosmic-ray collisions, and hence the LHC will also not produce any vacuum bubbles.",
+        "source_span": "242-243",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "lsag_2008_safety_review_eu003",
+        "warnings": [],
+        "why_it_matters": "Uses the survival of celestial bodies as a 'natural experiment' to rule out catastrophic vacuum decay or monopole catalysis."
+      }
+    ]
+  },
+  "source_quantity_tuples": {
+    "canonical_record_type": "source_result_quantity_tuple_v1",
+    "schema_id": "source_quantity_tuples_v1",
+    "source_id": "lsag_2008_safety_review",
+    "tuples": [
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "lsag_2008_safety_review_eu001",
+        "comparator": "",
+        "design": "comparative analysis",
+        "endpoint": "safety/stability of astronomical bodies",
+        "estimate": "7 TeV",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "collision energy",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "LHC design collision energy per beam",
+        "measures": "energy",
+        "population": "LHC and cosmic rays",
+        "quantity_role": "exposure_or_intervention_level",
+        "quantity_type": "unknown",
+        "result_tuple_id": "lsag_2008_safety_review_eu001_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "lsag_2008_safety_review",
+        "source_quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays.",
+        "source_span": "61-62",
+        "time_horizon": "",
+        "tuple_id": "lsag_2008_safety_review_eu001_q001",
+        "unit_id": "lsag_2008_safety_review_eu001",
+        "units": "",
+        "value": "7 TeV"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "lsag_2008_safety_review_eu001",
+        "comparator": "",
+        "design": "comparative analysis",
+        "endpoint": "safety/stability of astronomical bodies",
+        "estimate": "10^17 eV",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "collision energy",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Energy threshold for cosmic rays exceeding LHC energy",
+        "measures": "energy",
+        "population": "LHC and cosmic rays",
+        "quantity_role": "threshold_or_guideline",
+        "quantity_type": "unknown",
+        "result_tuple_id": "lsag_2008_safety_review_eu001_q002",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "lsag_2008_safety_review",
+        "source_quote": "The energies of accelerators have been increasing regularly over the past decades, though they are still far below those of the most energetic cosmic rays.",
+        "source_span": "61-62",
+        "time_horizon": "",
+        "tuple_id": "lsag_2008_safety_review_eu001_q002",
+        "unit_id": "lsag_2008_safety_review_eu001",
+        "units": "",
+        "value": "10^17 eV"
+      }
+    ]
+  }
+}

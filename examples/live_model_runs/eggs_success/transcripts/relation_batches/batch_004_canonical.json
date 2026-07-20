@@ -1,0 +1,70 @@
+{
+  "relations": [
+    {
+      "crux_candidates": [
+        "Whether the high-risk population in eggs_c008 changes the interpretation of the general finding in eggs_c010."
+      ],
+      "edge_basis": "source_inferred",
+      "failure_condition": "If the high LDL population is not considered a relevant subgroup for the decision question.",
+      "pair_id": "pair_013",
+      "rationale": "eggs_c008 identifies a specific high-risk population (high LDL, overweight, obesity) for whom dietary cholesterol and saturated fat should be reduced, which provides a boundary for the broader finding in eggs_c010 that moderate egg consumption is not associated with CVD risk in general US cohorts.",
+      "relation_confidence": "high",
+      "relation_type": "refines",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "Anyone with a high LDL cholesterol level",
+      "source_anchor_b": "not associated with incident cardiovascular disease risk",
+      "source_claim": "eggs_c008",
+      "target_claim": "eggs_c010",
+      "why_decision_relevant": "The edge clarifies that the neutral finding in eggs_c010 may not apply to individuals with specific pre-existing risk factors identified in eggs_c008."
+    },
+    {
+      "crux_candidates": [],
+      "edge_basis": "source_inferred",
+      "failure_condition": "If the temporal limitation in eggs_c022 is not relevant to the interpretation of CVD risk in eggs_c010.",
+      "pair_id": "pair_014",
+      "rationale": "eggs_c022 specifies that the impact of egg consumption on biomarkers (LDL-c) is more pronounced in interventions lasting longer than 2 months, refining the temporal scope of the findings related to egg consumption effects.",
+      "relation_confidence": "medium",
+      "relation_type": "refines",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "larger effect size than the subset of intervention within two months",
+      "source_anchor_b": "not associated with incident cardiovascular disease risk",
+      "source_claim": "eggs_c022",
+      "target_claim": "eggs_c010",
+      "why_decision_relevant": "It suggests that the lack of association in eggs_c010 might be time-dependent or that significant changes require longer duration."
+    },
+    {
+      "crux_candidates": [
+        "Whether the risk in eggs_c025 outweighs the benefit in eggs_c001."
+      ],
+      "edge_basis": "source_explicit",
+      "failure_condition": "If the dose (high vs. moderate) is considered so different that no tension exists.",
+      "pair_id": "pair_015",
+      "rationale": "eggs_c001 recommends eggs as an appropriate source of omega-3s for those not consuming seafood, while eggs_c025 notes that high egg intake (>1/day) is associated with higher CVD risk in US studies.",
+      "relation_confidence": "high",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "higher risk of cardiovascular disease",
+      "source_anchor_b": "is appropriate",
+      "source_claim": "eggs_c025",
+      "target_claim": "eggs_c001",
+      "why_decision_relevant": "The tension highlights a conflict between the benefit of omega-3s and the potential risks associated with high egg consumption."
+    },
+    {
+      "crux_candidates": [
+        "Whether the biomarker change in eggs_c020 predicts the outcome in eggs_c024."
+      ],
+      "edge_basis": "source_explicit",
+      "failure_condition": "If the LDL-c/HDL-c ratio is not considered a reliable predictor of actual CVD events.",
+      "pair_id": "pair_016",
+      "rationale": "eggs_c020 reports that increased egg consumption significantly elevates the LDL-c/HDL-c ratio (a known cardiovascular risk marker), which stands in tension with eggs_c024's finding that moderate egg consumption is not associated with increased CVD risk.",
+      "relation_confidence": "high",
+      "relation_type": "in_tension_with",
+      "similar_but_not_identical": [],
+      "source_anchor_a": "higher LDL-c/HDL-c ratio",
+      "source_anchor_b": "not associated with increased risk of CVD",
+      "source_claim": "eggs_c020",
+      "target_claim": "eggs_c024",
+      "why_decision_relevant": "This highlights a discrepancy between biomarker changes (potential risk) and clinical outcomes (lack of observed disease)."
+    }
+  ]
+}

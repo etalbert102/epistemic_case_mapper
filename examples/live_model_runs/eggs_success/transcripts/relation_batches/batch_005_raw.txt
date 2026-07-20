@@ -1,0 +1,38 @@
+```json
+{
+  "relations": [
+    {
+      "pair_id": "pair_017",
+      "source_claim": "eggs_c002",
+      "target_claim": "eggs_c024",
+      "relation_type": "none",
+      "rationale": "The claims describe entirely different populations and contexts: eggs_c002 is a dietary recommendation for infants/toddlers (6-12 months old), while eggs_c024 is an outcome finding regarding cardiovascular disease risk in European adults. There is no logical dependency or refinement between these two.",
+      "relation_confidence": "high",
+      "edge_basis": "uncertain",
+      "source_anchor_a": "",
+      "source_anchor_b": "",
+      "why_decision_relevant": "",
+      "failure_condition": "The claims are for different life stages and outcomes.",
+      "crux_candidates": [],
+      "similar_but_not_identical": []
+    },
+    {
+      "pair_id": "pair_018",
+      "source_claim": "eggs_c005",
+      "target_claim": "eggs_c009",
+      "relation_type": "in_tension_with",
+      "rationale": "The claims are in tension because eggs_c005 identifies a physiological response (elevated LDL cholesterol) to high dietary cholesterol, whereas eggs_c009 states that such cholesterol intake is not generally associated with cardiovascular risk. This creates a tension between a biomarker change and the ultimate clinical outcome.",
+      "relation_confidence": "high",
+      "edge_basis": "source_explicit",
+      "source_anchor_a": "elevated total or low-density lipoprotein cholesterol concentrations",
+      "source_anchor_b": "not generally supported an association between dietary cholesterol and cardiovascular risk",
+      "why_decision_relevant": "This highlights the distinction between a biomarker change (LDL) and actual clinical disease risk, which is central to determining if eggs are harmful.",
+      "failure_condition": "The edge weakens if the outcome of interest is specifically LDL levels rather than CVD risk.",
+      "crux_candidates": [
+        "Whether the elevation in LDL (eggs_c005) translates to actual cardiovascular risk (eggs_c009) is a crux for the decision."
+      ],
+      "similar_but_not_identical": []
+    }
+  ]
+}
+```

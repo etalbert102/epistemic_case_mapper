@@ -1,0 +1,607 @@
+{
+  "claims": [
+    {
+      "claim": "Healthy people can include up to one whole egg daily in their diets, while older people with healthy cholesterol levels may have two.",
+      "claim_quantities": [
+        {
+          "line_hint": "64",
+          "local_interpretation": "Maximum daily allowance for healthy people",
+          "measures": "eggs per day",
+          "quantity_role": "threshold_or_guideline",
+          "quantity_type": "unknown",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "up to a whole egg... each day",
+          "value": "1"
+        },
+        {
+          "line_hint": "64",
+          "local_interpretation": "Maximum for older people with healthy levels",
+          "measures": "eggs",
+          "quantity_role": "threshold_or_guideline",
+          "quantity_type": "unknown",
+          "retention_hint": "must_retain",
+          "schema_id": "claim_bound_quantity_v1",
+          "source_quote": "older people with healthy cholesterol levels can have two",
+          "value": "2"
+        }
+      ],
+      "decision_importance": "critical",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Provides specific guidance on egg consumption for the general healthy population.",
+      "quantity_values": [
+        "1",
+        "2"
+      ],
+      "question_relevance": "direct",
+      "relevance_rationale": "Provides specific guidance on egg consumption for the general healthy population.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0064",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "2019 AHA science advisory",
+          "exposure_or_option": "Whole eggs",
+          "outcome_or_endpoint": "Dietary inclusion/tolerance",
+          "population": "Healthy people; older people with healthy cholesterol levels",
+          "stated_dose_or_threshold": "one whole egg (daily); two (for older people)",
+          "stated_limitations": [],
+          "stated_scope": [
+            "healthy cholesterol levels"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum daily allowance for healthy people",
+            "measures": "eggs per day",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to a whole egg... each day",
+            "value": "1"
+          },
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum for older people with healthy levels",
+            "measures": "eggs",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "older people with healthy cholesterol levels can have two",
+            "value": "2"
+          }
+        ],
+        "must_preserve_terms": [
+          "healthy people",
+          "one whole egg",
+          "daily",
+          "older people",
+          "healthy cholesterol levels",
+          "two"
+        ],
+        "natural_bottom_line": "Healthy adults can eat up to one egg a day, and older adults with healthy levels may have two.",
+        "quantities": [
+          "1",
+          "2"
+        ],
+        "scope_conditions": [
+          "healthy cholesterol levels"
+        ],
+        "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+        "supporting_quotes": [
+          {
+            "line_hint": "64",
+            "quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Individuals with high LDL cholesterol or other risk factors (overweight, obesity) should reduce sources of both saturated fat and dietary cholesterol.",
+      "claim_quantities": [],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Identifies the specific population where egg/cholesterol restriction is necessary.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Identifies the specific population where egg/cholesterol restriction is necessary.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0066",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Expert consensus/clinical guidance",
+          "exposure_or_option": "Saturated fat and dietary cholesterol",
+          "outcome_or_endpoint": "Arterial plaque reduction",
+          "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "high LDL level"
+          ]
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "high LDL cholesterol",
+          "saturated fat",
+          "dietary cholesterol",
+          "overweight",
+          "obesity"
+        ],
+        "natural_bottom_line": "People with high LDL or obesity should limit both saturated fat and dietary cholesterol.",
+        "quantities": [],
+        "scope_conditions": [
+          "high LDL",
+          "overweight/obesity"
+        ],
+        "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+        "supporting_quotes": [
+          {
+            "line_hint": "66",
+            "quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors."
+          }
+        ]
+      }
+    },
+    {
+      "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+      "claim_quantities": [],
+      "decision_importance": "high",
+      "entailed_by_excerpt": "yes",
+      "importance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+      "quantity_values": [],
+      "question_relevance": "direct",
+      "relevance_rationale": "Provides the scientific basis for why current guidelines are less restrictive than historical ones.",
+      "role": "source_claim",
+      "scope_flags": [
+        "none"
+      ],
+      "source_acronym_expansions": {},
+      "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+      "span_id": "aha_2023_dietary_cholesterol_news_s0052",
+      "whole_doc_source_card": {
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "2019 AHA science advisory / scientific studies",
+          "exposure_or_option": "Dietary cholesterol",
+          "outcome_or_endpoint": "Cardiovascular risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": []
+        },
+        "claim_quantities": [],
+        "must_preserve_terms": [
+          "dietary cholesterol",
+          "cardiovascular risk",
+          "not generally supported"
+        ],
+        "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+        "quantities": [],
+        "scope_conditions": [],
+        "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+        "supporting_quotes": [
+          {
+            "line_hint": "52",
+            "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+          }
+        ]
+      }
+    }
+  ],
+  "extractor": "whole-doc",
+  "prompt_version": "whole_doc_source_card_claim_extraction_v11_result_cluster_claims_json",
+  "source_card": {
+    "canonical_claims": [
+      {
+        "claim": "Healthy people can include up to one whole egg daily in their diets, while older people with healthy cholesterol levels may have two.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "2019 AHA science advisory",
+          "exposure_or_option": "Whole eggs",
+          "outcome_or_endpoint": "Dietary inclusion/tolerance",
+          "population": "Healthy people; older people with healthy cholesterol levels",
+          "stated_dose_or_threshold": "one whole egg (daily); two (for older people)",
+          "stated_limitations": [],
+          "stated_scope": [
+            "healthy cholesterol levels"
+          ]
+        },
+        "claim_quantities": [
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum daily allowance for healthy people",
+            "measures": "eggs per day",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to a whole egg... each day",
+            "value": "1"
+          },
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum for older people with healthy levels",
+            "measures": "eggs",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "older people with healthy cholesterol levels can have two",
+            "value": "2"
+          }
+        ],
+        "decision_importance": "critical",
+        "must_preserve_terms": [
+          "healthy people",
+          "one whole egg",
+          "daily",
+          "older people",
+          "healthy cholesterol levels",
+          "two"
+        ],
+        "natural_bottom_line": "Healthy adults can eat up to one egg a day, and older adults with healthy levels may have two.",
+        "quantities": [
+          "1",
+          "2"
+        ],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "healthy cholesterol levels"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "64",
+            "quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two."
+          }
+        ],
+        "why_it_matters": "Provides specific guidance on egg consumption for the general healthy population."
+      },
+      {
+        "claim": "Individuals with high LDL cholesterol or other risk factors (overweight, obesity) should reduce sources of both saturated fat and dietary cholesterol.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "Expert consensus/clinical guidance",
+          "exposure_or_option": "Saturated fat and dietary cholesterol",
+          "outcome_or_endpoint": "Arterial plaque reduction",
+          "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": [
+            "high LDL level"
+          ]
+        },
+        "claim_quantities": [],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          "high LDL cholesterol",
+          "saturated fat",
+          "dietary cholesterol",
+          "overweight",
+          "obesity"
+        ],
+        "natural_bottom_line": "People with high LDL or obesity should limit both saturated fat and dietary cholesterol.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [
+          "high LDL",
+          "overweight/obesity"
+        ],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "66",
+            "quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors."
+          }
+        ],
+        "why_it_matters": "Identifies the specific population where egg/cholesterol restriction is necessary."
+      },
+      {
+        "claim": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "claim_context": {
+          "applicability_limits": [],
+          "evidence_design": "2019 AHA science advisory / scientific studies",
+          "exposure_or_option": "Dietary cholesterol",
+          "outcome_or_endpoint": "Cardiovascular risk",
+          "population": "General population",
+          "stated_dose_or_threshold": "",
+          "stated_limitations": [],
+          "stated_scope": []
+        },
+        "claim_quantities": [],
+        "decision_importance": "high",
+        "must_preserve_terms": [
+          "dietary cholesterol",
+          "cardiovascular risk",
+          "not generally supported"
+        ],
+        "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "scope_conditions": [],
+        "scope_flags": [
+          "none"
+        ],
+        "source_limit": "",
+        "supporting_quotes": [
+          {
+            "line_hint": "52",
+            "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk."
+          }
+        ],
+        "why_it_matters": "Provides the scientific basis for why current guidelines are less restrictive than historical ones."
+      }
+    ],
+    "excluded_as_not_decision_relevant": [
+      "The history of how research has shifted from isolated nutrients to eating patterns (Lines 71-72)",
+      "Information about the microbiome and precision health studies (Lines 77-78)"
+    ],
+    "source_bottom_line": "For healthy adults with normal cholesterol levels, a few eggs per week are considered tolerable as part of a balanced diet, but individuals with high LDL or other risk factors should limit both saturated fat and dietary cholesterol.",
+    "source_id": "aha_2023_dietary_cholesterol_news"
+  },
+  "source_evidence_unit_quality_report": {
+    "exact_quote_count": 3,
+    "issues": [],
+    "quantity_tuple_count": 2,
+    "quote_count": 3,
+    "schema_id": "source_evidence_unit_quality_report_v1",
+    "source_id": "aha_2023_dietary_cholesterol_news",
+    "status": "ready",
+    "unit_count": 3,
+    "warning_counts": {}
+  },
+  "source_evidence_units": {
+    "schema_id": "source_evidence_units_v1",
+    "source_id": "aha_2023_dietary_cholesterol_news",
+    "units": [
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "2019 AHA science advisory",
+          "exposure_or_option": "Whole eggs",
+          "outcome_or_endpoint": "Dietary inclusion/tolerance",
+          "population": "Healthy people; older people with healthy cholesterol levels",
+          "stated_dose_or_threshold": "one whole egg (daily); two (for older people)",
+          "stated_scope": "['healthy cholesterol levels']"
+        },
+        "comparator": "",
+        "decision_importance": "critical",
+        "endpoint": "Dietary inclusion/tolerance",
+        "estimate": "one whole egg (daily); two (for older people)",
+        "evidence_type": "2019 AHA science advisory",
+        "exposure_or_intervention": "Whole eggs",
+        "method": "2019 AHA science advisory",
+        "must_preserve_terms": [
+          "healthy people",
+          "one whole egg",
+          "daily",
+          "older people",
+          "healthy cholesterol levels",
+          "two"
+        ],
+        "natural_bottom_line": "Healthy adults can eat up to one egg a day, and older adults with healthy levels may have two.",
+        "population": "Healthy people; older people with healthy cholesterol levels",
+        "proposition": "Healthy people can include up to one whole egg daily in their diets, while older people with healthy cholesterol levels may have two.",
+        "quantities": [
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum daily allowance for healthy people",
+            "measures": "eggs per day",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "up to a whole egg... each day",
+            "value": "1"
+          },
+          {
+            "line_hint": "64",
+            "local_interpretation": "Maximum for older people with healthy levels",
+            "measures": "eggs",
+            "quantity_role": "threshold_or_guideline",
+            "quantity_type": "unknown",
+            "retention_hint": "must_retain",
+            "schema_id": "claim_bound_quantity_v1",
+            "source_quote": "older people with healthy cholesterol levels can have two",
+            "value": "2"
+          }
+        ],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "64",
+            "quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "healthy cholesterol levels"
+        ],
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+        "source_span": "64",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "aha_2023_dietary_cholesterol_news_eu001",
+        "warnings": [],
+        "why_it_matters": "Provides specific guidance on egg consumption for the general healthy population."
+      },
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "Expert consensus/clinical guidance",
+          "exposure_or_option": "Saturated fat and dietary cholesterol",
+          "outcome_or_endpoint": "Arterial plaque reduction",
+          "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors",
+          "stated_scope": "['high LDL level']"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "Arterial plaque reduction",
+        "estimate": "",
+        "evidence_type": "Expert consensus/clinical guidance",
+        "exposure_or_intervention": "Saturated fat and dietary cholesterol",
+        "method": "Expert consensus/clinical guidance",
+        "must_preserve_terms": [
+          "high LDL cholesterol",
+          "saturated fat",
+          "dietary cholesterol",
+          "overweight",
+          "obesity"
+        ],
+        "natural_bottom_line": "People with high LDL or obesity should limit both saturated fat and dietary cholesterol.",
+        "population": "People with high LDL cholesterol; people with overweight, obesity or other risk factors",
+        "proposition": "Individuals with high LDL cholesterol or other risk factors (overweight, obesity) should reduce sources of both saturated fat and dietary cholesterol.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "66",
+            "quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [
+          "high LDL",
+          "overweight/obesity"
+        ],
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "Anyone with a high LDL cholesterol level should consider reducing sources of both saturated fat and dietary cholesterol, Van Horn said, because together they are considered more likely to contribute to arterial plaque. This is especially a concern among people with overweight, obesity or other risk factors.",
+        "source_span": "66",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "aha_2023_dietary_cholesterol_news_eu002",
+        "warnings": [],
+        "why_it_matters": "Identifies the specific population where egg/cholesterol restriction is necessary."
+      },
+      {
+        "caveat": "",
+        "claim_context": {
+          "evidence_design": "2019 AHA science advisory / scientific studies",
+          "exposure_or_option": "Dietary cholesterol",
+          "outcome_or_endpoint": "Cardiovascular risk",
+          "population": "General population"
+        },
+        "comparator": "",
+        "decision_importance": "high",
+        "endpoint": "Cardiovascular risk",
+        "estimate": "",
+        "evidence_type": "2019 AHA science advisory / scientific studies",
+        "exposure_or_intervention": "Dietary cholesterol",
+        "method": "2019 AHA science advisory / scientific studies",
+        "must_preserve_terms": [
+          "dietary cholesterol",
+          "cardiovascular risk",
+          "not generally supported"
+        ],
+        "natural_bottom_line": "Current research does not generally link dietary cholesterol to heart disease risk.",
+        "population": "General population",
+        "proposition": "Studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "quantities": [],
+        "question_relevance": "direct",
+        "quote_lineage": [
+          {
+            "line_hint": "52",
+            "quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+            "quote_match_status": "exact_or_normalized"
+          }
+        ],
+        "schema_id": "source_evidence_unit_v1",
+        "scope_conditions": [],
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "the 2019 science advisory said studies have not generally supported an association between dietary cholesterol and cardiovascular risk.",
+        "source_span": "52",
+        "time_horizon": "",
+        "uncertainty_interval": "",
+        "unit_id": "aha_2023_dietary_cholesterol_news_eu003",
+        "warnings": [],
+        "why_it_matters": "Provides the scientific basis for why current guidelines are less restrictive than historical ones."
+      }
+    ]
+  },
+  "source_quantity_tuples": {
+    "canonical_record_type": "source_result_quantity_tuple_v1",
+    "schema_id": "source_quantity_tuples_v1",
+    "source_id": "aha_2023_dietary_cholesterol_news",
+    "tuples": [
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "aha_2023_dietary_cholesterol_news_eu001",
+        "comparator": "",
+        "design": "2019 AHA science advisory",
+        "endpoint": "Dietary inclusion/tolerance",
+        "estimate": "1",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "Whole eggs",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Maximum daily allowance for healthy people",
+        "measures": "eggs per day",
+        "population": "Healthy people; older people with healthy cholesterol levels",
+        "quantity_role": "threshold_or_guideline",
+        "quantity_type": "unknown",
+        "result_tuple_id": "aha_2023_dietary_cholesterol_news_eu001_q001",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+        "source_span": "64",
+        "time_horizon": "",
+        "tuple_id": "aha_2023_dietary_cholesterol_news_eu001_q001",
+        "unit_id": "aha_2023_dietary_cholesterol_news_eu001",
+        "units": "",
+        "value": "1"
+      },
+      {
+        "binding_rule": "result_tuple_id_preserves_source_local_quantity_with_unit_context",
+        "claim_id": "aha_2023_dietary_cholesterol_news_eu001",
+        "comparator": "",
+        "design": "2019 AHA science advisory",
+        "endpoint": "Dietary inclusion/tolerance",
+        "estimate": "2",
+        "estimate_type": "numeric",
+        "exposure_or_intervention": "Whole eggs",
+        "interval_high": "",
+        "interval_low": "",
+        "interval_type": "",
+        "local_interpretation": "Maximum for older people with healthy levels",
+        "measures": "eggs",
+        "population": "Healthy people; older people with healthy cholesterol levels",
+        "quantity_role": "threshold_or_guideline",
+        "quantity_type": "unknown",
+        "result_tuple_id": "aha_2023_dietary_cholesterol_news_eu001_q002",
+        "schema_id": "source_result_quantity_tuple_v1",
+        "source_id": "aha_2023_dietary_cholesterol_news",
+        "source_quote": "The 2019 science advisory says healthy people can include up to a whole egg or the equivalent in their diets each day; given the nutritional benefits and convenience, older people with healthy cholesterol levels can have two.",
+        "source_span": "64",
+        "time_horizon": "",
+        "tuple_id": "aha_2023_dietary_cholesterol_news_eu001_q002",
+        "unit_id": "aha_2023_dietary_cholesterol_news_eu001",
+        "units": "",
+        "value": "2"
+      }
+    ]
+  }
+}

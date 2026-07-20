@@ -1,0 +1,17 @@
+{
+  "crux_candidates": [
+    "Whether the finding in eggs_c016 (that egg risk is accounted for by cholesterol) justifies the AHA's recommendation in eggs_c006."
+  ],
+  "edge_basis": "source_inferred",
+  "failure_condition": "The edge weakens if the adjustment for dietary cholesterol in eggs_c016 is considered methodologically flawed or if it does not actually imply that dietary patterns are a sufficient substitute for monitoring individual components.",
+  "pair_id": "pair_002",
+  "rationale": "eggs_c016 provides a mechanistic explanation for why the AHA's recommendation in eggs_c006 to focus on dietary patterns rather than specific cholesterol targets is appropriate: it suggests that the risk associated with egg consumption is accounted for by total dietary cholesterol, supporting a shift toward broader dietary patterns.",
+  "relation_confidence": "medium",
+  "relation_type": "supports",
+  "similar_but_not_identical": [],
+  "source_anchor_a": "no longer significant after adjusting for dietary cholesterol consumption",
+  "source_anchor_b": "focus on healthy dietary patterns... rather than specific dietary cholesterol targets",
+  "source_claim": "eggs_c016",
+  "target_claim": "eggs_c006",
+  "why_decision_relevant": "This edge reinforces the logic of the AHA's guidance by providing evidence that individual components (like eggs) may be neutral when viewed as part of a broader, balanced dietary pattern."
+}

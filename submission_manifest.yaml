@@ -30,6 +30,7 @@ judge_paths:
   - examples/eggs/worked_region_observational_vs_rct_map.md
   - examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md
   - examples/investigator_challenge/README.md
+  - examples/live_model_runs/README.md
   - docs/submission/PROOF_BY_EXAMPLE.md
   - docs/submission/EVIDENCE_AND_LIMITATIONS.md
   - docs/submission/REPRODUCE.md
@@ -126,6 +127,10 @@ extension_artifacts:
     case: Cross-case
     path: examples/investigator_challenge/README.md
     status: answer-key addressability and change-locality replay
+  - artifact: Paired live Gemma MLX map runs
+    case: Eggs success and LHC failure
+    path: examples/live_model_runs/README.md
+    status: machine-generated candidates with retained transcripts and human review required
   - artifact: Decision-space framework integration
     case: Submission
     path: docs/methodology/DECISION_SPACE_FRAMEWORK.md

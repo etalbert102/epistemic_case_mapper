@@ -1,0 +1,19 @@
+```json
+{
+  "pair_id": "pair_005",
+  "source_claim": "eggs_c009",
+  "target_claim": "eggs_c006",
+  "relation_type": "supports",
+  "rationale": "Claim eggs_c009 provides the evidence-based rationale (lack of association between dietary cholesterol and cardiovascular risk) that justifies the recommendation in eggs_c006 to focus on overall dietary patterns rather than specific cholesterol targets.",
+  "relation_confidence": "high",
+  "edge_basis": "source_explicit",
+  "source_anchor_a": "studies have not generally supported an association between dietary cholesterol and cardiovascular risk",
+  "source_anchor_b": "Dietary guidance should focus on healthy dietary patterns... rather than specific dietary cholesterol targets",
+  "why_decision_relevant": "This edge connects the scientific finding (the 'why') to the clinical recommendation (the 'what'), showing that the lack of a cholesterol-risk link is the basis for the shift toward pattern-based advice.",
+  "failure_condition": "The edge would be invalid if the AHA's recommendation was based on a different factor entirely, such as fiber content or caloric density, independent of cholesterol research.",
+  "crux_candidates": [
+    "Whether eggs_c009 is true determines the validity of the guidance in eggs_c006."
+  ],
+  "similar_but_not_identical": []
+}
+```
