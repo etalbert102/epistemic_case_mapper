@@ -6,6 +6,10 @@ mutation from a clean snapshot, and applies one prewritten source delta. It
 does not measure investigator recovery, perform semantic repair, or derive an
 update from a newly read source.
 
+Path fields in the checked-in JSON records are normalized to repository-root-
+relative logical paths. Some point to the ignored original run tree; retained
+counterparts are grouped under this example's `supporting/` directory.
+
 ## Results At A Glance
 
 - **Address:** on `lhc_t003`, flat/map/map-plus-sources scores are

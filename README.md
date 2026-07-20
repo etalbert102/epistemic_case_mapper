@@ -86,3 +86,9 @@ Not demonstrated: measured improvement in reviewer accuracy or speed,
 independent expert approval, unseen-case performance, low-variance second-user
 operation, autonomous source integration, or consistently successful final
 memo generation.
+
+## License
+
+Original software and documentation are available under the [MIT License](LICENSE).
+Third-party source material retains its original rights; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

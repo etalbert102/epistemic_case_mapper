@@ -10,7 +10,8 @@ This criteria document combines:
 
 - FLF competition requirements from `docs/reference/flf_epistemic_case_study_competition_criteria.md`.
 - Codex goal-mode research from `docs/reference/codex_goal_ability_research.md`.
-- Agent planning standards from `/Users/eli/Documents/Experiments/docx-review-engine/docs/agent_plan_quality_guide.md`.
+- Agent planning standards from an external planning guide that is not included
+  in this repository.
 
 ## Goal Contract
 

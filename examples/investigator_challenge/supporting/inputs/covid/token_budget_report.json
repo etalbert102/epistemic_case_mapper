@@ -1,19 +1,19 @@
 {
   "flat": {
     "char_count": 3505,
-    "path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/inputs/covid/flat_packet.md",
+    "path": "inputs/covid/flat_packet.md",
     "sha256": "6a4b8eb83b6183668deb1b263c215095e060042fd545a2d9de5f1affbdc2bb7b",
     "word_count": 453
   },
   "map": {
     "char_count": 7310,
-    "path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/inputs/covid/map_packet.md",
+    "path": "inputs/covid/map_packet.md",
     "sha256": "b6e087f002dc3e45b34d2a714be931bacc77a6c068210c0b13abfd17734b8676",
     "word_count": 874
   },
   "map_plus_sources": {
     "char_count": 8591,
-    "path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/inputs/covid/map_plus_sources_packet.md",
+    "path": "inputs/covid/map_plus_sources_packet.md",
     "sha256": "cb5aac3931e9f56383891b9c0e0857f4bfc124b6255ca6ac41743cdf1af9dfcf",
     "word_count": 1055
   }

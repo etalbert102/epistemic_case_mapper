@@ -21,12 +21,13 @@ retained as a failure rather than repaired manually or presented as a map.
 
 ## Provenance
 
-The packet copies the immutable outputs from the original ignored run
-directories. Original artifact paths inside run metadata therefore point to
-those run directories; the corresponding files are relocated beneath this
-packet without content edits. Prompt, raw output, canonical parse, and report
-files are retained for every recorded source-extraction call. The eggs packet
-also retains relation-generation and targeted relation-repair transcripts.
+The packet copies outputs from the original ignored run directories. Artifact
+paths inside run metadata are normalized to repository-root-relative logical
+paths; the corresponding files are relocated beneath this packet. Aside from
+that path normalization, prompt, raw output, canonical parse, and report files
+are retained without content edits for every recorded source-extraction call.
+The eggs packet also retains relation-generation and targeted relation-repair
+transcripts.
 
 The original shell transcript was not retained. The configured parameters in
 each `run_summary.json` support this equivalent rerun shape:
@@ -61,4 +62,3 @@ The validator checks every packet file against
 `examples/live_model_runs/artifact_manifest.json`, requires the eggs map to
 pass semantic validation, requires the LHC map to fail for the recorded
 structural reasons, and checks the backend and quality boundaries.
-

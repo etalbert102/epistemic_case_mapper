@@ -251,7 +251,7 @@
       "completed_at_utc": "2026-07-18T08:04:16.101210Z",
       "failure_count": 0,
       "last_update_utc": "2026-07-18T08:04:16.101210Z",
-      "output_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/truth_boundary_verification_eggs_live/generated_map.json",
+      "output_path": "generated_map.json",
       "started_at_utc": "2026-07-18T08:04:16.096891Z",
       "status": "completed",
       "validate": false

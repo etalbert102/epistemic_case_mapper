@@ -1,8 +1,8 @@
 {
   "schema_id": "live_model_example_artifact_manifest_v1",
-  "interpretation": "Hashes bind unedited live-run outputs, transcripts, reports, and packet guides.",
+  "interpretation": "Hashes bind live-run outputs, transcripts, reports, and packet guides; recorded artifact paths may be normalized to repository-root-relative form.",
   "sha256": {
-    "README.md": "88b42fa2565ad84f24fbadbc1b1d4f8722d7782fb394ee02d797add6fba4d799",
+    "README.md": "e4a7c8fb2b35f1a6ee5053105c0463ef76ff95bbc10150cef2b35e2041a19d49",
     "eggs_success/README.md": "ef08b3bbb068f84404865ff6865cafc463494de7fe0033e888ef12efaa7f1b6d",
     "eggs_success/generated_map.json": "ffbb80f9de7f41bced8616877f189ec21fce4261d7092107d1694166aa65fa9a",
     "eggs_success/records/candidate_map_initial.json": "4a5d0bd52b981f1d00abee0527449d236d3d5ebadc54d20e9041944cdec6b929",
@@ -12,7 +12,7 @@
     "eggs_success/records/map_quality_report.json": "97eb61e27022ea872c169ea9da27e678fe86682235243a610b72512711fc1c33",
     "eggs_success/records/map_quality_report_initial.json": "804b2866146c296b460398a0401966597d56e346244eb72b753d514bbfb22d35",
     "eggs_success/records/map_repair_plan.json": "b2788b172e16d5d282d117d19694bee98a7a7b38f22f7f7af1fd083cb5baf532",
-    "eggs_success/records/pipeline_progress.json": "443756b04d0c28d47b065763cc7350689901e6a6b48924eacfbd57c160feb18a",
+    "eggs_success/records/pipeline_progress.json": "bd56e52d1134219a018bfe18e1079cdddf10701c77d0211a1d961d803556cdf4",
     "eggs_success/records/run_summary.json": "1000e73a7a66585a7ead1a493ee372fcf5f22e5e6bf5ec08adf940dc8bc48f38",
     "eggs_success/transcripts/claim_sources/aha_2019_dietary_cholesterol_pubmed_whole_doc_canonical.json": "4a3f087eb1235eed320d96d0bc696d1997db8b4f1903413312e50e2198264136",
     "eggs_success/transcripts/claim_sources/aha_2019_dietary_cholesterol_pubmed_whole_doc_prompt.txt": "78d6b0f22593b3a8cfcfa4de27c9664256bf3c99e381c71e148adc7b59994bb6",
@@ -92,7 +92,7 @@
     "lhc_failure/records/map_quality_report.json": "41bea0ce5a51cc15233f8d6fe6336ededa2f584f0c8676fb0d420085a1adeaaf",
     "lhc_failure/records/map_quality_report_initial.json": "41bea0ce5a51cc15233f8d6fe6336ededa2f584f0c8676fb0d420085a1adeaaf",
     "lhc_failure/records/map_repair_plan.json": "f92b44398c2347b17647f0d477462616b7d5dc12ded80a06de56720e30ddcda9",
-    "lhc_failure/records/pipeline_progress.json": "ce8e255e5143e499a828e2a5f8b1a324a77529f3d3fd3d4d2f95485920e88b7a",
+    "lhc_failure/records/pipeline_progress.json": "32143c6c9a83656aefabb618329e8a2298348de916c7f707c71ee3ac73c76ea8",
     "lhc_failure/records/run_summary.json": "be41c8354753006713dc35773f6ced6f4fe4f095e1918e95f027a43dd950de3c",
     "lhc_failure/transcripts/claim_sources/giddings_mangano_2008_comments_plaga_whole_doc_canonical.json": "d4d4f2d2ffa300fe129a546e8696b8a539488e434765d266aa73cf646caaf648",
     "lhc_failure/transcripts/claim_sources/giddings_mangano_2008_comments_plaga_whole_doc_prompt.txt": "ab5bc45f46addbe16a63f9146f2f941df7871b082a7d43b3bef0cd995626b213",

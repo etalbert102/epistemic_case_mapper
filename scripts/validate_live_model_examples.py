@@ -44,7 +44,10 @@ def build_artifact_manifest(packet_root: Path) -> dict[str, object]:
     paths = sorted(_packet_paths(packet_root))
     return {
         "schema_id": SCHEMA_ID,
-        "interpretation": "Hashes bind unedited live-run outputs, transcripts, reports, and packet guides.",
+        "interpretation": (
+            "Hashes bind live-run outputs, transcripts, reports, and packet guides; "
+            "recorded artifact paths may be normalized to repository-root-relative form."
+        ),
         "sha256": {path: _sha256(packet_root / path) for path in paths},
     }
 

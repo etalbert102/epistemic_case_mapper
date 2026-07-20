@@ -12,10 +12,13 @@ from epistemic_case_mapper.submission_manifest import SubmissionManifest, load_s
 SCHEMA_ID = "curated_submission_artifact_manifest_v1"
 DEFAULT_ARTIFACT_MANIFEST = "curated_submission_manifest.json"
 CURATION_SUPPORT_PATHS = {
+    "LICENSE",
     "README.md",
+    "THIRD_PARTY_NOTICES.md",
     "pyproject.toml",
     "scripts/run_blinded_baselines.py",
     "scripts/run_flf_demo.py",
+    "scripts/run_investigator_challenge.py",
     "scripts/validate_live_model_examples.py",
     "scripts/validate_worked_regions.py",
     "examples/live_model_runs/artifact_manifest.json",

@@ -13,6 +13,7 @@ import copy
 import difflib
 import hashlib
 import json
+import os
 import re
 import sys
 import time
@@ -48,6 +49,10 @@ def _write_json(path: Path, payload: Any) -> None:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _portable_path(path: Path, base: Path) -> str:
+    return Path(os.path.relpath(path.resolve(), start=base.resolve())).as_posix()
 
 
 def _slug_words(value: str) -> list[str]:
@@ -234,7 +239,7 @@ def build_condition_packets(
         path = output_dir / "inputs" / case["case_id"] / f"{condition_id}_packet.md"
         _write_text(path, text)
         packet_info[condition_id] = {
-            "path": str(path),
+            "path": _portable_path(path, output_dir),
             "word_count": _word_count(text),
             "char_count": len(text),
             "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
@@ -450,8 +455,8 @@ def run_followup_tasks(
             score = score_response(response, task_key, condition)
             score.update(
                 {
-                    "prompt_path": str(prompt_path),
-                    "response_path": str(response_path),
+                    "prompt_path": _portable_path(prompt_path, output_dir),
+                    "response_path": _portable_path(response_path, output_dir),
                     "prompt_word_count": _word_count(prompt),
                     "response_word_count": _word_count(response),
                 }
@@ -795,8 +800,8 @@ def render_final_packet(
                 f"- flat composite: {conditions['flat']['composite_score']:.3f}",
                 f"- map composite: {conditions['map']['composite_score']:.3f}",
                 f"- map + sources composite: {conditions['map_plus_sources']['composite_score']:.3f}",
-                f"- raw flat response: `{Path(conditions['flat']['response_path']).relative_to(output_dir)}`",
-                f"- raw map response: `{Path(conditions['map']['response_path']).relative_to(output_dir)}`",
+                f"- raw flat response: `{conditions['flat']['response_path']}`",
+                f"- raw map response: `{conditions['map']['response_path']}`",
                 "",
             ]
         )
@@ -1004,21 +1009,25 @@ def run_challenge(
         "mode": manifest["default_mode"],
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "elapsed_seconds": round(time.monotonic() - start, 3),
-        "manifest_path": str(manifest_path),
+        "manifest_path": _portable_path(manifest_path, repo_root),
         "manifest_sha256": _sha256(manifest_path),
-        "answer_keys_path": str(answer_keys_path),
+        "answer_keys_path": _portable_path(answer_keys_path, repo_root),
         "answer_keys_sha256": _sha256(answer_keys_path),
         "selected_cases": sorted(selected),
         "packet_info": packet_info,
         "case_results": case_results,
-        "mutation_report_path": str(output_dir / "mutation" / "lhc" / "mutation_report.json")
+        "mutation_report_path": _portable_path(
+            output_dir / "mutation" / "lhc" / "mutation_report.json", output_dir
+        )
         if mutation_report
         else None,
-        "update_ledger_path": str(output_dir / "update" / "lhc" / "affected_object_ledger.json")
+        "update_ledger_path": _portable_path(
+            output_dir / "update" / "lhc" / "affected_object_ledger.json", output_dir
+        )
         if update_ledger
         else None,
         "claim_level": claim_level,
-        "completion_audit_path": str(output_dir / "completion_audit.json"),
+        "completion_audit_path": _portable_path(output_dir / "completion_audit.json", output_dir),
     }
     _write_json(output_dir / "challenge_run.json", run_record)
     print(f"[investigator-challenge] done; claim level: {claim_level}")
