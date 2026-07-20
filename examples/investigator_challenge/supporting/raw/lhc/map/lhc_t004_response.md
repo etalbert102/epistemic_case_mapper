@@ -2,7 +2,7 @@
 
 Question: Which criticism most directly challenges the compact-star safety argument?
 
-The map condition can recover these frozen answer-key objects:
+The harness materializes these frozen answer-key objects from the map:
 
 ## plaga_challenges_compact_star_safety
 

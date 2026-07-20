@@ -21,6 +21,8 @@
     "target_claim": "lhc_c004"
   },
   "repair_diff": "--- corrupted_relation\n\n+++ repaired_relation\n\n@@ -1 +1 @@\n\n-- `lhc_r004` (supports): `lhc_c004` -> `lhc_c012`. GM's trapping analysis provides the technical version of the velocity caveat.\n\n+- `lhc_r004` (supports): `lhc_c012` -> `lhc_c004`. GM's trapping analysis provides the technical version of the velocity caveat.\n",
-  "source_safe_repair_produced": true,
+  "restoration_method": "copy_from_frozen_clean_snapshot",
+  "restored_from_frozen_clean_snapshot": true,
+  "semantic_repair_attempted": false,
   "unaffected_objects_changed": 0
 }

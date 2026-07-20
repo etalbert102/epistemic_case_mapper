@@ -2,9 +2,10 @@ schema_id: investigator_challenge_manifest_v1
 challenge_id: investigator_challenge_v1
 default_mode: deterministic_retrieval_proxy
 description: >
-  Frozen investigator challenge for demonstrating whether structured case maps
-  help a downstream investigator recover distinctions, traces, corrections, and
-  update effects that flat synthesis can obscure.
+  Frozen artifact-addressability harness comparing answer-key object exposure
+  across structured maps and flat synthesis, plus one frozen-snapshot
+  restoration and one prewritten source-delta locality replay. It is not an
+  investigator-performance, semantic-repair, or autonomous-update benchmark.
 
 conditions:
   - id: flat

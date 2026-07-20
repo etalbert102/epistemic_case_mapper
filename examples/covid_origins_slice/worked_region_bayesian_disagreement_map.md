@@ -2,7 +2,7 @@
 
 Status: `human-review-needed`
 Prompt/procedure: `covid_worked_region_v1_source_notes_manual_audit`
-Evidence mode: `source_grounded_slice`
+Evidence mode: `seed`
 
 ## Source Subset
 
@@ -16,7 +16,10 @@ Evidence mode: `source_grounded_slice`
 
 ## What To Notice
 
-This slice is not a COVID origins adjudication. It makes disagreement structure reviewable by separating:
+This slice is not a COVID origins adjudication or source-grounded evidence
+packet. Its local files are investigator-authored notes and excerpts that have
+not been verified against the cited originals. It is a representational stress
+test that makes disagreement structure reviewable by separating:
 
 - debate outcome from substantive posterior disagreement,
 - aggregate forecasts from minority forecasts,

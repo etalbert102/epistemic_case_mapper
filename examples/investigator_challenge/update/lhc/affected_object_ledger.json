@@ -30,5 +30,6 @@
     "lhc_c005"
   ],
   "unaffected_claim_count": 14,
-  "update_id": "lhc_public_faq_update"
+  "update_id": "lhc_public_faq_update",
+  "update_method": "apply_prewritten_claim_and_relation_delta"
 }

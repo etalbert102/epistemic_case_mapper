@@ -2,11 +2,12 @@ case_id: covid_origins_slice
 title: "COVID Origins Debate Slice"
 question: "How should a narrow slice of COVID origins evidence be represented without flattening Bayesian disagreement?"
 case_type: "adversarial live case slice"
-evidence_mode: source_grounded
+evidence_mode: seed
 review_status: human-review-needed
 status: in_progress
 notes:
   - "Use only as a narrow worked-region stress test; do not treat this as a full COVID origins assessment."
+  - "Local source files are investigator-authored notes and excerpts, not verified copies of the cited originals; promote individual claims only after source verification."
   - "The slice focuses on disagreement about Bayesian weighting, market/geography evidence, and post-debate updates."
 sources:
   - source_id: flf_covid_case_brief

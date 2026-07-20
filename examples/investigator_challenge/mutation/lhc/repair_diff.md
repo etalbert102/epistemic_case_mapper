@@ -1,4 +1,4 @@
-# Local Correction Diff
+# Frozen-Snapshot Restoration Diff
 
 ```diff
 --- corrupted_relation

@@ -27,16 +27,49 @@ def _run_many(repo_root: Path, commands: list[list[str]], package: str) -> int:
         if result != 0:
             return result
     return 0
+
+
 def _run(repo_root: Path, command: list[str], package: str) -> int:
-    env = {**os.environ, "PYTHONPATH": "src"}
+    target_script = repo_root / command[0]
+    engine_script = ENGINE_ROOT / command[0]
+    script_path = target_script if target_script.is_file() else engine_script
+    if not script_path.is_file():
+        print(
+            "package_command_unavailable "
+            f"missing_target_script={target_script} "
+            f"missing_engine_script={engine_script} "
+            "This command requires an Epistemic Case Mapper repository checkout "
+            "either at --repo-root or as the installed engine source.",
+            file=sys.stderr,
+        )
+        return 2
+
+    existing_pythonpath = os.environ.get("PYTHONPATH")
+    python_paths = [str(repo_root / "src")]
+    engine_src = ENGINE_ROOT / "src"
+    if engine_src != repo_root / "src":
+        python_paths.append(str(engine_src))
+    if existing_pythonpath:
+        python_paths.append(existing_pythonpath)
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(python_paths)}
     result = subprocess.run(
-        [sys.executable, *command, "--repo-root", str(repo_root), "--manifest", package],
-        cwd=ENGINE_ROOT,
+        [
+            sys.executable,
+            str(script_path),
+            *command[1:],
+            "--repo-root",
+            str(repo_root),
+            "--manifest",
+            package,
+        ],
+        cwd=repo_root,
         env=env,
         text=True,
         check=False,
     )
     return result.returncode
+
+
 def _prepare_package(repo_root: Path, package: str) -> int:
     result = _run_many(
         repo_root,
@@ -147,4 +180,3 @@ def _write_quality_tasks(repo_root: Path, manifest: SubmissionManifest, case_slu
     path = write_quality_risk_tasks(repo_root, case_slug, case_manifest)
     print(f"Wrote {path.relative_to(repo_root).as_posix()}")
     return 0
-

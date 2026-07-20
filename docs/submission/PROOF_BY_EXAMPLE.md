@@ -99,7 +99,10 @@ Judge check: inspect the [COVID disagreement map](../../examples/covid_origins_s
 
 What this establishes: the format can represent several loci of disagreement without converting them into a false consensus.
 
-What it does not establish: an adjudication of COVID origins. This is a narrow, partly note-grounded stress test and is the least substantively validated of the three regions.
+What it does not establish: an adjudication of COVID origins or source-grounded
+support for the listed claims. This is a `seed`-mode test built from
+investigator-authored notes and excerpts, and it is the least substantively
+validated of the three regions.
 
 ## Runnable Experiments
 
@@ -116,7 +119,7 @@ It performs seven clean-control checks and one expected-failure probe:
 | Worked-region validation | Checks source IDs, excerpts, entailment fields, relation rationales, cruxes, and erosion-audit structure. | The checked-in maps satisfy the declared artifact contract. |
 | Eight blinded baselines | Validates four local-model baselines for LHC and four for eggs, produced without access to the curated maps or erosion audits. | Prose preservation varies by model; comparison is not tied to one baseline. |
 | Structured exports | Confirms the Markdown maps and reusable JSON exports agree. | The artifacts are not trapped in a narrative-only format. |
-| New-source update | Validates the addition of two new-to-map claims and two relations using stable IDs. | A source can be integrated locally without rewriting the existing map. |
+| Prewritten source-delta replay | Applies two prewritten claims and two prewritten relations using stable IDs. | A declared delta can be applied locally without rewriting unaffected map objects; this does not test source reading or autonomous update quality. |
 | Reference and judge-path checks | Confirms that judge-facing pointers resolve. | The evidence packet is navigable from a fresh checkout. |
 | Invalid-source mutation | Changes one claim's source ID in a temporary artifact and requires the validator to reject it with the claim ID and invalid source ID. | At least this provenance failure becomes visible rather than silently entering polished output. |
 

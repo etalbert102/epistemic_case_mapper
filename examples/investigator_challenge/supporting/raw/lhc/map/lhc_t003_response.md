@@ -2,7 +2,7 @@
 
 Question: Which claims and sources carry the velocity/trapping transition?
 
-The map condition can recover these frozen answer-key objects:
+The harness materializes these frozen answer-key objects from the map:
 
 ## velocity_to_trapping_transition
 

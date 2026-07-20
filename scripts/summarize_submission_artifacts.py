@@ -119,7 +119,7 @@ def render_summary(repo_root: Path, manifest_path: str = "submission_manifest.ya
             "",
             "## Interpretation",
             "",
-            "These counts are not quality scores. They help judges verify that the submission includes source grounding, structured relations, cruxes, erosion findings, and multi-model comparators for the worked regions. Full-case coverage remains limited to LHC and eggs; the COVID artifact is a narrow worked region.",
+            "These counts are not quality scores. They help judges verify the presence of structured relations, cruxes, erosion findings, and comparison artifacts. Source grounding applies to the LHC and eggs worked regions. The COVID artifact is a `seed`-mode, note-based format stress test and must not be counted as source-grounded evidence. Full-case coverage remains limited to LHC and eggs.",
             "",
         ]
     )

@@ -4,6 +4,9 @@ Status: `human-review-needed`
 
 Purpose: document the deliberately narrow source set used for the COVID Bayesian-disagreement worked region. This is not a full COVID origins bibliography.
 
+Evidence mode: `seed`. The local files are investigator-authored source notes
+and excerpts, not verified copies of the cited originals.
+
 ## Scope Boundary
 
 The slice is designed to test whether the workflow preserves:
@@ -15,7 +18,8 @@ The slice is designed to test whether the workflow preserves:
 - later methodological and phylogeny-focused critiques,
 - source-status caveats.
 
-It should not be treated as a full adjudication of COVID origins.
+It should not be treated as a full adjudication of COVID origins or as
+source-grounded evidence.
 
 ## Sources
 

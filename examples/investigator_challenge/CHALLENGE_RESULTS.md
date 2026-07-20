@@ -1,6 +1,9 @@
 # Investigator Challenge Results
 
-Earned claim level: **narrow**
+Earned claim level: **artifact addressability and locality only**
+
+The scores describe answer-key-driven object coverage, not investigator or
+model performance. The map condition directly receives the selected IDs.
 
 | case | flat | map | map + sources |
 | --- | ---: | ---: | ---: |

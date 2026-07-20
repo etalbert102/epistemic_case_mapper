@@ -42,10 +42,13 @@ This narrows the prototype claim in a useful way. A strong model with all source
 - `lhc_c004` for the velocity caveat,
 - `lhc_c012` for trapping,
 - `lhc_r003` and `lhc_r004` for the dependency bridge,
-- mutation and update ledgers for local correction and new-source integration.
+- snapshot-restoration and prewritten-delta ledgers for change locality.
 
 The comparison strengthens the submission if it is framed honestly: the prototype is a review and compounding surface, not a proof of prose superiority.
 
 ## Failure Boundary
 
-This is one live strong-model run on one source universe. It does not settle model-vs-map performance. It does show that the strongest claim should be decision-space preservation, recoverability, and local revisability, with final prose quality treated as a separate product layer.
+This is one live strong-model run on one source universe. It does not settle
+model-vs-map performance. It shows that the strongest supported claim is
+decision-space persistence and stable object addressability, with final prose
+quality and investigator performance treated as separate evaluation layers.

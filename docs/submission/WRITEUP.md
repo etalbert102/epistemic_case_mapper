@@ -111,11 +111,20 @@ Humans remain responsible for the final substantive decisions: whether a claim i
 
 The strongest evidence for the project is qualitative but concrete.
 
-In the **LHC black-hole case**, the map preserves the dependency between the low-velocity trapping caveat and the use of compact astronomical bodies as safety evidence. A flat answer can reach the right bottom line without leaving this dependency inspectable. This directly demonstrates dependency recovery and resistance to hierarchical abstraction failure. It becomes evidence of decision-space preservation if the missing branch would otherwise remove a live interpretation or investigation path from review.
+In the **LHC black-hole case**, the map preserves the dependency between the low-velocity trapping caveat and the use of compact astronomical bodies as safety evidence. A flat answer can reach the right bottom line without leaving this dependency inspectable. A matched `gpt-5.6-sol` run with the same source universe and a targeted prompt recovered much of the chain, so the evidence does not support a claim that strong models cannot reconstruct it. The demonstrated value is persistence and addressability: the dependency already exists as stable objects that can be inspected and revised without re-deriving it from prose. It becomes evidence of decision-space preservation if the missing branch would otherwise remove a live interpretation or investigation path from review.
 
 In the **eggs and cardiovascular-health case**, the map keeps several evidence roles separate: long-term observational cardiovascular outcomes, randomized effects on lipid markers, guideline interpretations, substitution context, baseline intake, and high-risk subgroups. This directly tests claim-normalization fidelity and conflict retention: a biomarker result, a population association, and a policy recommendation should not be blended into one undifferentiated conclusion.
 
-In the **COVID-origins slice**, the map separates a debate result, critiques of the debate process, aggregate and minority forecasts, formal Bayesian decompositions, geographic assumptions, and later phylogenetic objections. This tests conflict and frame preservation. Its contribution is representational: it makes the loci of disagreement visible without offering a full origins adjudication.
+In the **COVID-origins slice**, the map separates a debate result, critiques of the debate process, aggregate and minority forecasts, formal Bayesian decompositions, geographic assumptions, and later phylogenetic objections. This is a `seed`-mode representational stress test built from investigator-authored notes and excerpts, not verified source copies. It tests whether the format can keep loci of disagreement distinct; it does not provide source-grounded evidence or a full origins adjudication.
+
+The deterministic investigator challenge is likewise an artifact-mechanics
+demonstration, not a performance benchmark. Its map responses materialize
+frozen answer-key objects, its mutation exercise restores a known relation from
+a clean snapshot, and its update exercise applies a prewritten delta. Those
+operations show addressability, stable-ID preservation, and change locality.
+They do not show that an investigator independently recovered the objects, that
+the system performed semantic repair, or that it derived an update from a newly
+read source.
 
 The checked-in submission snapshot contains 53 curated claims, 48 relations, nine crux candidates, and 19 findings recorded under the current erosion-audit schema across the three worked regions. Eight blinded local-model baselines provide additional comparison surfaces for the LHC and eggs regions. These counts demonstrate artifact depth, not accuracy scores. The findings still require item-level review to distinguish general structure loss from the narrower subset that qualifies as baseline-relative decision-space erosion.
 

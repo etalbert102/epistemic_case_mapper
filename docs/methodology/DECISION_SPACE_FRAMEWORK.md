@@ -74,8 +74,8 @@ Current surfaces:
 - Markdown maps for inspection,
 - JSON exports for reuse,
 - validation gates,
-- mutation repair diffs,
-- held-out-source update ledgers,
+- frozen-snapshot restoration diffs,
+- prewritten source-delta ledgers,
 - static UI that points back to canonical files.
 
 Reviewer question: did the reviewable structure survive transformation across file formats, repair, and update?
@@ -86,8 +86,8 @@ Transparency is weak if no one can intervene. The submission's stronger claim is
 
 Current surfaces:
 
-- local relation repair in the investigator challenge,
-- held-out source update that preserves unaffected IDs,
+- local restoration of a known relation in the investigator challenge,
+- prewritten source-delta application that preserves unaffected IDs,
 - reviewer packets that separate accept/revise/reject decisions,
 - warnings and validation reports that identify where human judgment is still needed.
 
@@ -99,7 +99,7 @@ Reviewer question: can the reviewer change the case locally without regenerating
 | --- | --- | --- |
 | Provenance | where a statement came from | source-grounded claims plus relation IDs, caveats, cruxes, review status, and update triggers |
 | Faithful summarization | whether prose reflects the sources | an inspectable record of which dependencies and distinctions survived or disappeared |
-| Argument mapping | claims, support, objections | source anchoring, erosion audits, mutation repair, held-out update ledgers, and reviewer handoff packets |
+| Argument mapping | claims, support, objections | source anchoring, erosion audits, snapshot-restoration diffs, source-delta ledgers, and reviewer handoff packets |
 | Knowledge graphs | entities and links | decision-relevant assumptions, contested relations, uncertainty, and local review tasks |
 | Literature review | synthesized bottom line | stable objects that can be corrected or extended without regenerating the whole synthesis |
 
@@ -113,8 +113,8 @@ Flat synthesis can say that cosmic-ray exposure shows LHC black-hole risk is rul
 - Claim normalization: the velocity caveat and trapping analysis become separate source-grounded claims.
 - Decision-space construction: the Earth-survival argument and compact-star argument remain distinct.
 - Judgment anchors: `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004` identify the load-bearing dependency.
-- Artifact fidelity: mutation repair restores a reversed relation without changing unaffected objects.
-- Auditable authority: a held-out CERN public FAQ update records added and touched claims while preserving stable IDs.
+- Artifact fidelity: a frozen-snapshot replay restores a reversed relation without changing unaffected objects; this is an object-locality check, not semantic repair.
+- Auditable authority: a prewritten CERN public FAQ delta records added and touched claims while preserving stable IDs; source interpretation was completed before the replay.
 
 This is why the project should not be judged mainly on whether it writes prettier prose than a strong model. The matched strong-model comparison shows that a strong model can recover much of the LHC chain when asked directly. The prototype's distinctive value is that the chain persists as a reviewable, updateable artifact.
 

@@ -39,6 +39,8 @@ Start with `covid_loss_004`: the baseline reports Levin's large odds ratio but
 does not preserve the decomposition assumptions and working-paper status as
 separate audit targets.
 
-This slice is partly note-grounded, agent-curated, and mechanically validated.
-It is the least substantively validated example and must not be read as a full
-origins assessment or as independently expert-reviewed.
+This is a `seed`-mode, agent-curated format stress test. Its local source files
+are investigator-authored notes and excerpts, not verified copies of the cited
+originals. Mechanical validation establishes artifact consistency only. This
+is the least substantively validated example and must not be read as a full
+origins assessment, source-grounded evidence, or independent expert review.

@@ -33,7 +33,8 @@ instead of reconstructing it from a polished paragraph.
    especially `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004`.
 3. Check the [baseline-relative erosion audit](../examples/lhc_black_holes/decision_space_erosion_audit.md).
 4. Open the [investigator challenge](../examples/investigator_challenge/README.md)
-   for deterministic recoverability, local repair, and held-out-source update.
+   for an artifact-addressability, frozen-snapshot restoration, and prewritten
+   update-locality replay.
 5. Read the [matched strong-model comparison](evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md),
    which narrows the claim: a capable model can reconstruct much of the chain,
    while the map makes it persistent and locally revisable.
@@ -55,8 +56,9 @@ do not establish broad generalization.
 ## What Is And Is Not Demonstrated
 
 Demonstrated narrowly: source-linked reasoning objects, baseline-relative loss
-audits, deterministic dependency recovery, one localized relation repair, one
-held-out-source update, reproducible exports, and publication checks.
+audits, direct addressability of frozen map objects, one localized
+frozen-snapshot restoration, one prewritten source-delta application,
+reproducible exports, and publication checks.
 
 Not established: automatic domain correctness, exhaustive retrieval, superior
 final prose, lower human review time, unseen-case performance, or successful

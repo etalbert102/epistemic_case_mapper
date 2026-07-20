@@ -25,7 +25,7 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | Full-case flat baseline | Eggs and health | `examples/eggs/full_case_flat_synthesis_baseline.md` | illustrative, non-blinded |
 | Draft public-risk worked region | LHC black holes | `examples/lhc_black_holes/worked_region_public_risk_framing_map.md` | draft extension, not canonical counts |
 | New-to-map source update demo | LHC black holes | `docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md` | demo from already acquired source |
-| Investigator challenge demonstration | Cross-case | `examples/investigator_challenge/README.md` | deterministic replay demo |
+| Investigator challenge demonstration | Cross-case | `examples/investigator_challenge/README.md` | answer-key addressability and change-locality replay |
 | Decision-space framework integration | Submission | `docs/methodology/DECISION_SPACE_FRAMEWORK.md` | judge-facing framing |
 | Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | single-run comparison |
 | Evidence and limitations | Submission | `docs/submission/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |
@@ -44,4 +44,4 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 
 ## Interpretation
 
-These counts are not quality scores. They help judges verify that the submission includes source grounding, structured relations, cruxes, erosion findings, and multi-model comparators for the worked regions. Full-case coverage remains limited to LHC and eggs; the COVID artifact is a narrow worked region.
+These counts are not quality scores. They help judges verify the presence of structured relations, cruxes, erosion findings, and comparison artifacts. Source grounding applies to the LHC and eggs worked regions. The COVID artifact is a `seed`-mode, note-based format stress test and must not be counted as source-grounded evidence. Full-case coverage remains limited to LHC and eggs.

@@ -12,7 +12,7 @@ as official results.
 2. Compare the LHC [flat synthesis](examples/lhc_black_holes/flat_synthesis_baseline.md),
    [worked map](examples/lhc_black_holes/worked_region_cosmic_ray_map.md), and
    [erosion audit](examples/lhc_black_holes/decision_space_erosion_audit.md).
-3. Inspect the [recover/repair/update challenge](examples/investigator_challenge/README.md)
+3. Inspect the [artifact-addressability challenge](examples/investigator_challenge/README.md)
    and its [matched strong-model boundary](docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md).
 4. Read the [formal writeup](docs/submission/WRITEUP.md) and
    [evidence limits](docs/submission/EVIDENCE_AND_LIMITATIONS.md).
@@ -61,6 +61,8 @@ boundary, see [REPRODUCE.md](docs/submission/REPRODUCE.md).
 
 The checked-in maps are agent-curated and mechanically validated, not
 independently domain-expert reviewed. The package demonstrates inspectable
-dependencies, local repair, update locality, and artifact fidelity on selected
-cases; it does not establish automatic truth, universal prose superiority, or
-broad generalization.
+dependencies, stable object addressability, replayed change locality, and
+artifact fidelity on selected cases; it does not establish automatic truth,
+semantic repair, autonomous source integration, universal prose superiority,
+or broad generalization. The COVID slice is a `seed`-mode format stress test,
+not source-grounded evidence.

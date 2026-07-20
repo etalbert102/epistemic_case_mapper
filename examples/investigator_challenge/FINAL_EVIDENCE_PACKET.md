@@ -2,9 +2,12 @@
 
 Challenge: `investigator_challenge_v1`
 Mode: `deterministic_retrieval_proxy`
-Earned claim level: **narrow**
+Earned claim level: **artifact addressability and locality only**
 
-This packet demonstrates a narrow product claim: the structured map is useful as an investigator handoff and audit surface, not as a prettier prose generator.
+This packet demonstrates a narrow artifact claim: stable map objects are
+directly addressable and a frozen change set can be applied locally. It does
+not test investigator performance, semantic repair, or autonomous source
+integration.
 
 ## Capable Baseline Answer
 
@@ -52,19 +55,24 @@ Which criticism most directly challenges the compact-star safety argument?
 
 ## Source-Trace Walkthrough
 
-`lhc_t003` asks for the velocity/trapping transition. The map response names `lhc_c004`, `lhc_c012`, `lhc_r003`, `lhc_r004`, and their source IDs. This is the recoverability surface the flat answer typically hides inside prose.
+`lhc_t003` asks for the velocity/trapping transition. The harness directly
+materializes frozen objects `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004`
+and their source IDs. This demonstrates addressability, not unaided recovery.
 
-## Local Correction Diff
+## Frozen-Snapshot Restoration Diff
 
 - synthetic mutation: `lhc_mutation_reversed_trapping_relation`
 - detected: `True`
 - localized object: `lhc_r004`
 - clean control triggered: `False`
+- restoration method: `copy_from_frozen_clean_snapshot`
+- semantic repair attempted: `False`
 - diff: `mutation/lhc/repair_diff.md`
 
-## Held-Out Source Update
+## Prewritten Held-Out-Source Delta
 
 - new source: `cern_lhc_current_page`
+- update method: `apply_prewritten_claim_and_relation_delta`
 - added claims: `lhc_update_c001`, `lhc_update_c002`
 - added relations: `lhc_update_r001`, `lhc_update_r002`
 - touched existing claims: `lhc_c001`, `lhc_c005`
@@ -88,12 +96,14 @@ Which criticism most directly challenges the compact-star safety argument?
 
 ## What This Establishes
 
-- The map condition makes hidden dependencies, source traces, and local updates easier to recover in deterministic replay.
-- The held-out source update preserves stable IDs and makes affected objects explicit.
+- Frozen answer-key objects are directly addressable in the map representation.
+- Restoring one known relation and applying one prewritten source delta preserve stable IDs and expose affected objects.
 - The curated snapshot preserves score records, hashes, mutation reports, update ledgers, token-budget reports, three representative flat input packets, and six representative LHC responses under `supporting/`. The complete generated replay is retained separately in quarantine as provenance, outside the judge path.
 
 ## What This Does Not Establish
 
 - It is not a scientific validation study.
+- It does not measure whether an investigator can find the objects without the answer key.
+- It does not perform semantic repair or derive an update from a newly read source.
 - It does not prove the map always beats a strong live research model on prose quality.
 - It does not claim human review beyond artifacts explicitly marked for human review.

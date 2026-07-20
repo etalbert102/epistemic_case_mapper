@@ -299,7 +299,7 @@ def _build_condition_response(
         "",
         f"Question: {question}",
         "",
-        "The map condition can recover these frozen answer-key objects:",
+        "The harness materializes these frozen answer-key objects from the map:",
         "",
     ]
     for distinction in task_key["required_distinctions"]:
@@ -545,7 +545,9 @@ def run_mutation_exercise(
         "localized_object_id": relation_id if detected else None,
         "clean_control_relation_id": control_relation_id,
         "clean_control_triggered": not control_clean,
-        "source_safe_repair_produced": detected,
+        "restoration_method": "copy_from_frozen_clean_snapshot",
+        "restored_from_frozen_clean_snapshot": detected,
+        "semantic_repair_attempted": False,
         "unaffected_objects_changed": 0,
         "original_relation": original,
         "corrupted_relation": corrupted_rel,
@@ -664,6 +666,7 @@ def run_update_exercise(
 
     ledger = {
         "update_id": update["update_id"],
+        "update_method": "apply_prewritten_claim_and_relation_delta",
         "new_source_id": update["source_id"],
         "added_claim_ids": added_claim_ids,
         "added_relation_ids": added_relation_ids,
@@ -740,11 +743,11 @@ def _unaffected_claims_stable(
 def _determine_claim_level(case_results: dict[str, Any], mutation: dict[str, Any] | None, update: dict[str, Any] | None) -> str:
     lhc = case_results.get("lhc")
     if not lhc:
-        return "mechanical only"
+        return "artifact mechanics only"
     lhc_gain = lhc["condition_averages"]["map"] > lhc["condition_averages"]["flat"]
     if lhc_gain and mutation and update:
-        return "narrow"
-    return "mechanical only"
+        return "artifact addressability and locality only"
+    return "artifact mechanics only"
 
 
 def render_final_packet(
@@ -763,7 +766,7 @@ def render_final_packet(
         f"Mode: `{manifest['default_mode']}`",
         f"Earned claim level: **{claim_level}**",
         "",
-        "This packet demonstrates a narrow product claim: the structured map is useful as an investigator handoff and audit surface, not as a prettier prose generator.",
+        "This packet demonstrates a narrow artifact claim: stable map objects are directly addressable and a frozen change set can be applied locally. It does not test investigator performance, semantic repair, or autonomous source integration.",
         "",
         "## Capable Baseline Answer",
         "",
@@ -801,9 +804,9 @@ def render_final_packet(
         [
             "## Source-Trace Walkthrough",
             "",
-            "`lhc_t003` asks for the velocity/trapping transition. The map response names `lhc_c004`, `lhc_c012`, `lhc_r003`, `lhc_r004`, and their source IDs. This is the recoverability surface the flat answer typically hides inside prose.",
+            "`lhc_t003` asks for the velocity/trapping transition. The harness directly materializes frozen objects `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004` and their source IDs. This demonstrates addressability, not unaided recovery.",
             "",
-            "## Local Correction Diff",
+            "## Frozen-Snapshot Restoration Diff",
             "",
         ]
     )
@@ -814,17 +817,20 @@ def render_final_packet(
                 f"- detected: `{mutation_report['detected']}`",
                 f"- localized object: `{mutation_report['localized_object_id']}`",
                 f"- clean control triggered: `{mutation_report['clean_control_triggered']}`",
+                f"- restoration method: `{mutation_report['restoration_method']}`",
+                f"- semantic repair attempted: `{mutation_report['semantic_repair_attempted']}`",
                 "- diff: `mutation/lhc/repair_diff.md`",
                 "",
             ]
         )
     else:
         lines.extend(["No mutation exercise ran.", ""])
-    lines.extend(["## Held-Out Source Update", ""])
+    lines.extend(["## Prewritten Held-Out-Source Delta", ""])
     if update_ledger:
         lines.extend(
             [
                 f"- new source: `{update_ledger['new_source_id']}`",
+                f"- update method: `{update_ledger['update_method']}`",
                 f"- added claims: {', '.join(f'`{claim_id}`' for claim_id in update_ledger['added_claim_ids'])}",
                 f"- added relations: {', '.join(f'`{relation_id}`' for relation_id in update_ledger['added_relation_ids'])}",
                 f"- touched existing claims: {', '.join(f'`{claim_id}`' for claim_id in update_ledger['touched_existing_claim_ids'])}",
@@ -855,13 +861,15 @@ def render_final_packet(
             "",
             "## What This Establishes",
             "",
-            "- The map condition makes hidden dependencies, source traces, and local updates easier to recover in deterministic replay.",
-            "- The held-out source update preserves stable IDs and makes affected objects explicit.",
+            "- Frozen answer-key objects are directly addressable in the map representation.",
+            "- Restoring one known relation and applying one prewritten source delta preserve stable IDs and expose affected objects.",
             "- The demonstration is inspectable: raw prompts, raw responses, score records, packet hashes, mutation reports, and update ledgers are all preserved.",
             "",
             "## What This Does Not Establish",
             "",
             "- It is not a scientific validation study.",
+            "- It does not measure whether an investigator can find the objects without the answer key.",
+            "- It does not perform semantic repair or derive an update from a newly read source.",
             "- It does not prove the map always beats a strong live research model on prose quality.",
             "- It does not claim human review beyond artifacts explicitly marked for human review.",
         ]
@@ -877,6 +885,8 @@ def _render_overall_results(case_results: dict[str, Any], claim_level: str) -> s
         "# Investigator Challenge Results",
         "",
         f"Earned claim level: **{claim_level}**",
+        "",
+        "The scores describe answer-key-driven object coverage, not investigator or model performance. The map condition directly receives the selected IDs.",
         "",
         "| case | flat | map | map + sources |",
         "| --- | ---: | ---: | ---: |",
@@ -902,12 +912,12 @@ def build_completion_audit(
     acceptance = {
         "lhc_vertical_slice_runnable": "lhc" in case_results and bool(lhc_tasks),
         "three_adversarial_questions_scored": len(lhc_tasks) >= 3,
-        "semantic_mutation_and_clean_control_evaluated": bool(
+        "frozen_snapshot_restoration_and_clean_control_replayed": bool(
             mutation_report
             and mutation_report.get("detected")
             and mutation_report.get("clean_control_triggered") is False
         ),
-        "held_out_source_update_has_ledger_and_stable_ids": bool(
+        "prewritten_source_delta_has_ledger_and_stable_ids": bool(
             update_ledger and update_ledger.get("all_unaffected_ids_stable")
         ),
         "raw_prompts_outputs_scores_token_counts_preserved": (
@@ -919,8 +929,8 @@ def build_completion_audit(
         "judge_evidence_packet_exists": (output_dir / "FINAL_EVIDENCE_PACKET.md").exists(),
         "writeup_reports_earned_claim_level": claim_level in {
             "strong deterministic replay",
-            "narrow",
-            "mechanical only",
+            "artifact addressability and locality only",
+            "artifact mechanics only",
             "negative",
         },
     }
@@ -980,7 +990,7 @@ def run_challenge(
         if case_id == "lhc":
             print("[investigator-challenge] running LHC mutation exercise")
             mutation_report = run_mutation_exercise(output_dir, case, worked_map)
-            print("[investigator-challenge] running LHC held-out-source update")
+            print("[investigator-challenge] applying LHC prewritten held-out-source delta")
             update_ledger = run_update_exercise(repo_root, output_dir, case, worked_map)
 
     claim_level = _determine_claim_level(case_results, mutation_report, update_ledger)

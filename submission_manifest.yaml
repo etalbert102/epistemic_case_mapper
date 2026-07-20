@@ -130,7 +130,7 @@ extension_artifacts:
   - artifact: Investigator challenge demonstration
     case: Cross-case
     path: examples/investigator_challenge/README.md
-    status: deterministic replay demo
+    status: answer-key addressability and change-locality replay
   - artifact: Decision-space framework integration
     case: Submission
     path: docs/methodology/DECISION_SPACE_FRAMEWORK.md

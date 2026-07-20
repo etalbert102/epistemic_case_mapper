@@ -2,7 +2,7 @@
 
 Question: Why is Earth survival under cosmic-ray collisions not sufficient by itself?
 
-The map condition can recover these frozen answer-key objects:
+The harness materializes these frozen answer-key objects from the map:
 
 ## earth_exposure_is_not_the_whole_argument
 

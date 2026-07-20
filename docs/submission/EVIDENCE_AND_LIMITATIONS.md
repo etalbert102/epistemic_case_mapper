@@ -14,10 +14,10 @@ The central claim is that AI-assisted workflows can lose reasoning structure dur
 
 Demonstrated:
 
-- Source-grounded worked-region maps preserve dependencies, caveats, critique/response structure, and review handles that flat syntheses can compress.
-- The investigator challenge shows better deterministic recoverability for selected hidden-dependency tasks.
-- Local repair and held-out-source update can preserve stable IDs for unaffected map objects.
-- The package demonstrates artifact fidelity across Markdown, JSON, review packets, mutation repair, and update ledgers.
+- The source-grounded LHC and eggs worked-region maps preserve dependencies, caveats, and review handles that flat syntheses can compress; the COVID region is a separate `seed`-mode format stress test.
+- The investigator challenge shows that frozen answer-key objects are directly addressable in map artifacts.
+- Frozen-snapshot restoration and a prewritten source-delta replay preserve stable IDs for unaffected map objects.
+- The package demonstrates artifact fidelity across Markdown, JSON, review packets, snapshot restoration, and update ledgers.
 
 Plausible but under-tested:
 
@@ -30,6 +30,7 @@ Not established:
 - The current prototype consistently beats strong models on final prose quality.
 - The artifacts are domain-correct without human review.
 - The challenge is a statistically powered benchmark.
+- The challenge measures investigator discovery, semantic repair, or autonomous source integration.
 
 ## Evidence Ledger
 

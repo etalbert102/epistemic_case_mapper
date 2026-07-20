@@ -4,6 +4,9 @@ Status: `human-review-needed`
 
 Purpose: provide a narrow human-review path for the COVID Bayesian-disagreement worked region. This packet is for source fidelity and relation fairness, not for deciding COVID origins.
 
+Evidence mode: `seed`. Reviewers must verify the cited originals before
+promoting any claim to source-grounded status.
+
 ## Scope
 
 Worked region: `covid_bayesian_disagreement`
@@ -78,5 +81,5 @@ reviewer_note:
 ## Reviewer Warnings
 
 - Do not infer that this map adjudicates COVID origins.
-- Check original sources before marking claims human-reviewed; current source files are source-local notes.
+- Check original sources before marking claims human-reviewed; current source files are investigator-authored notes and excerpts, not verified source copies.
 - Be stricter than in LHC or eggs because COVID is adversarial, politically charged, and methodologically contested.

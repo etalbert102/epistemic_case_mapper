@@ -261,7 +261,7 @@
         "No multi-reviewer disagreement handling yet."
       ]
     ],
-    "evidence_mode": "source_grounded_slice",
+    "evidence_mode": "seed",
     "prompt_procedure": "covid_worked_region_v1_source_notes_manual_audit",
     "relations": [
       {

@@ -1269,11 +1269,11 @@
     }
   },
   "challenge_id": "investigator_challenge_v1",
-  "claim_level": "narrow",
+  "claim_level": "artifact addressability and locality only",
   "completion_audit_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/completion_audit.json",
   "elapsed_seconds": 0.044,
   "manifest_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/experiments/investigator_challenge/challenge_manifest.yaml",
-  "manifest_sha256": "741bdce7f9a7cb2902407eef57d4b9a9e81cc46ef4bd0d65e0e3aaa1cc5bb53b",
+  "manifest_sha256": "362d079fa0b23f47122cbcfaa454a64ffdcfbe6493bec0a2b6a21f7f014f7e7e",
   "mode": "deterministic_retrieval_proxy",
   "mutation_report_path": "/Users/eli/Documents/Experiments/epistemic_case_mapper/artifacts/investigator_challenge/latest/mutation/lhc/mutation_report.json",
   "packet_info": {
