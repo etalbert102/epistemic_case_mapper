@@ -2174,8 +2174,8 @@
         "primary": false
       },
       {
-        "label": "Open audit",
-        "path": "examples/lhc_black_holes/decision_space_erosion_audit.md",
+        "label": "Open eggs map",
+        "path": "examples/eggs/worked_region_observational_vs_rct_map.md",
         "primary": false
       }
     ],

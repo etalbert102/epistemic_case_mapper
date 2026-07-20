@@ -19,6 +19,16 @@ over the configured target, contains two near-duplicate pairs, and was built
 under a chunk budget that skipped 83 chunks. The LHC output is deliberately
 retained as a failure rather than repaired manually or presented as a map.
 
+## How The Eggs Artifacts Fit Together
+
+The [seven-source curated map](../eggs/worked_region_observational_vs_rct_map.md)
+is the substantive eggs example. This packet demonstrates live map generation
+over the same bounded region. The separate
+[50-source stress run](../eggs_large_source_stress/README.md) demonstrates
+larger-corpus intake, adjudication, memo construction, and fail-closed
+publication. None of the machine-generated artifacts supersedes the curated
+map or removes its `human-review-needed` boundary.
+
 ## Provenance
 
 The packet copies outputs from the original ignored run directories. Artifact

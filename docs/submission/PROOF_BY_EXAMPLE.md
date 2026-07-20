@@ -61,7 +61,12 @@ What it does not establish: that every map relation is correct, that every synth
 
 ## Demonstration 2: A Stronger Baseline Narrows The Claim Rather Than Defeating It
 
-The eggs case is deliberately harder for the prototype. The strongest blinded synthesis already preserves the major observational-versus-randomized distinction, population heterogeneity, and a moderate-intake conclusion. This is useful: the comparison is not against a straw-man summary.
+The eggs case is deliberately harder for the prototype. Its substantive worked
+map uses seven selected sources to preserve 19 claims, 17 relations, and 3
+decision cruxes. The strongest blinded synthesis already preserves the major
+observational-versus-randomized distinction, population heterogeneity, and a
+moderate-intake conclusion. This is useful: the comparison is not against a
+straw-man summary.
 
 The map adds stable handles for distinctions that remain easy to merge:
 
@@ -82,6 +87,14 @@ Verification:
 What this establishes: a good synthesis can preserve much of the answer while a map still provides a more local and explicit disagreement surface.
 
 What it does not establish: that the mapped workflow produces a better standalone nutrition answer. No current memo comparison is included in the curated evidence.
+
+The separate [50-source eggs stress run](../../examples/eggs_large_source_stress/README.md)
+tests scale rather than replacing this substantive map. It retains 165 initial
+claims from 50 PMC sources, but only 6 generated relations; after
+prioritization, the briefing path had 90 claims and 3 relations. The pipeline
+completed chunked adjudication and then blocked publication because material
+generation and source-binding defects remained. This is machinery evidence,
+not a stronger substantive map.
 
 ## Demonstration 3: Preserve Disagreement Without Pretending To Settle It
 

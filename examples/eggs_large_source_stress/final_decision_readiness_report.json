@@ -1,0 +1,120 @@
+{
+  "decision_ready": false,
+  "decision_ready_with_warnings": false,
+  "issues": [
+    {
+      "detail": [
+        "synthesis_not_accepted",
+        "repair_not_accepted"
+      ],
+      "issue_type": "final_lineage_not_accepted",
+      "severity": "blocker"
+    },
+    {
+      "detail": [
+        {
+          "detail": [
+            "decision_critical_omitted_evidence",
+            "missing_available_roles",
+            "top_quantities_missing_from_must_retain",
+            "compression_loss"
+          ],
+          "issue_type": "packet_sufficiency_warnings",
+          "severity": "warning"
+        }
+      ],
+      "issue_type": "packet_quality_gate_warnings",
+      "severity": "warning"
+    },
+    {
+      "detail": 10,
+      "issue_type": "critical_packet_evidence_missing_from_memo",
+      "severity": "blocker"
+    },
+    {
+      "detail": [
+        {
+          "source_binding_warning_count": 2
+        },
+        {
+          "source_binding_status": "warning"
+        },
+        {
+          "citation_clause": "After a single dose of eggs, endothelial function did not change from baseline as compared to sausage and cheese ( p = 0.99) [Pmc2904713]",
+          "guidance": "Use this source on a boundary, counterweight, or calibration clause rather than a broad support claim.",
+          "issue_type": "source_binding_mismatch",
+          "sentence": "After a single dose of eggs, endothelial function did not change from baseline as compared to sausage and cheese ( p = 0.99) [Pmc2904713].",
+          "sentence_roles": [
+            "direct_support"
+          ],
+          "severity": "critical",
+          "source_binding_warning_type": "citation_role_mismatch",
+          "source_id": "SRC_I23FFA6C",
+          "source_roles": [
+            "counterweight"
+          ],
+          "warning_type": "citation_role_mismatch"
+        },
+        {
+          "citation_clause": "Furthermore, a systematic review of 23 randomized controlled trials (RCTs) found nonsignificant effects of increasing the consumption of eggs on risk markers for cardiovascular disease (CVD)",
+          "guidance": "Keep this citation only if its source-specific evidence supports the exact adjacent claim; otherwise remove or replace it.",
+          "issue_type": "source_binding_mismatch",
+          "reason": "cited source evidence does not match the clause's distinctive claim terms",
+          "sentence": "Furthermore, a systematic review of 23 randomized controlled trials (RCTs) found nonsignificant effects of increasing the consumption of eggs on risk markers for cardiovascular disease (CVD) [Pmc10285014].",
+          "severity": "critical",
+          "source_binding_warning_type": "citation_claim_entailment_mismatch",
+          "source_evidence_samples": [
+            "A systematic review of 23 RCTs found nonsignificant effects of increasing the consumption of eggs on risk markers for CVD"
+          ],
+          "source_id": "SRC_KRQBZ43X",
+          "unmatched_quantities": [],
+          "unmatched_terms": [
+            "systematic",
+            "review",
+            "randomized",
+            "controlled",
+            "trials",
+            "rcts",
+            "found",
+            "nonsignificant"
+          ],
+          "warning_type": "citation_claim_entailment_mismatch"
+        }
+      ],
+      "issue_type": "source_binding_validation_failed",
+      "severity": "blocker"
+    },
+    {
+      "detail": [
+        {
+          "issue_type": "missing_concept_packet_surface_term",
+          "message": "The briefing does not visibly surface retained Mechanism or causal path evidence.",
+          "severity": "warning"
+        },
+        {
+          "issue_type": "sparse_relation_graph",
+          "message": "The source map has 3 relation(s) for 90 claim(s), below the graph sufficiency floor.",
+          "severity": "warning"
+        },
+        {
+          "issue_type": "missing_evidence_roles_section",
+          "message": "The briefing does not expose separated evidence-role sections.",
+          "severity": "warning"
+        }
+      ],
+      "issue_type": "briefing_validation_failed",
+      "severity": "blocker"
+    }
+  ],
+  "reader_output_available": true,
+  "schema_id": "final_decision_readiness_report_v1",
+  "source_signals": {
+    "briefing_validation_status": "needs_review",
+    "final_evaluation_status": "pass",
+    "final_lineage_status": "blocked",
+    "memo_coherence_status": "pass",
+    "packet_quality_gate_status": "warning",
+    "packet_retention_status": "warning"
+  },
+  "status": "not_decision_ready"
+}

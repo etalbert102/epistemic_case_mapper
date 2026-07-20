@@ -15,11 +15,14 @@ prose, autonomous truth discovery, or domain correctness without review.
    [Qwen LHC synthesis](examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md)
    with dependency objects `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004`
    in the [LHC map](examples/lhc_black_holes/worked_region_cosmic_ray_map.md).
-3. Check transfer in the
-   [eggs map](examples/eggs/worked_region_observational_vs_rct_map.md) and see
-   which claims survived or failed across four local models in the
-   [multi-model audit](docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md).
-4. After the install below, run the deterministic package gate:
+3. Inspect the substantive seven-source
+   [eggs map](examples/eggs/worked_region_observational_vs_rct_map.md), which
+   preserves 19 claims, 17 relations, and 3 decision cruxes.
+4. Compare it with the
+   [50-source eggs stress run](examples/eggs_large_source_stress/README.md),
+   where the production pipeline processed the corpus but blocked a defective
+   memo from publication.
+5. After the install below, run the deterministic package gate:
 
    ```bash
    ./.venv/bin/python scripts/run_flf_demo.py --skip-build
@@ -30,13 +33,15 @@ prose, autonomous truth discovery, or domain correctness without review.
 ## What The Package Demonstrates
 
 - Two source-grounded worked maps across different evidence shapes: LHC
-  technical risk and eggs/health evidence.
+  technical risk and a substantive seven-source eggs/health map.
 - A narrow COVID disagreement map as a format stress test, not source-grounded
   adjudication.
 - Eight scripted blinded local-model baselines across Gemma, Qwen, Phi, and
   Granite, with an audit that narrows or rejects unsupported loss claims.
 - A paired live Gemma MLX map run: one valid eggs candidate with review risks
   and one rejected LHC candidate with retained timeout and validation evidence.
+- A separate 50-source eggs stress run that exposes corpus-scale mapping,
+  adjudication, a sparse active relation graph, and fail-closed memo publication.
 - Stable IDs, Markdown/JSON parity, source manifests, review packets, and
   generic package validation.
 - Frozen-snapshot restoration and a prewritten source update that demonstrate
@@ -52,9 +57,11 @@ not baseline performance evidence.
 documents -> map -> briefing -> publication gate
 ```
 
-The paired [live-model packet](examples/live_model_runs/README.md) shows this
-machinery producing both a reviewable candidate and an explicit failure. The
-implementation under
+The paired [live-model packet](examples/live_model_runs/README.md) shows map
+generation producing both a reviewable candidate and an explicit failure. The
+[50-source eggs trace](examples/eggs_large_source_stress/README.md) shows the
+deeper map-to-memo machinery processing a large corpus and refusing publication
+when critical defects remain. The implementation under
 [`src/epistemic_case_mapper/pipeline/`](src/epistemic_case_mapper/pipeline/)
 includes model-assisted extraction, map construction, briefing synthesis, and
 fail-closed publication checks. This production machinery is implementation

@@ -14,7 +14,8 @@ The central claim is that AI-assisted workflows can lose reasoning structure dur
 
 Demonstrated:
 
-- The source-grounded LHC and eggs worked-region maps preserve dependencies, caveats, and review handles that flat syntheses can compress; the COVID region is a separate `seed`-mode format stress test.
+- The source-grounded LHC and seven-source eggs worked-region maps preserve dependencies, caveats, and review handles that flat syntheses can compress; the COVID region is a separate `seed`-mode format stress test.
+- A 50-source eggs run preserves the exact generated map and fail-closed memo evidence, demonstrating scale handling while exposing a sparse active relation graph and unresolved generation defects.
 - The investigator challenge shows that frozen answer-key objects are directly addressable in map artifacts.
 - Frozen-snapshot restoration and a prewritten source-delta replay preserve stable IDs for unaffected map objects.
 - The package demonstrates artifact fidelity across Markdown, JSON, review packets, snapshot restoration, and update ledgers.

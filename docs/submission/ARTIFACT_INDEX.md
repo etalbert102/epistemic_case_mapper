@@ -27,6 +27,7 @@ Purpose: provide quick counts for the curated project package. Regenerate with `
 | New-to-map source update demo | LHC black holes | `docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md` | demo from already acquired source |
 | Investigator challenge demonstration | Cross-case | `examples/investigator_challenge/README.md` | answer-key addressability and change-locality replay |
 | Paired live Gemma MLX map runs | Eggs success and LHC failure | `examples/live_model_runs/README.md` | machine-generated candidates with retained transcripts and human review required |
+| Fifty-source eggs stress run | Eggs and health | `examples/eggs_large_source_stress/README.md` | machine-generated map and blocked memo with retained readiness evidence |
 | Decision-space framework integration | Project | `docs/methodology/DECISION_SPACE_FRAMEWORK.md` | mechanism framing |
 | Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | reported single-run response, invocation not independently auditable |
 | Evidence and limitations | Project | `docs/submission/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |

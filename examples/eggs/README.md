@@ -3,6 +3,10 @@
 This transfer example tests evidence-role, endpoint, and population boundaries.
 The source packet is declared in
 [`data/cases/eggs/case.yaml`](../../data/cases/eggs/case.yaml).
+It is the project's substantive eggs map: seven selected sources are represented
+as 19 claims, 17 relations, and 3 decision cruxes. The separate
+[50-source stress run](../eggs_large_source_stress/README.md) tests production
+scale and fail-closed memo publication rather than replacing this map.
 
 ## Reviewer Path
 

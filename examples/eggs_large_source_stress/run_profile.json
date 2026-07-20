@@ -1,0 +1,23 @@
+{
+  "schema_id": "eggs_large_source_stress_public_profile_v1",
+  "status": "machine-generated-not-decision-ready",
+  "run_date": "2026-07-19",
+  "backend": "ollama:gemma4:12b-mlx",
+  "source_count": 50,
+  "initial_claim_count": 165,
+  "canonical_claim_count": 164,
+  "initial_relation_count": 6,
+  "initial_crux_count": 5,
+  "prioritized_claim_count": 90,
+  "prioritized_relation_count": 3,
+  "analyst_adjudication_row_count": 117,
+  "analyst_adjudication_chunk_count": 59,
+  "analyst_adjudication_failed_chunk_count": 0,
+  "analyst_adjudication_parallelism": 8,
+  "map_quality_score": 80,
+  "map_quality_status": "usable_with_review",
+  "briefing_validation_score": 64,
+  "briefing_validation_status": "needs_review",
+  "publication_ready": false,
+  "publication_status": "blocked_not_decision_ready"
+}

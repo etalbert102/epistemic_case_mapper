@@ -19,6 +19,7 @@ CURATION_SUPPORT_PATHS = {
     "scripts/run_blinded_baselines.py",
     "scripts/run_flf_demo.py",
     "scripts/run_investigator_challenge.py",
+    "scripts/validate_eggs_large_source_stress.py",
     "scripts/validate_live_model_examples.py",
     "scripts/validate_worked_regions.py",
     "examples/live_model_runs/artifact_manifest.json",

@@ -121,6 +121,7 @@ as interchangeable.
 | Curated LHC and eggs maps | The artifact protocol can preserve source-linked dependencies, evidence roles, caveats, and disagreement across two different case shapes. | Reliable autonomous map generation or expert-approved domain correctness. |
 | Eight blinded local-model syntheses | The agent-authored audit indicates that prose preservation varies across Gemma, Qwen, Phi, and Granite, while the map provides a stable comparison surface. | A human-scored benchmark or superiority over top-range deep research. |
 | Paired live Gemma MLX runs | The production mapper can retain a candidate that passes its artifact checks and can reject an invalid result while preserving its failure trail. | Consistent hands-free production quality or domain correctness from a local 12B model. |
+| Fifty-source eggs stress run | The deeper pipeline can process a large acquired corpus through mapping and chunked adjudication, then block a defective memo with explicit reasons. | A dense high-quality generated relation graph or a decision-ready nutrition answer. |
 | Deterministic validators and replay exercises | Provenance faults, invalid relations, stale artifacts, and some local changes can be detected or accounted for mechanically. | Semantic truth, corpus completeness, or correct relation judgment. |
 | COVID-origins slice | The format can keep several loci of disagreement distinct. | Source-grounded adjudication of COVID origins. |
 
@@ -142,7 +143,8 @@ review; its value is the item-level comparison surface, not an accuracy score.
 ### Transfer proof: different evidence roles
 
 The [eggs and cardiovascular-health map](../../examples/eggs/worked_region_observational_vs_rct_map.md)
-tests a different kind of case. It keeps long-term observational outcomes
+tests a different kind of case. Across seven selected sources, its 19 claims,
+17 relations, and 3 cruxes keep long-term observational outcomes
 separate from randomized effects on lipid markers, guideline interpretations,
 replacement context, baseline intake, regional heterogeneity, and high-risk
 subgroups. This matters because a biomarker result, a population association,
@@ -169,6 +171,16 @@ This pair is not the primary epistemic proof. It demonstrates that the
 production machinery can create a reviewable candidate and, equally
 importantly, make a failed run visible instead of presenting it as a polished
 answer.
+
+The [50-source eggs stress packet](../../examples/eggs_large_source_stress/README.md)
+exercises the deeper path from a broad corpus through briefing. Gemma MLX 12B
+generated 165 initial claims, 6 relations, and 5 crux candidates from 50 PMC
+sources. Analyst adjudication processed 117 rows in 59 chunks without a chunk
+failure. After prioritization, however, the briefing path contained 90 claims
+and only 3 relations. The publication gate rejected the memo for omitted
+critical evidence, source-binding failures, and the sparse active graph. This
+trace demonstrates scale handling and controlled failure, not substantive map
+quality. The seven-source worked map remains the primary eggs artifact.
 
 ## Why this can support compounding work
 
@@ -233,10 +245,10 @@ method well. No second operator has independently built a fresh case. The
 blinded comparisons are qualitative and agent-audited, not a paper-grade human
 benchmark. The live Gemma pair shows that automation can still fail severely.
 
-The optional decision-memo layer is provisional. Its gates expose missing
-writer obligations, but no saved memo run meets the current evidence boundary.
-The demonstrated result is inspectable stage contracts and controlled handoff,
-not superior final prose.
+The optional decision-memo layer is provisional. The retained 50-source run
+shows its gates exposing missing writer obligations and blocking publication;
+no saved memo run meets the current evidence boundary. The demonstrated result
+is inspectable stage contracts and controlled handoff, not superior final prose.
 
 The full claim ledger is in [Evidence And Limitations](EVIDENCE_AND_LIMITATIONS.md).
 

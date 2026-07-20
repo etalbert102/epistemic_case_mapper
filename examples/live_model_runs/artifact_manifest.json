@@ -2,7 +2,7 @@
   "schema_id": "live_model_example_artifact_manifest_v1",
   "interpretation": "Hashes bind live-run outputs, transcripts, reports, and packet guides; recorded artifact paths may be normalized to repository-root-relative form.",
   "sha256": {
-    "README.md": "e4a7c8fb2b35f1a6ee5053105c0463ef76ff95bbc10150cef2b35e2041a19d49",
+    "README.md": "f1f6df36dd0f91669091b59121e114144f9e460805a2ede55d29a8cde367765e",
     "eggs_success/README.md": "ef08b3bbb068f84404865ff6865cafc463494de7fe0033e888ef12efaa7f1b6d",
     "eggs_success/generated_map.json": "ffbb80f9de7f41bced8616877f189ec21fce4261d7092107d1694166aa65fa9a",
     "eggs_success/records/candidate_map_initial.json": "4a5d0bd52b981f1d00abee0527449d236d3d5ebadc54d20e9041944cdec6b929",

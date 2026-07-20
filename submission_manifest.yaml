@@ -12,8 +12,8 @@ ui_hero:
       primary: true
     - label: Open LHC map
       path: examples/lhc_black_holes/worked_region_cosmic_ray_map.md
-    - label: Open audit
-      path: examples/lhc_black_holes/decision_space_erosion_audit.md
+    - label: Open eggs map
+      path: examples/eggs/worked_region_observational_vs_rct_map.md
   cards:
     - label: Flat synthesis
       text: Cosmic-ray exposure shows LHC black-hole risk is ruled out.
@@ -28,6 +28,7 @@ judge_paths:
   - examples/lhc_black_holes/worked_region_cosmic_ray_map.md
   - docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
   - examples/eggs/worked_region_observational_vs_rct_map.md
+  - examples/eggs_large_source_stress/README.md
   - examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md
   - examples/investigator_challenge/README.md
   - examples/live_model_runs/README.md
@@ -85,6 +86,12 @@ required_docs:
   - docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
   - docs/review/REVIEWER_START_HERE.md
   - docs/review/TIER1_HUMAN_REVIEW_CHECKLIST.csv
+  - examples/eggs_large_source_stress/README.md
+  - examples/eggs_large_source_stress/run_profile.json
+  - examples/eggs_large_source_stress/generated_map.json
+  - examples/eggs_large_source_stress/blocked_memo.md
+  - examples/eggs_large_source_stress/final_decision_readiness_report.json
+  - examples/eggs_large_source_stress/analyst_adjudication_chunk_reports.json
 
 reference_scan_paths:
   - README.md
@@ -103,6 +110,7 @@ reference_scan_paths:
   - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
   - examples/lhc_black_holes/README.md
   - examples/eggs/README.md
+  - examples/eggs_large_source_stress/README.md
   - examples/investigator_challenge/README.md
   - ui/index.html
   - ui/README.md
@@ -133,6 +141,10 @@ extension_artifacts:
     case: Eggs success and LHC failure
     path: examples/live_model_runs/README.md
     status: machine-generated candidates with retained transcripts and human review required
+  - artifact: Fifty-source eggs stress run
+    case: Eggs and health
+    path: examples/eggs_large_source_stress/README.md
+    status: machine-generated map and blocked memo with retained readiness evidence
   - artifact: Decision-space framework integration
     case: Project
     path: docs/methodology/DECISION_SPACE_FRAMEWORK.md
