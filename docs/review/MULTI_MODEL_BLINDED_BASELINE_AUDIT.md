@@ -1,6 +1,6 @@
 # Multi-Model Blinded Baseline Audit
 
-Status: `agent-authored-human-review-needed`
+
 
 Purpose: extend the blinded flat-synthesis comparator beyond the original local Gemma4 baseline to see whether decision-space erosion findings are model-specific or recur across local model families.
 
@@ -51,15 +51,6 @@ The strongest recurring losses are:
 - LHC: low-velocity LHC trapping dependency, the source-level white-dwarf versus neutron-star scope split, GM's detailed response threads, and separate reviewable support roles for Earth, Sun, stellar, and universe-scale exposure.
 - Eggs: DGA guideline-process provenance, NNR scoping-review limitations, replacement-food specificity, and the different meanings attached to `up to one egg/day` across AHA, BMJ, and NNR evidence.
 
-The model comparison also strengthens the paper/prototype framing. The claim should not be that every flat synthesis misses every major distinction. The better claim is that flat synthesis preservation is brittle and model-dependent, while the map/audit workflow creates an explicit surface for checking which distinctions survived, flattened, or disappeared.
 
-## Recommended Next Step
 
-Use these multi-model blinded baselines as comparators in a small human audit packet. Ask reviewers to score whether each curated-map distinction is:
 
-- clearly preserved in the baseline,
-- partially preserved but narrowed,
-- omitted,
-- contradicted or distorted.
-
-That produces a more defensible measurement than relying on agent-authored judgments alone.
