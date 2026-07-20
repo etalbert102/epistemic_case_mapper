@@ -48,17 +48,18 @@ https://github.com/etalbert102/epistemic_case_mapper
 ## What does your submission do?
 
 Epistemic Case Mapper is an AI-assisted workflow and reference prototype that
-turns bounded investigations into stable, source-linked claims, relations,
-caveats, and cruxes. It addresses a failure mode of fluent synthesis: an answer
-can be broadly correct while obscuring the dependencies, disagreements, and
-evidence-role boundaries another investigator needs to inspect or update. The
-submission demonstrates the same artifact protocol on source-grounded LHC and
-eggs cases and a narrow COVID disagreement stress test, with Markdown/JSON
-exports, blinded four-model comparisons, deterministic validators, and a live
-Gemma MLX success/failure pair that preserves both reviewable output and
-fail-closed rejection evidence. Its claim is deliberately bounded: the
-prototype improves inspectability and persistence of reasoning, not autonomous
-truth discovery or domain correctness without human review.
+turns bounded source packets into stable, source-linked claims, relations,
+caveats, and cruxes that another investigator can inspect and update. In the
+LHC case, it keeps visible why slower, trappable collider products limit the
+broad cosmic-ray safety analogy, even when a fluent synthesis reaches the
+correct overall conclusion without preserving that dependency as a review
+surface. The same artifact protocol is demonstrated on source-grounded LHC and
+eggs cases and a narrow COVID disagreement stress test, alongside blinded
+comparisons across four local-model families. A paired live Gemma MLX run shows
+both a map candidate retained for review and an invalid candidate rejected with
+its prompts, failures, and repair trail intact. The demonstrated contribution
+is inspectable, persistent reasoning and visible failure, not autonomous truth
+discovery or domain correctness without human review.
 
 ## Interest in further paid work
 
@@ -71,14 +72,14 @@ your availability, preferred working arrangement, and any constraints.]
 
 The submission is designed to be judged as a workflow, protocol, and runnable
 reference prototype rather than as a finished epistemic stack. The strongest
-evidence is the inspectable LHC dependency example, transfer to the eggs
-evidence shape, eight blinded local-model baselines across four model families,
-and the paired live Gemma MLX packet showing both a usable-with-review candidate
-and an explicitly rejected failure. The repository includes a five-minute judge
-path, reproducibility commands, 1,070 passing tests, hash-bound curated
-artifacts, and a candid evidence-and-limitations ledger. The strongest maps
-still depend materially on curation; independent expert review, unseen-case
-performance, and measured reviewer accuracy or speed remain future work.
+evidence is directly inspectable: compare the LHC synthesis with four mapped
+dependency objects, check how the eggs map separates outcomes from biomarkers,
+and inspect the paired live Gemma MLX packet for both reviewable generation and
+fail-closed rejection. The repository provides a five-minute judge path,
+portable Markdown and JSON artifacts, deterministic reproducibility commands,
+and a candid evidence-and-limitations ledger. The strongest maps still depend
+materially on curation; independent expert review, unseen-case performance, and
+measured reviewer accuracy or speed remain future work.
 
 ## How did you hear about this?
 

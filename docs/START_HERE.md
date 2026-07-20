@@ -40,8 +40,9 @@ and persistence, not proof that models cannot recover the reasoning.
    for transfer across outcomes, biomarkers, guidelines, and subgroup caveats.
 5. Run `PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build`.
 
-For the complete argument, read
-[Proof By Example](submission/PROOF_BY_EXAMPLE.md). For limits, read
+For the formal competition narrative, read the
+[submission writeup](submission/WRITEUP.md). For the compact evidence argument,
+read [Proof By Example](submission/PROOF_BY_EXAMPLE.md). For limits, read
 [Evidence And Limitations](submission/EVIDENCE_AND_LIMITATIONS.md).
 
 ## Evidence Hierarchy
