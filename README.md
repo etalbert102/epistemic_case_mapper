@@ -19,10 +19,10 @@ prose, autonomous truth discovery, or domain correctness without review.
    [eggs map](examples/eggs/worked_region_observational_vs_rct_map.md) and see
    which claims survived or failed across four local models in the
    [multi-model audit](docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md).
-4. Run the deterministic judge gate:
+4. After the install below, run the deterministic judge gate:
 
    ```bash
-   PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+   ./.venv/bin/python scripts/run_flf_demo.py --skip-build
    ```
 
 5. Read the [evidence boundary](docs/submission/EVIDENCE_AND_LIMITATIONS.md).
@@ -64,10 +64,10 @@ depend materially on curation.
 ## Reproduce
 
 ```bash
-python -m venv .venv
-python -m pip install -e ".[dev]"
-python scripts/run_flf_demo.py --skip-build
-python scripts/reproducibility_gate.py \
+python3 -m venv .venv
+./.venv/bin/python -m pip install -e ".[dev]"
+./.venv/bin/python scripts/run_flf_demo.py --skip-build
+./.venv/bin/python scripts/reproducibility_gate.py \
   --include-worked-regions \
   --include-blinded-baselines
 ```

@@ -45,7 +45,7 @@ def main() -> int:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
-    count = len(_required_primary_paths(args.manifest, manifest))
+    count = len(_required_primary_paths(repo_root, args.manifest, manifest))
     print(f"Validated curated submission artifacts files={count}")
     return 0
 
@@ -55,7 +55,7 @@ def build_artifact_manifest(
     submission_manifest_path: str,
     manifest: SubmissionManifest,
 ) -> dict[str, object]:
-    paths = sorted(_required_primary_paths(submission_manifest_path, manifest))
+    paths = sorted(_required_primary_paths(repo_root, submission_manifest_path, manifest))
     return {
         "schema_id": SCHEMA_ID,
         "interpretation": (
@@ -92,7 +92,7 @@ def validate_artifact_manifest(
     ):
         return [*failures, "curated_artifact_hashes_invalid"]
 
-    expected = _required_primary_paths(submission_manifest_path, manifest)
+    expected = _required_primary_paths(repo_root, submission_manifest_path, manifest)
     listed = set(paths)
     for path in sorted(expected - listed):
         failures.append(f"curated_artifact_required_path_missing path={path}")
@@ -119,7 +119,9 @@ def validate_artifact_manifest(
     return failures
 
 
-def _required_primary_paths(submission_manifest_path: str, manifest: SubmissionManifest) -> set[str]:
+def _required_primary_paths(
+    repo_root: Path, submission_manifest_path: str, manifest: SubmissionManifest
+) -> set[str]:
     paths = {
         submission_manifest_path,
         *CURATION_SUPPORT_PATHS,
@@ -135,6 +137,11 @@ def _required_primary_paths(submission_manifest_path: str, manifest: SubmissionM
         if region.blinded_baseline:
             paths.add(region.blinded_baseline.output_path)
             paths.update(span.path for span in region.blinded_baseline.spans)
+            output_dir = (repo_root / region.blinded_baseline.output_path).parent
+            paths.update(
+                path.relative_to(repo_root).as_posix()
+                for path in output_dir.glob("blinded_flat_synthesis_baseline_*.md")
+            )
     return paths
 
 

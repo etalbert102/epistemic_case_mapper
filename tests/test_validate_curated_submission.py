@@ -42,6 +42,21 @@ def test_curated_artifact_validator_detects_hash_mismatch(tmp_path: Path) -> Non
     assert f"curated_artifact_hash_mismatch path={first_path}" in failures
 
 
+def test_curated_artifact_manifest_includes_every_blinded_model_output() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest = load_submission_manifest(repo_root, "submission_manifest.yaml")
+    artifact = build_artifact_manifest(repo_root, "submission_manifest.yaml", manifest)
+    listed = set(artifact["primary_evidence_paths"])
+    expected = {
+        path.relative_to(repo_root).as_posix()
+        for case_dir in (repo_root / "examples/lhc_black_holes", repo_root / "examples/eggs")
+        for path in case_dir.glob("blinded_flat_synthesis_baseline_*.md")
+    }
+
+    assert len(expected) == 8
+    assert expected <= listed
+
+
 def test_curated_artifact_paths_must_be_normalized_and_relative() -> None:
     assert _is_safe_relative_path("docs/START_HERE.md")
     assert not _is_safe_relative_path("../outside.md")
