@@ -2,7 +2,11 @@
 
 Model: `gpt-5.6-sol` through Codex CLI
 
-Condition: same five LHC source documents used by the frozen investigator challenge. The prompt instructed the model to use only those source files and not inspect the worked map, answer keys, erosion audit, or generated comparison artifacts.
+Reported condition: same five LHC source documents used by the frozen
+investigator challenge. The prompt instructed the model to use only those
+source files and not inspect the worked map, answer keys, erosion audit, or
+generated comparison artifacts. The invocation transcript was not retained,
+so compliance with that instruction is not independently auditable.
 
 ## Earth Survival Is Not Sufficient By Itself
 

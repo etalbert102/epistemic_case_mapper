@@ -6,12 +6,19 @@ The source packet is declared in
 
 ## Reviewer Path
 
-1. [Flat synthesis baseline](flat_synthesis_baseline.md): the readable before view.
-2. [Worked map](worked_region_observational_vs_rct_map.md): the curated after view.
-3. [Erosion audit](decision_space_erosion_audit.md): specific distinctions the
-   baseline compressed or lost.
+1. [Scripted blinded Qwen synthesis](blinded_flat_synthesis_baseline_qwen3_8b.md):
+   a strong local-model before view.
+2. [Worked map](worked_region_observational_vs_rct_map.md): the curated
+   structured view.
+3. [Multi-model audit](../../docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md):
+   distinctions preserved, flattened, or distorted across four models.
 4. [Structured export](worked_region_observational_vs_rct_map.json): the same
    worked map in reusable JSON.
+
+The original [flat synthesis](flat_synthesis_baseline.md) and
+[erosion audit](decision_space_erosion_audit.md) are retained only as
+non-evaluative audit-format examples because their writer had curated task
+context.
 
 ## Strongest Claim Cluster
 
@@ -39,9 +46,10 @@ guidance, cohort baseline intake, and evidence-grade limits separate.
 
 ## Strongest Flat-Synthesis Loss
 
-Start with `eggs_loss_001` in the erosion audit. The baseline mentions
-biomarkers but does not preserve that randomized lipid evidence concerns
-mechanistic risk factors rather than direct cardiovascular outcomes.
+Start with `eggs_loss_005`, `eggs_loss_006`, and `eggs_loss_007` in the
+multi-model audit. Stronger local models preserve the basic endpoint boundary,
+while guideline-process provenance, review-method limits, and the different
+meanings of “up to one egg/day” remain less stable.
 
 ## Starter Snapshot
 

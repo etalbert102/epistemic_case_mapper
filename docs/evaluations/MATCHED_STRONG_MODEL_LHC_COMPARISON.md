@@ -1,8 +1,12 @@
 # Matched Strong-Model LHC Comparison
 
-Status: single-run comparison, not a benchmark
+Status: reported single-run response, not an auditable control or benchmark
 
-This comparison asks whether a strong model can recover the LHC hidden-dependency chain from the same source universe without seeing the worked map, answer keys, erosion audit, or generated challenge artifacts.
+This comparison records a response to instructions asking a strong model to
+recover the LHC dependency chain from the same source universe without seeing
+the worked map, answer keys, erosion audit, or generated challenge artifacts.
+The invocation transcript was not retained, so the isolation condition cannot
+be independently verified.
 
 Artifacts:
 
@@ -48,7 +52,8 @@ The comparison strengthens the submission if it is framed honestly: the prototyp
 
 ## Failure Boundary
 
-This is one live strong-model run on one source universe. It does not settle
-model-vs-map performance. It shows that the strongest supported claim is
-decision-space persistence and stable object addressability, with final prose
-quality and investigator performance treated as separate evaluation layers.
+This is one reported strong-model response on one source universe. It does not
+settle model-vs-map performance and is not performance evidence. It helps set
+the conservative claim boundary: decision-space persistence and stable object
+addressability, with final prose quality and investigator performance treated
+as separate evaluation layers.

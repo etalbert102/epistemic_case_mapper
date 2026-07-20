@@ -5,12 +5,18 @@ packet is declared in [`data/cases/lhc_black_holes/case.yaml`](../../data/cases/
 
 ## Reviewer Path
 
-1. [Flat synthesis baseline](flat_synthesis_baseline.md): the readable before view.
-2. [Worked map](worked_region_cosmic_ray_map.md): the curated after view.
-3. [Erosion audit](decision_space_erosion_audit.md): specific distinctions the
-   baseline compressed or lost.
+1. [Scripted blinded Qwen synthesis](blinded_flat_synthesis_baseline_qwen3_8b.md):
+   a strong local-model before view.
+2. [Worked map](worked_region_cosmic_ray_map.md): the curated structured view.
+3. [Multi-model audit](../../docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md):
+   distinctions preserved, flattened, or distorted across four models.
 4. [Structured export](worked_region_cosmic_ray_map.json): the same worked map
    in reusable JSON.
+
+The original [flat synthesis](flat_synthesis_baseline.md) and
+[erosion audit](decision_space_erosion_audit.md) are retained only as
+non-evaluative audit-format examples because their writer had curated task
+context.
 
 ## Strongest Claim Cluster
 
@@ -38,9 +44,9 @@ dispute, and Eddington-limited accretion remain distinct review targets.
 
 ## Strongest Flat-Synthesis Loss
 
-Start with `lhc_loss_001` in the erosion audit. The baseline mentions the
-velocity caveat but does not preserve the dependency among velocity, trapping,
-and the need for compact-star analysis.
+Start with `lhc_loss_001` in the multi-model audit. The low-velocity trapping
+dependency survives as a loss across the blinded local-model comparisons even
+when broader caveats are preserved.
 
 ## Starter Snapshot
 

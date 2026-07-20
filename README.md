@@ -1,68 +1,84 @@
 # Epistemic Case Mapper
 
-An AI-assisted evidence workflow for preserving decision-relevant reasoning
-before and during memo synthesis. It turns a bounded source packet into
-source-linked claims, relations, caveats, cruxes, and briefing inputs, while
-mechanical gates keep unsupported or incomplete outputs from being published
-as official results.
+Epistemic Case Mapper is an AI-assisted workflow for preserving
+decision-relevant reasoning as source-linked claims, relations, caveats, and
+cruxes that another investigator can inspect and revise.
 
-## Judge In Ten Minutes
+The contest claim is deliberately narrow: structured reasoning objects make a
+case easier to audit and extend. The submission does not claim superior final
+prose, autonomous truth discovery, or domain correctness without review.
 
-1. Read the [contest guide](docs/START_HERE.md).
-2. Compare the LHC [flat synthesis](examples/lhc_black_holes/flat_synthesis_baseline.md),
-   [worked map](examples/lhc_black_holes/worked_region_cosmic_ray_map.md), and
-   [erosion audit](examples/lhc_black_holes/decision_space_erosion_audit.md).
-3. Inspect the [artifact-addressability challenge](examples/investigator_challenge/README.md)
-   and its [matched strong-model boundary](docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md).
-4. Read the [formal writeup](docs/submission/WRITEUP.md) and
-   [evidence limits](docs/submission/EVIDENCE_AND_LIMITATIONS.md).
-5. Check transfer on the [eggs example](examples/eggs/README.md).
+## Judge In Five Minutes
 
-The shortest example is one hidden dependency. A flat answer can correctly say
-that natural cosmic-ray exposure makes catastrophic LHC black-hole risk
-negligible while obscuring why Earth survival is not sufficient by itself if
-LHC products are slower and more trappable. The map preserves that caveat, the
-technical trapping analysis, and the relations that make compact-star evidence
-relevant as separately reviewable objects.
+1. Read the [curated contest guide](docs/START_HERE.md).
+2. Compare the scripted blinded
+   [Qwen LHC synthesis](examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md)
+   with dependency objects `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004`
+   in the [LHC map](examples/lhc_black_holes/worked_region_cosmic_ray_map.md).
+3. Check transfer in the
+   [eggs map](examples/eggs/worked_region_observational_vs_rct_map.md) and see
+   which claims survived or failed across four local models in the
+   [multi-model audit](docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md).
+4. Run the deterministic judge gate:
 
-## Pipeline
+   ```bash
+   PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+   ```
+
+5. Read the [evidence boundary](docs/submission/EVIDENCE_AND_LIMITATIONS.md).
+
+## What The Package Demonstrates
+
+- Two source-grounded worked maps across different evidence shapes: LHC
+  technical risk and eggs/health evidence.
+- A narrow COVID disagreement map as a format stress test, not source-grounded
+  adjudication.
+- Eight scripted blinded local-model baselines across Gemma, Qwen, Phi, and
+  Granite, with an audit that narrows or rejects unsupported loss claims.
+- Stable IDs, Markdown/JSON parity, source manifests, review packets, and
+  generic package validation.
+- Frozen-snapshot restoration and a prewritten source update that demonstrate
+  addressability and local change accounting, not semantic repair.
+
+The original same-context flat syntheses and their erosion audits remain in the
+repository as explicitly non-evaluative examples of the audit format. They are
+not baseline performance evidence.
+
+## Pipeline Depth
 
 ```text
 documents -> map -> briefing -> publication gate
 ```
 
-- `documents/` bounds and prepares the evidence packet.
-- `map/` extracts claims, proposes relations, identifies cruxes, and repairs
-  source or structure failures.
-- `briefing/` prioritizes the map and synthesizes a decision memo.
-- The publication gate checks provenance, citations, source binding, retained
-  obligations, and readiness; failures produce an inspection packet instead of
-  an official memo.
+The implementation under
+[`src/epistemic_case_mapper/pipeline/`](src/epistemic_case_mapper/pipeline/)
+includes model-assisted extraction, map construction, briefing synthesis, and
+fail-closed publication checks. This production machinery is implementation
+depth rather than the central contest proof; the best checked-in maps still
+depend materially on curation.
 
-The stage implementation lives under
-[`src/epistemic_case_mapper/pipeline/`](src/epistemic_case_mapper/pipeline/).
-Curated review evidence lives under [`examples/`](examples/), with methodology,
-evaluation, operating guides, and review packets indexed from
-[`docs/`](docs/README.md).
-
-## Run The Contest Gate
+## Reproduce
 
 ```bash
 python -m venv .venv
 python -m pip install -e ".[dev]"
 python scripts/run_flf_demo.py --skip-build
-python scripts/reproducibility_gate.py --include-worked-regions --include-blinded-baselines
+python scripts/reproducibility_gate.py \
+  --include-worked-regions \
+  --include-blinded-baselines
 ```
 
-For a live model-assisted example, prerequisites, outputs, and the fail-closed
-boundary, see [REPRODUCE.md](docs/submission/REPRODUCE.md).
+The package is configured by [`submission_manifest.yaml`](submission_manifest.yaml).
+For the live backend boundary and exact commands, see
+[REPRODUCE.md](docs/submission/REPRODUCE.md).
 
-## Review Boundary
+## Claim Boundary
 
-The checked-in maps are agent-curated and mechanically validated, not
-independently domain-expert reviewed. The package demonstrates inspectable
-dependencies, stable object addressability, replayed change locality, and
-artifact fidelity on selected cases; it does not establish automatic truth,
-semantic repair, autonomous source integration, universal prose superiority,
-or broad generalization. The COVID slice is a `seed`-mode format stress test,
-not source-grounded evidence.
+Demonstrated: inspectable reasoning objects, cross-case artifact reuse,
+scripted baseline comparisons, deterministic package checks, and local edit
+accounting.
+
+Not demonstrated: measured improvement in reviewer accuracy or speed,
+independent expert approval, unseen-case performance, low-variance second-user
+operation, autonomous source integration, or consistently successful final
+memo generation.

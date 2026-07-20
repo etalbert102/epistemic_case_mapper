@@ -74,8 +74,8 @@
     ],
     "map_comparator": "examples/eggs/worked_region_observational_vs_rct_map.md",
     "prompt_procedure": "erosion_audit_prompt_v1",
-    "status": "human-review-needed",
-    "title": "Eggs Decision-Space Erosion Audit"
+    "status": "illustrative_non_evaluative",
+    "title": "Illustrative Eggs Decision-Space Erosion Audit"
   },
   "region_id": "eggs_observational_vs_rct",
   "worked_map": {

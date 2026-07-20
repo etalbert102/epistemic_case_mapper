@@ -1,10 +1,15 @@
-# LHC Decision-Space Erosion Audit
+# Illustrative LHC Decision-Space Erosion Audit
 
-Status: `human-review-needed`
+Status: `illustrative_non_evaluative`
 Prompt/procedure: `erosion_audit_prompt_v1`
 
 Baseline comparator: `examples/lhc_black_holes/flat_synthesis_baseline.md`
 Map comparator: `examples/lhc_black_holes/worked_region_cosmic_ray_map.md`
+
+Interpretation limit: the baseline writer had access to the curated task
+context. These findings illustrate the audit schema but are not model
+performance evidence. Comparative claims should use the scripted blinded
+baselines and `docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md`.
 
 ## Counted Losses
 

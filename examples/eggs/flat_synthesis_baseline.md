@@ -1,6 +1,6 @@
-# Eggs Flat Synthesis Baseline
+# Illustrative Eggs Flat Synthesis
 
-Status: `human-review-needed`
+Status: `illustrative_non_evaluative`
 Prompt/procedure: `flat_baseline_prompt_v1`
 
 ## Source Subset
@@ -23,6 +23,11 @@ Using only the listed source excerpts for this worked region, write a concise sy
 
 - baseline_writer_had_access_to_curated_map: `yes`
 - baseline_protocol_limitation: This baseline is illustrative rather than evaluative because the same Codex run had access to the curated-map task and source-packet orientation before this file was finalized.
+
+This artifact demonstrates the original audit format only. It cannot estimate
+model performance or how often independently generated prose loses structure.
+Use the scripted blinded baselines and multi-model audit for comparative
+evidence.
 
 ## Baseline Output
 

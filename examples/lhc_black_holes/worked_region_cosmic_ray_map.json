@@ -65,8 +65,8 @@
     ],
     "map_comparator": "examples/lhc_black_holes/worked_region_cosmic_ray_map.md",
     "prompt_procedure": "erosion_audit_prompt_v1",
-    "status": "human-review-needed",
-    "title": "LHC Decision-Space Erosion Audit"
+    "status": "illustrative_non_evaluative",
+    "title": "Illustrative LHC Decision-Space Erosion Audit"
   },
   "region_id": "lhc_cosmic_ray_argument",
   "worked_map": {

@@ -4,8 +4,8 @@ package_label: FLF Submission
 
 ui_hero:
   eyebrow: Judge Mode
-  title: See the value in one dependency.
-  body: "A flat synthesis can say cosmic-ray exposure rules out LHC black-hole risk. The map preserves the judgment chain: declared sources, normalized claims, dependency handles, repairable relations, and update ledgers."
+  title: Inspect one dependency, then test transfer.
+  body: "Scripted blinded baselines show which distinctions survive in prose. The maps preserve source-linked dependency handles across LHC and eggs, with a narrow COVID disagreement stress test and explicit evidence limits."
   links:
     - label: Start here
       path: docs/START_HERE.md
@@ -24,20 +24,15 @@ ui_hero:
 
 judge_paths:
   - docs/START_HERE.md
-  - docs/submission/WRITEUP.md
-  - examples/lhc_black_holes/README.md
+  - examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md
   - examples/lhc_black_holes/worked_region_cosmic_ray_map.md
-  - examples/lhc_black_holes/decision_space_erosion_audit.md
-  - examples/investigator_challenge/README.md
-  - docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
-  - examples/eggs/README.md
+  - docs/review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md
   - examples/eggs/worked_region_observational_vs_rct_map.md
-  - examples/eggs/decision_space_erosion_audit.md
+  - examples/covid_origins_slice/worked_region_bayesian_disagreement_map.md
+  - examples/investigator_challenge/README.md
   - docs/submission/PROOF_BY_EXAMPLE.md
   - docs/submission/EVIDENCE_AND_LIMITATIONS.md
-  - docs/submission/GENERALIZABILITY_RED_TEAM.md
   - docs/submission/REPRODUCE.md
-  - docs/review/REVIEWER_START_HERE.md
   - ui/index.html
 
 required_docs:
@@ -138,7 +133,7 @@ extension_artifacts:
   - artifact: Matched strong-model LHC comparison
     case: LHC black holes
     path: docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md
-    status: single-run comparison
+    status: reported single-run response, invocation not independently auditable
   - artifact: Evidence and limitations
     case: Submission
     path: docs/submission/EVIDENCE_AND_LIMITATIONS.md

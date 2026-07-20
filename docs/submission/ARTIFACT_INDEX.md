@@ -27,7 +27,7 @@ Purpose: provide quick counts for the FLF submission package. Regenerate with `P
 | New-to-map source update demo | LHC black holes | `docs/evaluations/investigator_challenge/NEW_SOURCE_UPDATE.md` | demo from already acquired source |
 | Investigator challenge demonstration | Cross-case | `examples/investigator_challenge/README.md` | answer-key addressability and change-locality replay |
 | Decision-space framework integration | Submission | `docs/methodology/DECISION_SPACE_FRAMEWORK.md` | judge-facing framing |
-| Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | single-run comparison |
+| Matched strong-model LHC comparison | LHC black holes | `docs/evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md` | reported single-run response, invocation not independently auditable |
 | Evidence and limitations | Submission | `docs/submission/EVIDENCE_AND_LIMITATIONS.md` | human-review-needed |
 | Human audit guide | Submission | `docs/review/HUMAN_AUDIT_GUIDE.md` | human-review-needed |
 | Operational workflow and realism | Submission | `docs/methodology/OPERATIONAL_WORKFLOW.md` | human-review-needed |

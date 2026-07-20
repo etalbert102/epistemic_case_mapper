@@ -1,82 +1,100 @@
-# Start Here: FLF Submission
+# Start Here: Curated FLF Submission
 
-The contest question is concrete:
+## Submission In One Sentence
 
-> Can an AI-assisted workflow preserve the evidence, distinctions, dependencies,
-> and review state that another investigator needs to audit or revise a memo?
-
-Epistemic Case Mapper answers with a durable review surface rather than a claim
-to better prose: source-bound claims, explicit relations, caveats, cruxes,
-erosion findings, and fail-closed briefing handoffs.
+Epistemic Case Mapper turns a bounded investigation into stable, source-linked
+reasoning objects so later investigators can inspect dependencies, preserve
+disagreement, and update local parts without reconstructing the case from
+prose.
 
 ## One-Minute Example
 
-A flat synthesis can correctly conclude that cosmic-ray exposure makes
-catastrophic LHC black-hole risk negligible. That conclusion hides an important
-dependency: Earth survival is not sufficient by itself if LHC-produced objects
-may be slower and more trappable than cosmic-ray products.
+The broad LHC safety argument observes that natural cosmic-ray collisions have
+occurred at or above LHC energies without destroying astronomical bodies. A
+load-bearing caveat is that collider products may be slower and more trappable
+than cosmic-ray products, so Earth survival is not sufficient by itself.
 
-The worked map keeps the dependency inspectable:
+The map preserves the dependency as four addressable objects:
 
-- `lhc_c004` records the velocity caveat.
-- `lhc_c012` records the trapping analysis.
-- `lhc_r003` and `lhc_r004` connect those objects to the need for compact-star
-  evidence.
+- `lhc_c004`: the low-velocity caveat;
+- `lhc_c012`: the technical trapping analysis;
+- `lhc_r003`: the caveat refines the broad cosmic-ray analogy;
+- `lhc_r004`: the trapping analysis supports the caveat.
 
-A later reviewer can now accept, challenge, or update the inference locally
-instead of reconstructing it from a polished paragraph.
+The scripted blinded Qwen synthesis reaches a broadly correct answer but does
+not leave this chain as a durable review surface. Other local models preserve
+different subsets of the case. The contribution is therefore inspectability
+and persistence, not proof that models cannot recover the reasoning.
 
-## Five-Minute Review Path
+## Five-Minute Evidence Path
 
-1. Read the LHC [flat baseline](../examples/lhc_black_holes/flat_synthesis_baseline.md).
-2. Inspect the same issue in the [worked map](../examples/lhc_black_holes/worked_region_cosmic_ray_map.md),
-   especially `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004`.
-3. Check the [baseline-relative erosion audit](../examples/lhc_black_holes/decision_space_erosion_audit.md).
-4. Open the [investigator challenge](../examples/investigator_challenge/README.md)
-   for an artifact-addressability, frozen-snapshot restoration, and prewritten
-   update-locality replay.
-5. Read the [matched strong-model comparison](evaluations/MATCHED_STRONG_MODEL_LHC_COMPARISON.md),
-   which narrows the claim: a capable model can reconstruct much of the chain,
-   while the map makes it persistent and locally revisable.
+1. Read the blinded
+   [Qwen LHC synthesis](../examples/lhc_black_holes/blinded_flat_synthesis_baseline_qwen3_8b.md).
+2. Inspect `lhc_c004`, `lhc_c012`, `lhc_r003`, and `lhc_r004` in the
+   [LHC map](../examples/lhc_black_holes/worked_region_cosmic_ray_map.md).
+3. Open the
+   [multi-model blinded audit](review/MULTI_MODEL_BLINDED_BASELINE_AUDIT.md),
+   which records where Gemma, Qwen, Phi, and Granite preserved, flattened, or
+   distorted distinctions in both LHC and eggs.
+4. Inspect the [eggs map](../examples/eggs/worked_region_observational_vs_rct_map.md)
+   for transfer across outcomes, biomarkers, guidelines, and subgroup caveats.
+5. Run `PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build`.
 
-Then use the [formal writeup](submission/WRITEUP.md) for the full competition
-argument and [Evidence and Limitations](submission/EVIDENCE_AND_LIMITATIONS.md)
-before assigning credit beyond the demonstrated mechanism.
+For the complete argument, read
+[Proof By Example](submission/PROOF_BY_EXAMPLE.md). For limits, read
+[Evidence And Limitations](submission/EVIDENCE_AND_LIMITATIONS.md).
 
-## Transfer Check
+## Evidence Hierarchy
 
-The [eggs case](../examples/eggs/README.md) tests whether observational outcomes,
-randomized lipid-marker evidence, guideline roles, and subgroup caveats remain
-separate. The [COVID slice](../examples/covid_origins_slice/README.md) tests
-whether debate outcomes, process critiques, Bayesian disagreement, and
-subargument boundaries can coexist without a false consensus. These selected
-examples show the same artifact contract across different evidence shapes; they
-do not establish broad generalization.
+### Primary Contest Evidence
 
-## What Is And Is Not Demonstrated
+- Source-grounded LHC and eggs maps with structured JSON exports.
+- Eight baselines produced by `scripts/run_blinded_baselines.py` from declared
+  source spans without curated-map or erosion-audit context.
+- The agent-authored multi-model audit, explicitly awaiting human review.
+- Generic manifest, worked-region, source, export, UI, and reference validators.
+- The deterministic investigator challenge for object addressability,
+  frozen-snapshot restoration, and prewritten update locality.
 
-Demonstrated narrowly: source-linked reasoning objects, baseline-relative loss
-audits, direct addressability of frozen map objects, one localized
-frozen-snapshot restoration, one prewritten source-delta application,
-reproducible exports, and publication checks.
+### Secondary Evidence
 
-Not established: automatic domain correctness, exhaustive retrieval, superior
-final prose, lower human review time, unseen-case performance, or successful
-multi-reviewer operation. The artifacts are agent-curated and mechanically
-validated; independent expert review remains outstanding. The full boundary is
-recorded in [Evidence and Limitations](submission/EVIDENCE_AND_LIMITATIONS.md).
+- The COVID origins slice tests disagreement representation across debate
+  results, process critiques, forecasts, and Bayesian subarguments. It uses
+  investigator notes and excerpts and is not source-grounded adjudication.
 
-## Run The Checks
+### Non-Evaluative And Appendix Material
 
-From an installed checkout:
+- Original same-context flat syntheses and erosion audits illustrate the audit
+  schema but cannot measure model performance because their writer had access
+  to the curated task context.
+- The matched top-model response is a reported claim-boundary illustration; its
+  invocation transcript was not retained.
+- The briefing pipeline shows implementation depth and fail-closed behavior,
+  but generated memo quality is outside the central proof.
+
+## FLF Criteria Boundary
+
+| Criterion | What is demonstrated | Main remaining gap |
+| --- | --- | --- |
+| Epistemic uplift | Load-bearing dependencies and evidence-role boundaries become directly inspectable. | No measured improvement over top-range deep research in reviewer accuracy or speed. |
+| Generalizability | One schema operates across two grounded cases and one narrow disagreement stress test. | No unseen-case or independent second-operator result. |
+| Compounding | Stable IDs, JSON, review packets, task queues, and update ledgers support local extension. | Multi-reviewer merge and conflict resolution are not implemented. |
+| Scalability | Generic stages, model backends, and validators can absorb more sources and model passes. | The strongest maps remain curated; hands-free quality is not demonstrated. |
+| Transparency | Prompts, manifests, source spans, validation rules, and limitations are retained. | Some historical model invocation records are incomplete. |
+| Adversarial robustness | Multiple model families, explicit rejected findings, critique/response structure, and fail-closed gates expose failures. | No external motivated audit has challenged source selection or relation labels. |
+| Insight | The package treats persistence and reviewability as separate from final prose quality. | Judges may reasonably view this as argument mapping plus provenance unless the handoff mechanism proves useful. |
+
+## Reproduce
+
+The fast gate and full deterministic gate both call no model:
 
 ```bash
-python scripts/run_flf_demo.py --skip-build
-python scripts/reproducibility_gate.py --include-worked-regions --include-blinded-baselines
+PYTHONPATH=src python3 scripts/run_flf_demo.py --skip-build
+PYTHONPATH=src python3 scripts/reproducibility_gate.py \
+  --include-worked-regions \
+  --include-blinded-baselines
 ```
 
-Passing means the package is internally consistent and reproducible, not that
-its substantive judgments are expert-approved. See
-[REPRODUCE.md](submission/REPRODUCE.md) for setup and a live model-assisted run,
-or serve the repository with `python -m http.server 8787` and open
-`http://localhost:8787/ui/` for the static viewer.
+Passing establishes package integrity and selected local-edit behavior, not
+scientific correctness. The install, starter-map exercise, and live backend
+boundary are documented in [REPRODUCE.md](submission/REPRODUCE.md).
