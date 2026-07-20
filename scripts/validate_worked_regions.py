@@ -48,6 +48,11 @@ def _validate_region(repo_root: Path, manifest: SubmissionManifest, region: Work
     case = manifest.case_for_key(region.case_key)
     case_manifest = CaseManifest.model_validate(read_yaml(repo_root / case.case_path))
     source_ids = {source.source_id for source in case_manifest.sources}
+    source_paths = {
+        source.source_id: source.path
+        for source in case_manifest.sources
+        if source.path
+    }
     required_sources = set(region.required_sources)
     missing_manifest_sources = required_sources - source_ids
     for source_id in sorted(missing_manifest_sources):
@@ -75,7 +80,18 @@ def _validate_region(repo_root: Path, manifest: SubmissionManifest, region: Work
                 failures.append(f"definition_missing_source region={region.region_id} source={source_id}")
 
     if map_path.exists():
-        _validate_map(region.region_id, map_path, region.map_format, source_ids, region.thresholds, manifest, failures)
+        _validate_map(
+            region.region_id,
+            map_path,
+            region.map_format,
+            source_ids,
+            source_paths,
+            case_manifest.evidence_mode == "source_grounded",
+            region.thresholds,
+            manifest,
+            repo_root,
+            failures,
+        )
     if baseline.exists():
         _validate_baseline(region.region_id, baseline, required_sources, region.thresholds, failures)
     if audit.exists():
@@ -89,8 +105,11 @@ def _validate_map(
     path: Path,
     artifact_format: str,
     source_ids: set[str],
+    source_paths: dict[str, str],
+    require_source_grounding: bool,
     thresholds: ValidationThresholds,
     manifest: SubmissionManifest,
+    repo_root: Path,
     failures: list[str],
 ) -> None:
     worked_map = parse_worked_map(path, artifact_format)
@@ -117,6 +136,15 @@ def _validate_map(
         failures.append(f"worked_map_missing_excerpts region={region_id} path={path}")
     if sum(1 for claim in claims if claim.get("entailed_by_excerpt")) < len(claim_ids):
         failures.append(f"worked_map_missing_entailment_checks region={region_id} path={path}")
+    if require_source_grounding:
+        for claim in claims:
+            _validate_claim_source_span(
+                repo_root,
+                region_id,
+                claim,
+                source_paths,
+                failures,
+            )
     text = path.read_text(encoding="utf-8")
     if any(str(claim.get("entailed_by_excerpt", "")).lower() == "no" for claim in claims) and "audit concern" not in text.lower():
         failures.append(f"unsupported_claim_not_moved_to_audit region={region_id} path={path}")
@@ -178,6 +206,122 @@ def _validate_best(region_id: str, path: Path, failures: list[str]) -> None:
     for section in required_sections:
         if section not in text:
             failures.append(f"best_regions_missing_section region={region_id} section={section} path={path}")
+
+
+def _validate_claim_source_span(
+    repo_root: Path,
+    region_id: str,
+    claim: dict[str, object],
+    source_paths: dict[str, str],
+    failures: list[str],
+) -> None:
+    claim_id = str(claim.get("claim_id", "<unknown>"))
+    source_id = str(claim.get("source_id", ""))
+    relative_path = source_paths.get(source_id)
+    if not relative_path:
+        failures.append(
+            f"worked_map_source_path_missing region={region_id} claim={claim_id} source={source_id}"
+        )
+        return
+    source_path = repo_root / relative_path
+    if not source_path.is_file():
+        failures.append(
+            f"worked_map_source_file_missing region={region_id} claim={claim_id} path={relative_path}"
+        )
+        return
+    lines = source_path.read_text(encoding="utf-8").split("\n")
+    source_span = str(claim.get("source_span", ""))
+    if source_span == "first non-empty line":
+        ranges = [
+            (line_number, line_number)
+            for line_number, line in enumerate(lines, start=1)
+            if line.strip()
+        ][:1]
+    else:
+        ranges = _parse_line_ranges(source_span)
+    if not ranges:
+        failures.append(
+            f"worked_map_source_span_invalid region={region_id} claim={claim_id}"
+        )
+        return
+    for start, end in ranges:
+        if start < 1 or end < start or end > len(lines):
+            failures.append(
+                f"worked_map_source_span_out_of_range region={region_id} "
+                f"claim={claim_id} span={start}-{end}"
+            )
+            return
+    span_tokens = _ordered_tokens(
+        "\n".join(
+            line
+            for start, end in ranges
+            for line in lines[start - 1 : end]
+        )
+    )
+    excerpt = str(claim.get("excerpt", "")).strip('"')
+    fragments = [
+        tokens
+        for fragment in re.split(r"\.\.\.", excerpt)
+        if (tokens := _ordered_tokens(fragment))
+    ]
+    if sum(map(len, fragments)) < 2 or any(
+        not _is_subsequence(fragment, span_tokens) for fragment in fragments
+    ):
+        failures.append(
+            f"worked_map_excerpt_not_grounded region={region_id} claim={claim_id}"
+        )
+
+
+def _parse_line_ranges(value: str) -> list[tuple[int, int]]:
+    if not re.fullmatch(r"(?:lines? )?\d+(?:-\d+)?(?: and \d+(?:-\d+)?)*", value):
+        return []
+    ranges: list[tuple[int, int]] = []
+    for start_text, end_text in re.findall(r"(\d+)(?:-(\d+))?", value):
+        start = int(start_text)
+        ranges.append((start, int(end_text) if end_text else start))
+    return ranges
+
+
+def _ordered_tokens(value: str) -> list[str]:
+    stop_words = {
+        "a", "an", "and", "are", "as", "be", "by", "for", "has", "have",
+        "in", "is", "of", "on", "or", "some", "that", "the", "this", "to",
+        "were", "will", "with", "would",
+    }
+    value = re.sub(r"10\s*\^\s*(\d+)", r"10\1", value)
+    value = re.sub(r"-\s*\n\s*", " ", value)
+    value = re.sub(r"\btern\b", "term", value, flags=re.IGNORECASE)
+    return [
+        token
+        for token in re.findall(r"[a-z0-9]+", value.lower())
+        if token not in stop_words
+    ]
+
+
+def _is_subsequence(needle: list[str], haystack: list[str]) -> bool:
+    needle_position = 0
+    haystack_position = 0
+    while needle_position < len(needle) and haystack_position < len(haystack):
+        if needle[needle_position] == haystack[haystack_position]:
+            needle_position += 1
+            haystack_position += 1
+        elif (
+            haystack_position + 1 < len(haystack)
+            and needle[needle_position]
+            == haystack[haystack_position] + haystack[haystack_position + 1]
+        ):
+            needle_position += 1
+            haystack_position += 2
+        elif (
+            needle_position + 1 < len(needle)
+            and needle[needle_position] + needle[needle_position + 1]
+            == haystack[haystack_position]
+        ):
+            needle_position += 2
+            haystack_position += 1
+        else:
+            haystack_position += 1
+    return needle_position == len(needle)
 
 
 def _require_file(path: Path, failures: list[str]) -> None:

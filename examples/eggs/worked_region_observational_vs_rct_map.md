@@ -270,7 +270,7 @@ source_id: nnr_2023_eggs_scoping_review
 
 source_span: `lines 30-41`
 
-excerpt: "RCTs suggest lipid changes with substantial heterogeneity... observational studies does not provide strong support for a detrimental role of moderate egg consumption... up to one egg/day... one egg/day is unlikely to adversely affect overall disease risk."
+excerpt: "Systematic reviews of randomized clinical trials indicates that higher egg intake may increase serum total cholesterol concentration and the ratio of low-density lipoprotein to high-density lipoprotein cholesterol, but with substantial heterogeneity in the response... observational studies does not provide strong support for a detrimental role of moderate egg consumption... up to one egg/day... one egg/day is unlikely to adversely affect overall disease risk."
 
 entailed_by_excerpt: yes
 

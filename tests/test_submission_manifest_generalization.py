@@ -391,18 +391,21 @@ Evidence mode: `source_grounded`
 claim_id: {claim_1}
 text: Alpha supports the first demo claim.
 source_id: demo_source_1
+source_span: line 1
 excerpt: Alpha line.
 entailed_by_excerpt: yes
 
 claim_id: {claim_2}
 text: Beta supports the second demo claim.
 source_id: demo_source_1
+source_span: line 2
 excerpt: Beta line.
 entailed_by_excerpt: yes
 
 claim_id: {claim_3}
 text: Gamma supports a crux-bearing claim.
 source_id: demo_source_2
+source_span: line 1
 excerpt: Gamma line.
 entailed_by_excerpt: yes
 
@@ -493,6 +496,7 @@ def _json_worked_map() -> dict:
                 "claim_id": "claim:demo:201",
                 "claim": "Alpha supports a JSON claim.",
                 "source_id": "demo_source_1",
+                "source_span": "line 1",
                 "excerpt": "Alpha line.",
                 "entailed_by_excerpt": "yes",
             },
@@ -500,6 +504,7 @@ def _json_worked_map() -> dict:
                 "claim_id": "claim:demo:202",
                 "claim": "Beta supports another JSON claim.",
                 "source_id": "demo_source_1",
+                "source_span": "line 2",
                 "excerpt": "Beta line.",
                 "entailed_by_excerpt": "yes",
             },
@@ -507,6 +512,7 @@ def _json_worked_map() -> dict:
                 "claim_id": "claim:demo:203",
                 "claim": "Gamma is a JSON crux claim.",
                 "source_id": "demo_source_2",
+                "source_span": "line 1",
                 "excerpt": "Gamma line.",
                 "entailed_by_excerpt": "yes",
             },
