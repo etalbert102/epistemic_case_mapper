@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Decision Brief\n\nRepresent a narrow slice of COVID origins evidence as a scoped evidence map that preserves Bayesian disagreement, rather than collapsing the packet into a single undifferentiated bottom line. This representation is necessary because the source material—specifically Rootclaim's COVID 19 Origins Debate Results—should be used for participant postmortem and process critique, not as a neutral adjudication of the debate.\n\nWhile the professional superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), they noted that significant disagreement persisted among forecasters. To maintain the integrity of this distinction, the representation must acknowledge that while the source provides a structured framework for evaluating evidence, it remains a scope-setting brief for an epistemic case study rather than an independent scientific authority on COVID origins."
-}
-```

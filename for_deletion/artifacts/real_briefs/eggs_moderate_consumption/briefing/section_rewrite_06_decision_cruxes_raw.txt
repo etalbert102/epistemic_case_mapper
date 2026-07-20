@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Decision Cruxes\n\nThe following conditions represent critical pivots that could alter the current decision read based on the provided source packet:\n\n| Crux | Why it matters | Current read | Would change if |\n|---|---|---|---|\n| Whether the stated concern changes the interpretation | This challenges relation marks a condition that can change the interpretation of the evidence. | A meta-analysis of 41 prospective cohort studies observed that higher egg intake was associated with a higher risk of total CVD (fatal and non-fatal events combined) (RR = 1.04, 95% CI 1.00–1.08 for each 50 g/day higher egg intake). | New evidence showed that this concern is false or immaterial to the interpretation. |\n| Causal attribution of the observed effect | This in tension with relation marks a condition that can change the interpretation of the evidence. | The evidence is decision-relevant but should be read with causal-attribution limits attached. | Better evidence showed the benefit came entirely from other concurrent changes. |"
-}
-```

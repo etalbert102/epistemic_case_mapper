@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Practical Scope and Exceptions\n\nThe practical recommendation for egg consumption is nuanced by specific population risks and dietary substitutions. While moderate consumption (up to one egg per day) is not associated with cardiovascular disease risk overall, high egg consumption was associated with a higher risk of cardiovascular disease in people with type 2 diabetes (Egg Consumption And Risk Of Cardiovascular Disease: Three Large Prospective US Cohort Studies, Systematic Review, And Updated Meta Analysis). \n\nAdditionally, the impact of egg consumption may vary depending on what it replaces in a diet. When comparing whole-food exposure versus replacement or substitution options on outcome effect, there is no clean mapped evidence for whole-food exposure; however, regarding the replacement or substitution option, there is an association with cardiovascular disease risk (hazard ratio for at least one egg per day) based on structured option comparison."
-}
-```

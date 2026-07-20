@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Practical Read\n\nThis source should be used for participant postmortem and process critique, not as a neutral adjudication of the debate. Because the value of a public debate can be obscured by the risk that \"nobody accepted my challenge\" rhetoric is mistaken for evidence, this representation serves to preserve the distinctions necessary to answer the representation question. \n\nReviewers should use the source packet to navigate the following:\n*   **Scope-Setting:** The source is a scope-setting brief for an epistemic case study, not an independent scientific authority on COVID origins.\n*   **Probability Distributions:** Professional Superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), while noting that the evidence remains contested.\n\nThis representation allows for a scoped evidence map that preserves Bayesian disagreement, rather than collapsing the packet into a single undifferentiated bottom line."
-}
-```

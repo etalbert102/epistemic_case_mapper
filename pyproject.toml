@@ -33,4 +33,4 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "-p no:cacheprovider"
-norecursedirs = ["artifacts", "for_deletion"]
+norecursedirs = ["artifacts"]

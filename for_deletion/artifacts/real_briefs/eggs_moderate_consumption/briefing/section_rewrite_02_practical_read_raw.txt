@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Practical Read\n\nBased on the provided source packet, the following actions are recommended for generally healthy adults:\n\n*   **Moderate Consumption:** Generally, consuming up to one egg per day is not associated with an increased risk of cardiovascular disease. \n*   **Risk Awareness:** Note that egg consumption is associated with a risk of cardiovascular disease, including coronary heart disease and stroke.\n*   **Specific Populations:** High egg consumption is associated with a higher risk of cardiovascular disease in individuals with type 2 diabetes.\n*   **Cancer Risk:** Egg consumption is associated with an increased risk of ovarian cancer."
-}
-```

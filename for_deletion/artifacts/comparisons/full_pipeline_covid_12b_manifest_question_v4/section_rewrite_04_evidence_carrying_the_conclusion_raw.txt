@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Evidence Carrying the Conclusion\n\nThe representation of this evidence is driven by three distinct sources of support and scope. First, Rootclaim's COVID 19 Origins Debate Results should be used for participant postmortem and process critique rather than as a neutral adjudication of the debate. This is complemented by professional superforecasters who assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), though they noted that disagreement persisted among forecasters.\n\nSecond, Levin's NBER working paper evaluates lab leak versus zoonotic transmission using Bayesian methods and spatiotemporal/zoonotic data. This provides a technical counterpoint to the qualitative debate. \n\nFinally, the scope of this representation is limited by the risk that the value of a public debate can be obscured by the risk that 'nobody accepted my challenge' rhetoric is mistaken for evidence (Practically A Book Review: Rootclaim $100,000 Lab Leak Debate)."
-}
-```

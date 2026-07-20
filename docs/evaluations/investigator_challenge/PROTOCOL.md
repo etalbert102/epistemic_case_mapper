@@ -20,8 +20,8 @@ artifacts/investigator_challenge/latest/
 ```
 
 The compact checked-in review snapshot is under
-`examples/investigator_challenge/`; bulk raw replay output remains local or is
-quarantined under `for_deletion/`.
+`examples/investigator_challenge/`; representative raw evidence is retained in
+its `supporting/` directory, while bulk replay output remains local.
 
 ## Frozen Inputs
 

@@ -24,7 +24,6 @@ Do not optimize for fluent summaries at the expense of provenance or disagreemen
 - `docs/archive/internal/`: development history and plans; not a judge-facing surface.
 - `examples/`: checked-in judge-facing snapshots.
 - `artifacts/`: generated local outputs; gitignored.
-- `for_deletion/`: recoverable quarantine for stale/superseded files pending human deletion approval.
 - `tests/`: pytest coverage.
 
 ## Required Reading Before Substantial Edits

@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Why This Read\n\nThis representation is necessary because a flat bottom line would obscure the inherent uncertainty and scope of the source packet. The primary support for this approach stems from Rootclaim's COVID 19 Origins Debate Results, which should be used for participant postmortem and process critique rather than as a neutral adjudication of the debate. Furthermore, while professional superforecasters assessed natural zoonosis as the most likely cause (74%) and a research-related accident as second most likely (25%), they explicitly noted that disagreement persisted among forecasters (Superforecasting The Origins Of The COVID 19 Pandemic). \n\nCrucially, the FLF Epistemic Case Study Competition COVID Brief serves as a scope-setting brief for an epistemic case study and does not constitute an independent scientific authority on COVID origins. Finally, because the live format of the debate advantaged debaters with more memorized detail, an offline text format is recommended for future iterations (Rootclaim's COVID 19 Origins Debate Results)."
-}
-```

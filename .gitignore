@@ -3,10 +3,5 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 artifacts/
-!for_deletion/artifacts/
-!for_deletion/artifacts/**
-for_deletion/artifacts/test_scratch/
-for_deletion/artifacts/cli_probes/
-for_deletion/artifacts/reproducibility_gate_20260719/
 outputs/
 .DS_Store

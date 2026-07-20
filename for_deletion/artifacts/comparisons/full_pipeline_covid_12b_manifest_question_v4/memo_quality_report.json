@@ -1,9 +1,0 @@
-{
-  "frame_type": "representation_decision",
-  "generic_term_hits": [],
-  "issues": [],
-  "method": "frame_aware_template_leakage_and_crux_lints",
-  "schema_id": "memo_quality_report_v1",
-  "score": 100,
-  "status": "polished"
-}

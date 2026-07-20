@@ -1,5 +1,0 @@
-```json
-{
-  "section_markdown": "## Limits of the Current Map\n\nThis source packet serves as a structured decision aid rather than an exhaustive literature review. Because the extractor produced near-duplicate claims, repeated formulations may overweight certain points unless carefully curated. Finally, while the map sufficiency status is usable, any absent slots should be treated as named gaps within the current scope."
-}
-```
